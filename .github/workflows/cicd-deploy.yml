@@ -1,0 +1,97 @@
+name: CI-CD (main → Oracle)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # 모노레포면 실제 백엔드 경로로 변경 (예: backend_SoBunSoBun/backend/)
+      BACKEND_DIR: backend/
+      JAVA_VERSION: "17"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build (skip tests if you want: -x test)
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build -x test
+
+      - name: Upload artifact (JAR)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: ${{ env.BACKEND_DIR }}build/libs/*.jar
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # 필요하면 GitHub Environments 사용: environment: test
+    env:
+      HEALTH_URL: "http://localhost:8081/actuator/health"   # 서버 내부 헬스 URL. 필요 시 수정
+      SSH_PORT: "22"                                        # 기본 22. 다른 포트면 수정/시크릿 전환
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: app
+          path: ./dist
+
+      - name: Prepare SSH
+        env:
+          KEY:  ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          {
+            echo "Host target"
+            echo "  HostName ${HOST}"
+            echo "  User ${USER}"
+            echo "  Port ${SSH_PORT}"
+            echo "  StrictHostKeyChecking no"
+          } >> ~/.ssh/config
+
+      - name: Upload JAR → /opt/app/app.jar
+        run: |
+          ssh target "mkdir -p /opt/app"
+          scp ./dist/*.jar target:/opt/app/app.jar
+
+      - name: Restart service & health check
+        run: |
+          ssh target "sudo systemctl restart myapp"
+          for i in {1..10}; do
+            if ssh target "curl -fsS '${HEALTH_URL}' >/dev/null"; then
+              echo "✅ Health OK"
+              exit 0
+            fi
+            echo "⏳ Waiting for app... ($i/10)"
+            sleep 3
+          done
+          echo "❌ Health check failed" >&2
+          exit 1
