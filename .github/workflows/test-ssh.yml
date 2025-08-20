@@ -1,19 +1,20 @@
-name: Test SSH
-on: { workflow_dispatch: {} }
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:  # 수동 실행 버튼 활성화
 
 jobs:
-  ping:
+  test-ssh:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH to server (use key from secrets)
+      - name: Try SSH to server
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.SSH_HOST }}     # ex) 158.180.80.135
-          username: ${{ secrets.SSH_USER }} # ex) ubuntu
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # 키에 비번이 있다면 다음 줄도 추가
-          # passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             echo "✅ Connected to $(hostname) as $(whoami)"
             uname -a
+            date
