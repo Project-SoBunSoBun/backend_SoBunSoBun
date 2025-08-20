@@ -1,0 +1,30 @@
+name: Probe SSH
+
+on:
+  workflow_dispatch:   # 수동 실행 버튼으로 실행
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare SSH
+        env:
+          HOST: ${{ secrets.SSH_HOST }}
+          USER: ${{ secrets.SSH_USER }}
+          KEY:  ${{ secrets.SSH_PRIVATE_KEY }}
+          PORT: 22   # 기본 SSH 포트. 다르면 시크릿으로 빼도 됨
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "$KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${PORT} -H ${HOST} >> ~/.ssh/known_hosts 2>/dev/null
+          {
+            echo "Host target"
+            echo "  HostName ${HOST}"
+            echo "  User ${USER}"
+            echo "  Port ${PORT}"
+            echo "  StrictHostKeyChecking yes"
+          } >> ~/.ssh/config
+
+      - name: Test SSH connection
+        run: |
+          ssh target "echo '✅ Connected to $(hostname) as $(whoami)'"
