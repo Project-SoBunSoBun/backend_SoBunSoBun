@@ -1,0 +1,91 @@
+name: CD (No Docker)
+on:
+  push:
+    branches: [ "main" ]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build (bootJar)
+        run: ./gradlew clean bootJar --no-daemon
+
+      - name: Compute release & jar
+        id: meta
+        run: |
+          echo "jar=$(ls -1 build/libs/*.jar | head -n 1)" >> $GITHUB_OUTPUT
+          echo "rel=$(date +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Prepare release dir on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            APP_DIR=/opt/apps/sobunsobun
+            REL=${{ steps.meta.outputs.rel }}
+            sudo mkdir -p "$APP_DIR/releases/$REL"
+            sudo chown -R $USER:$USER "$APP_DIR/releases/$REL"
+
+      - name: Upload JAR
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: ${{ steps.meta.outputs.jar }}
+          target: /opt/apps/sobunsobun/releases/${{ steps.meta.outputs.rel }}/
+
+      - name: Switch & Restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            APP_DIR=/opt/apps/sobunsobun
+            REL=${{ steps.meta.outputs.rel }}
+            RELDIR=$APP_DIR/releases/$REL
+
+            # 업로드된 JAR를 app.jar로 통일
+            JAR=$(ls -1 "$RELDIR"/*.jar | head -n 1)
+            mv "$JAR" "$RELDIR/app.jar"
+
+            # current 링크를 새 릴리즈로 교체
+            ln -sfn "$RELDIR" "$APP_DIR/current"
+
+            # 권한(서비스 계정이 sobunsobun이면)
+            sudo chown -h sobunsobun:sobunsobun "$APP_DIR/current"
+            sudo chown -R sobunsobun:sobunsobun "$RELDIR"
+
+            # 서비스 재시작
+            sudo systemctl restart sobunsobun
+            sudo systemctl is-active --quiet sobunsobun && echo "service ok"
+
+            # (선택) 액추에이터 헬스체크
+            for i in {1..30}; do
+              if curl -fsS http://localhost:8080/actuator/health >/dev/null 2>&1; then
+                echo "health ok"; break
+              fi
+              sleep 2
+            done
