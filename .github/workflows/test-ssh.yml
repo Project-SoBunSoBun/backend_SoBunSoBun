@@ -5,12 +5,15 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH to server
+      - name: SSH to server (use key from secrets)
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          host: ${{ secrets.SSH_HOST }}     # ex) 158.180.80.135
+          username: ${{ secrets.SSH_USER }} # ex) ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # 키에 비번이 있다면 다음 줄도 추가
+          # passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            echo "✅ $(whoami)@$(hostname)"
+            echo "✅ Connected to $(hostname) as $(whoami)"
             uname -a
