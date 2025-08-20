@@ -1,18 +1,16 @@
-name: Test SSH Connection
-
-on:
-  workflow_dispatch:   # 수동 실행 버튼 활성화
+name: Test SSH
+on: { workflow_dispatch: {} }
 
 jobs:
-  test-ssh:
+  ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Connect to server and run uname
-        uses: appleboy/ssh-action@v0.1.6
+      - name: SSH to server
+        uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "✅ 서버 연결 성공"
+            echo "✅ $(whoami)@$(hostname)"
             uname -a
