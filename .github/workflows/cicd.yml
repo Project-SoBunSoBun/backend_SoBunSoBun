@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD with Gradle & SSH
 
 on:
   push:
@@ -12,8 +12,8 @@ jobs:
     outputs:
       jar_name: ${{ steps.findjar.outputs.jar_name }}
     steps:
-      - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -24,10 +24,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x backend_SoBunSoBun/backend/gradlew
 
-      - name: Setup Gradle (cache)
+      - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build with Gradle
+      - name: Build
         working-directory: backend_SoBunSoBun/backend
         run: ./gradlew clean build -x test --stacktrace
 
@@ -54,7 +54,6 @@ jobs:
           name: app-jar
           path: .
 
-      # runner -> server 파일 전송은 scp-action으로
       - name: Copy JAR to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -64,9 +63,8 @@ jobs:
           source: "${{ needs.build.outputs.jar_name }}"
           target: "/opt/apps/sobunsobun"
           overwrite: true
-          strip_components: 0
 
-      - name: Restart app on server
+      - name: Restart app on server (systemd 우선)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -78,12 +76,12 @@ jobs:
             # 최신 JAR를 app.jar로 교체
             NEW_JAR="${{ needs.build.outputs.jar_name }}"
             mv -f "$NEW_JAR" app.jar
-            # systemd를 쓰는 경우 (권장)
+            # systemd가 있으면 서비스 재시작
             if command -v systemctl >/dev/null 2>&1; then
               sudo systemctl restart sobunsobun
               sudo systemctl status sobunsobun --no-pager -l || true
             else
-              # systemd가 없다면 수동 재기동
+              # (대안) systemd가 없을 때 수동 재기동
               pkill -f "java .*app.jar" || true
               nohup java -jar /opt/apps/sobunsobun/app.jar --spring.profiles.active=prod > app.log 2>&1 &
             fi
