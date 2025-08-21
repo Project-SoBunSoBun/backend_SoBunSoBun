@@ -21,27 +21,42 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Make gradlew executable
-        run: chmod +x backend_SoBunSoBun/backend/gradlew
+      # gradlew 자동 탐색(루트~3depth)
+      - name: Locate gradlew
+        id: locate
+        run: |
+          set -e
+          GRADLEW=$(find . -maxdepth 3 -type f -name gradlew | head -n1 || true)
+          if [ -z "$GRADLEW" ]; then
+            echo "❌ gradlew를 찾지 못했습니다. 레포에 gradlew/gradle-wrapper가 커밋되어 있는지 확인하세요."
+            echo "=== 디버그: 상위 디렉토리 목록 ==="
+            find . -maxdepth 2 -type d -print
+            exit 1
+          fi
+          chmod +x "$GRADLEW"
+          DIR=$(dirname "$GRADLEW")
+          echo "gradlew_path=$GRADLEW" >> $GITHUB_OUTPUT
+          echo "gradle_dir=$DIR" >> $GITHUB_OUTPUT
+          echo "✅ gradlew: $GRADLEW"
 
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build
-        working-directory: backend_SoBunSoBun/backend
+        working-directory: ${{ steps.locate.outputs.gradle_dir }}
         run: ./gradlew clean build -x test --stacktrace
 
       - name: Find built JAR
         id: findjar
         run: |
-          JAR=$(ls -t backend_SoBunSoBun/backend/build/libs/*.jar | head -n1)
+          JAR=$(ls -t "${{ steps.locate.outputs.gradle_dir }}/build/libs/"*.jar | head -n1)
           echo "jar_name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
-          path: backend_SoBunSoBun/backend/build/libs/*.jar
+          path: ${{ steps.locate.outputs.gradle_dir }}/build/libs/*.jar
 
   deploy:
     needs: build
@@ -73,15 +88,12 @@ jobs:
           script: |
             set -e
             cd /opt/apps/sobunsobun
-            # 최신 JAR를 app.jar로 교체
             NEW_JAR="${{ needs.build.outputs.jar_name }}"
             mv -f "$NEW_JAR" app.jar
-            # systemd가 있으면 서비스 재시작
             if command -v systemctl >/dev/null 2>&1; then
               sudo systemctl restart sobunsobun
               sudo systemctl status sobunsobun --no-pager -l || true
             else
-              # (대안) systemd가 없을 때 수동 재기동
               pkill -f "java .*app.jar" || true
               nohup java -jar /opt/apps/sobunsobun/app.jar --spring.profiles.active=prod > app.log 2>&1 &
             fi
