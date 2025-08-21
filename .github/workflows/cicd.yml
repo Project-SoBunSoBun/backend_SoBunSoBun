@@ -1,0 +1,195 @@
+name: CI/CD with Gradle & SSH
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      jar_name: ${{ steps.findjar.outputs.jar_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Locate gradlew
+        id: locate
+        run: |
+          set -e
+          GRADLEW=$(find . -maxdepth 3 -type f -name gradlew | head -n1 || true)
+          if [ -z "$GRADLEW" ]; then
+            echo "❌ gradlew를 찾지 못했습니다."
+            find . -maxdepth 2 -type d -print
+            exit 1
+          fi
+          chmod +x "$GRADLEW"
+          DIR=$(dirname "$GRADLEW")
+          echo "gradlew_path=$GRADLEW" >> $GITHUB_OUTPUT
+          echo "gradle_dir=$DIR" >> $GITHUB_OUTPUT
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build (bootJar only)
+        working-directory: ${{ steps.locate.outputs.gradle_dir }}
+        run: ./gradlew clean bootJar -x test --stacktrace
+
+      - name: Find built JAR
+        id: findjar
+        run: |
+          set -e
+          DIR="${{ steps.locate.outputs.gradle_dir }}"
+          CANDIDATES=$(ls -t "$DIR/build/libs/"*.jar 2>/dev/null | grep -Ev '(plain|original)' || true)
+          JAR=$(echo "$CANDIDATES" | head -n1)
+          if [ -z "$JAR" ]; then
+            echo "❌ 실행 가능한 bootJar를 찾지 못했습니다."
+            ls -al "$DIR/build/libs/" || true
+            exit 1
+          fi
+          SIZE=$(stat -c%s "$JAR")
+          if [ "$SIZE" -lt 5000000 ]; then
+            echo "❌ JAR 용량이 비정상적으로 작습니다: ${SIZE} bytes ($JAR)"
+            ls -al "$DIR/build/libs/"
+            exit 1
+          fi
+          echo "jar_name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
+          echo "✅ Found JAR: $JAR ($(du -h "$JAR" | cut -f1))"
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: ${{ steps.locate.outputs.gradle_dir }}/build/libs/${{ steps.findjar.outputs.jar_name }}
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: .
+
+      - name: Upload JAR to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "${{ needs.build.outputs.jar_name }}"
+          target: /opt/apps/sobunsobun
+          overwrite: true
+
+      - name: Pre-validate jar on server (manifest check)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            APP_DIR="/opt/apps/sobunsobun"
+            NEW_JAR="${{ needs.build.outputs.jar_name }}"
+            cd "$APP_DIR"
+            [ -f "$NEW_JAR" ] || { echo "[ERROR] Missing JAR: $NEW_JAR"; exit 1; }
+            SIZE=$(stat -c%s "$NEW_JAR")
+            if [ "$SIZE" -lt 5000000 ]; then
+              echo "[ERROR] Jar too small: ${SIZE} bytes"
+              exit 1
+            fi
+            if ! command -v unzip >/dev/null 2>&1; then
+              if command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update && sudo apt-get install -y unzip
+              elif command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y unzip
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y unzip
+              fi
+            fi
+            MANIFEST=$(unzip -p "$NEW_JAR" META-INF/MANIFEST.MF || true)
+            echo "$MANIFEST" | grep -E '^(Main-Class|Start-Class):' >/dev/null || {
+              echo "[ERROR] Manifest에 Main-Class/Start-Class 없음 -> 실행 불가 JAR"
+              exit 1
+            }
+            echo "[OK] Manifest 확인 완료"
+
+      - name: Apply new JAR and restart service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            APP_DIR="/opt/apps/sobunsobun"
+            SERVICE_NAME="sobunsobun"
+            NEW_JAR="${{ needs.build.outputs.jar_name }}"
+            JAR_PATH="$APP_DIR/app.jar"
+            cd "$APP_DIR"
+            [ -f "$NEW_JAR" ] || { echo "[ERROR] 새 JAR 없음: $NEW_JAR"; exit 1; }
+            cp -f "$NEW_JAR" app.jar.new
+            mv -f app.jar.new "$JAR_PATH"
+            if command -v systemctl >/dev/null 2>&1; then
+              sudo systemctl daemon-reload || true
+              sudo systemctl restart "$SERVICE_NAME"
+              sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
+            else
+              pkill -f "java .*app.jar" || true
+              nohup java -Xms128m -Xmx512m -jar "$JAR_PATH" --spring.profiles.active=prod > app.log 2>&1 &
+              sleep 2
+            fi
+
+      - name: Health check (fail CI on error)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            APP_DIR="/opt/apps/sobunsobun"
+            SERVICE_NAME="sobunsobun"
+            HEALTH_URL="http://127.0.0.1:8081/healthz"
+            STARTUP_TIMEOUT=60
+            if command -v systemctl >/dev/null 2>&1; then
+              SECS=0
+              until sudo systemctl is-active --quiet "$SERVICE_NAME"; do
+                sleep 2; SECS=$((SECS+2))
+                if [ $SECS -ge $STARTUP_TIMEOUT ]; then
+                  sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
+                  sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager || true
+                  exit 1
+                fi
+              done
+            else
+              SECS=0
+              until pgrep -f "java .*app.jar" >/dev/null 2>&1; do
+                sleep 2; SECS=$((SECS+2))
+                if [ $SECS -ge $STARTUP_TIMEOUT ]; then
+                  tail -n 200 "$APP_DIR/app.log" || true
+                  exit 1
+                fi
+              done
+            fi
+            if command -v curl >/dev/null 2>&1; then
+              if ! curl -fsS --max-time 5 "$HEALTH_URL" | grep -q '"status":"UP"'; then
+                if command -v systemctl >/dev/null 2>&1; then
+                  sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager || true
+                else
+                  tail -n 200 "$APP_DIR/app.log" || true
+                fi
+                exit 1
+              fi
+            fi
+            echo "[SUCCESS] 배포/재시작/헬스체크 완료"
