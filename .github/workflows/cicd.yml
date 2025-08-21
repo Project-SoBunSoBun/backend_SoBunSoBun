@@ -2,12 +2,12 @@ name: CI/CD with Gradle & SSH
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-    build:
+  build:
     runs-on: ubuntu-latest
     outputs:
       jar_name: ${{ steps.findjar.outputs.jar_name }}
@@ -18,8 +18,8 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: "17"
 
       - name: Locate gradlew
         id: locate
@@ -39,12 +39,10 @@ jobs:
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      # ⬇️ bootJar만 생성 (plain 방지)
       - name: Build (bootJar only)
         working-directory: ${{ steps.locate.outputs.gradle_dir }}
         run: ./gradlew clean bootJar -x test --stacktrace
 
-      # ⬇️ 실행 가능한 JAR만 선택 (plain/original 제외, 최소 크기 검증)
       - name: Find built JAR
         id: findjar
         run: |
@@ -66,7 +64,6 @@ jobs:
           echo "jar_name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
           echo "✅ Found JAR: $JAR ($(du -h "$JAR" | cut -f1))"
 
-      # ⬇️ 선택된 JAR만 업로드
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
@@ -78,14 +75,12 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      # 1) 빌드 산출물 내려받기
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
           name: app-jar
           path: .
-  
-      # 2) 서버에 파일 전송 (임시파일명으로 올려 원자적 교체 준비)
+
       - name: Upload JAR to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -93,10 +88,42 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "${{ needs.build.outputs.jar_name }}"
-          target: "/opt/apps/sobunsobun"
+          target: /opt/apps/sobunsobun
           overwrite: true
-  
-      # 3) 서버에서 JAR 교체 + 서비스 재시작 (systemd 우선)
+
+      - name: Pre-validate jar on server (manifest check)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -Eeuo pipefail
+            APP_DIR="/opt/apps/sobunsobun"
+            NEW_JAR="${{ needs.build.outputs.jar_name }}"
+            cd "$APP_DIR"
+            [ -f "$NEW_JAR" ] || { echo "[ERROR] Missing JAR: $NEW_JAR"; exit 1; }
+            SIZE=$(stat -c%s "$NEW_JAR")
+            if [ "$SIZE" -lt 5000000 ]; then
+              echo "[ERROR] Jar too small: ${SIZE} bytes"
+              exit 1
+            fi
+            if ! command -v unzip >/dev/null 2>&1; then
+              if command -v apt-get >/dev/null 2>&1; then
+                sudo apt-get update && sudo apt-get install -y unzip
+              elif command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y unzip
+              elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y unzip
+              fi
+            fi
+            MANIFEST=$(unzip -p "$NEW_JAR" META-INF/MANIFEST.MF || true)
+            echo "$MANIFEST" | grep -E '^(Main-Class|Start-Class):' >/dev/null || {
+              echo "[ERROR] Manifest에 Main-Class/Start-Class 없음 -> 실행 불가 JAR"
+              exit 1
+            }
+            echo "[OK] Manifest 확인 완료"
+
       - name: Apply new JAR and restart service
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -109,34 +136,20 @@ jobs:
             SERVICE_NAME="sobunsobun"
             NEW_JAR="${{ needs.build.outputs.jar_name }}"
             JAR_PATH="$APP_DIR/app.jar"
-  
-            echo "[INFO] cd $APP_DIR"
             cd "$APP_DIR"
-  
-            if [ ! -f "$NEW_JAR" ]; then
-              echo "[ERROR] 새 JAR를 찾을 수 없습니다: $NEW_JAR"
-              ls -al
-              exit 1
-            fi
-  
-            # 원자적 교체: 먼저 .new 로 바꾸고 mv로 덮어쓰기
-            echo "[INFO] JAR 교체 준비: $NEW_JAR -> app.jar.new"
+            [ -f "$NEW_JAR" ] || { echo "[ERROR] 새 JAR 없음: $NEW_JAR"; exit 1; }
             cp -f "$NEW_JAR" app.jar.new
             mv -f app.jar.new "$JAR_PATH"
-  
             if command -v systemctl >/dev/null 2>&1; then
-              echo "[INFO] systemd 감지됨. daemon-reload 후 재시작"
               sudo systemctl daemon-reload || true
               sudo systemctl restart "$SERVICE_NAME"
               sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
             else
-              echo "[INFO] systemd 미사용. 수동 재기동"
               pkill -f "java .*app.jar" || true
               nohup java -Xms128m -Xmx512m -jar "$JAR_PATH" --spring.profiles.active=prod > app.log 2>&1 &
               sleep 2
             fi
-  
-      # 4) 헬스체크 (실패 시 로그 출력하고 액션 실패)
+
       - name: Health check (fail CI on error)
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -149,40 +162,28 @@ jobs:
             SERVICE_NAME="sobunsobun"
             HEALTH_URL="http://127.0.0.1:8080/actuator/health"
             STARTUP_TIMEOUT=60
-  
-            # 1) 프로세스/서비스 기동 대기
             if command -v systemctl >/dev/null 2>&1; then
-              echo "[INFO] systemd 서비스 기동 대기 (최대 ${STARTUP_TIMEOUT}s)"
               SECS=0
               until sudo systemctl is-active --quiet "$SERVICE_NAME"; do
-                sleep 2
-                SECS=$((SECS+2))
+                sleep 2; SECS=$((SECS+2))
                 if [ $SECS -ge $STARTUP_TIMEOUT ]; then
-                  echo "[ERROR] 서비스가 active 상태가 아닙니다."
                   sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
                   sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager || true
                   exit 1
                 fi
               done
             else
-              echo "[INFO] 수동 실행 프로세스 기동 대기 (최대 ${STARTUP_TIMEOUT}s)"
               SECS=0
               until pgrep -f "java .*app.jar" >/dev/null 2>&1; do
-                sleep 2
-                SECS=$((SECS+2))
+                sleep 2; SECS=$((SECS+2))
                 if [ $SECS -ge $STARTUP_TIMEOUT ]; then
-                  echo "[ERROR] java -jar 프로세스가 뜨지 않았습니다."
                   tail -n 200 "$APP_DIR/app.log" || true
                   exit 1
                 fi
               done
             fi
-  
-            # 2) 애플리케이션 레벨 헬스체크 (Actuator)
             if command -v curl >/dev/null 2>&1; then
-              echo "[INFO] 헬스체크 호출: $HEALTH_URL"
               if ! curl -fsS --max-time 5 "$HEALTH_URL" | grep -q '"status":"UP"'; then
-                echo "[ERROR] 헬스체크 실패(status!=UP)"
                 if command -v systemctl >/dev/null 2>&1; then
                   sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager || true
                 else
@@ -190,9 +191,5 @@ jobs:
                 fi
                 exit 1
               fi
-              echo "[INFO] 헬스체크 성공 (status=UP)"
-            else
-              echo "[WARN] curl 없음. systemd 상태만으로 통과"
             fi
-  
             echo "[SUCCESS] 배포/재시작/헬스체크 완료"
