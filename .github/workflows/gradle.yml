@@ -1,95 +1,47 @@
-name: Java CI/CD with Gradle
+name: CI/CD Pipeline
 
-on:
+on:   # 언제 실행할지
   push:
-    branches: [ "main" ]
+    branches: [ "main" ]   # main 브랜치에 push 될 때 실행
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
+  build:   # Job 이름
+    runs-on: ubuntu-latest   # 실행 환경 (Linux 서버)
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4   # 코드 받아오기
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
 
-      - name: Setup Gradle (cache)
-        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
-
-      # Spring Boot라면 bootJar가 최종 실행 JAR을 만듭니다.
-      - name: Build with Gradle Wrapper
-        run: ./gradlew clean bootJar
-
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-jar
-          path: build/libs/*.jar
-
-  dependency-submission:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      - name: Generate and submit dependency graph
-        uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
-
+    - name: Build with Gradle
+      run: ./gradlew build
   deploy:
-    # main 브랜치로 push일 때만 배포 (PR은 배포 X)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
+
     steps:
-      - name: Download JAR artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-jar
-          path: ./dist
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Show artifact
-        run: ls -al ./dist
+    - name: Build with Gradle
+      run: ./gradlew build -x test
 
-      - name: Copy JAR to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "dist/*.jar"
-          target: "~/apps/sobunsobun/"
-
-      - name: Restart app on server
-        uses: appleboy/ssh-action@v0.1.10
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            APP_DIR=~/apps/sobunsobun
-            mkdir -p "$APP_DIR/logs"
-
-            # 최신 JAR 경로
-            JAR_PATH=$(ls -t $APP_DIR/*.jar | head -n 1)
-
-            # 기존 프로세스 종료(있으면)
-            pgrep -f "$APP_DIR/.*\.jar" && pkill -f "$APP_DIR/.*\.jar" || true
-
-            # prod 프로파일로 백그라운드 실행
-            nohup java -jar "$JAR_PATH" --spring.profiles.active=prod \
-              > "$APP_DIR/logs/app.out" 2>&1 &
-
-            echo "Started: $JAR_PATH"
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /opt/apps/sobunsobun
+          pkill -f 'sobunsobun-0.0.1-SNAPSHOT.jar' || true
+          rm -f sobunsobun-0.0.1-SNAPSHOT.jar
+          scp ./build/libs/sobunsobun-0.0.1-SNAPSHOT.jar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/apps/sobunsobun/
+          nohup java -jar sobunsobun-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod > log.txt 2>&1 &
