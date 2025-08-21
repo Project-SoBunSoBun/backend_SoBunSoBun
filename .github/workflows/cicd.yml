@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+    build:
     runs-on: ubuntu-latest
     outputs:
       jar_name: ${{ steps.findjar.outputs.jar_name }}
@@ -21,15 +21,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # gradlew 자동 탐색(루트~3depth)
       - name: Locate gradlew
         id: locate
         run: |
           set -e
           GRADLEW=$(find . -maxdepth 3 -type f -name gradlew | head -n1 || true)
           if [ -z "$GRADLEW" ]; then
-            echo "❌ gradlew를 찾지 못했습니다. 레포에 gradlew/gradle-wrapper가 커밋되어 있는지 확인하세요."
-            echo "=== 디버그: 상위 디렉토리 목록 ==="
+            echo "❌ gradlew를 찾지 못했습니다."
             find . -maxdepth 2 -type d -print
             exit 1
           fi
@@ -37,26 +35,43 @@ jobs:
           DIR=$(dirname "$GRADLEW")
           echo "gradlew_path=$GRADLEW" >> $GITHUB_OUTPUT
           echo "gradle_dir=$DIR" >> $GITHUB_OUTPUT
-          echo "✅ gradlew: $GRADLEW"
 
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build
+      # ⬇️ bootJar만 생성 (plain 방지)
+      - name: Build (bootJar only)
         working-directory: ${{ steps.locate.outputs.gradle_dir }}
-        run: ./gradlew clean build -x test --stacktrace
+        run: ./gradlew clean bootJar -x test --stacktrace
 
+      # ⬇️ 실행 가능한 JAR만 선택 (plain/original 제외, 최소 크기 검증)
       - name: Find built JAR
         id: findjar
         run: |
-          JAR=$(ls -t "${{ steps.locate.outputs.gradle_dir }}/build/libs/"*.jar | head -n1)
+          set -e
+          DIR="${{ steps.locate.outputs.gradle_dir }}"
+          CANDIDATES=$(ls -t "$DIR/build/libs/"*.jar 2>/dev/null | grep -Ev '(plain|original)' || true)
+          JAR=$(echo "$CANDIDATES" | head -n1)
+          if [ -z "$JAR" ]; then
+            echo "❌ 실행 가능한 bootJar를 찾지 못했습니다."
+            ls -al "$DIR/build/libs/" || true
+            exit 1
+          fi
+          SIZE=$(stat -c%s "$JAR")
+          if [ "$SIZE" -lt 5000000 ]; then
+            echo "❌ JAR 용량이 비정상적으로 작습니다: ${SIZE} bytes ($JAR)"
+            ls -al "$DIR/build/libs/"
+            exit 1
+          fi
           echo "jar_name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
+          echo "✅ Found JAR: $JAR ($(du -h "$JAR" | cut -f1))"
 
+      # ⬇️ 선택된 JAR만 업로드
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
-          path: ${{ steps.locate.outputs.gradle_dir }}/build/libs/*.jar
+          path: ${{ steps.locate.outputs.gradle_dir }}/build/libs/${{ steps.findjar.outputs.jar_name }}
 
   deploy:
     needs: build
