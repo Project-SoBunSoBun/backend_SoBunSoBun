@@ -160,7 +160,7 @@ jobs:
             set -Eeuo pipefail
             APP_DIR="/opt/apps/sobunsobun"
             SERVICE_NAME="sobunsobun"
-            HEALTH_URL="http://127.0.0.1:8080/actuator/health"
+            HEALTH_URL="http://127.0.0.1:8081/healthz"
             STARTUP_TIMEOUT=60
             if command -v systemctl >/dev/null 2>&1; then
               SECS=0
