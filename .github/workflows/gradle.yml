@@ -1,47 +1,89 @@
 name: CI/CD Pipeline
 
-on:   # 언제 실행할지
+on:
   push:
-    branches: [ "main" ]   # main 브랜치에 push 될 때 실행
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
 jobs:
-  build:   # Job 이름
-    runs-on: ubuntu-latest   # 실행 환경 (Linux 서버)
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4   # 코드 받아오기
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Build with Gradle
-      run: ./gradlew build
-  deploy:
-    needs: build
+  build:
     runs-on: ubuntu-latest
-
+    outputs:
+      jar_name: ${{ steps.findjar.outputs.jar_name }}
     steps:
-    - name: Checkout repository
+      - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Build with Gradle
-      run: ./gradlew build -x test
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Deploy to Server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /opt/apps/sobunsobun
-          pkill -f 'sobunsobun-0.0.1-SNAPSHOT.jar' || true
-          rm -f sobunsobun-0.0.1-SNAPSHOT.jar
-          scp ./build/libs/sobunsobun-0.0.1-SNAPSHOT.jar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/opt/apps/sobunsobun/
-          nohup java -jar sobunsobun-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod > log.txt 2>&1 &
+      - name: Make gradlew executable
+        run: chmod +x backend_SoBunSoBun/backend/gradlew
+
+      - name: Setup Gradle (cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build with Gradle
+        working-directory: backend_SoBunSoBun/backend
+        run: ./gradlew clean build -x test --stacktrace
+
+      - name: Find built JAR
+        id: findjar
+        run: |
+          JAR=$(ls -t backend_SoBunSoBun/backend/build/libs/*.jar | head -n1)
+          echo "jar_name=$(basename "$JAR")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: backend_SoBunSoBun/backend/build/libs/*.jar
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: .
+
+      # runner -> server 파일 전송은 scp-action으로
+      - name: Copy JAR to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "${{ needs.build.outputs.jar_name }}"
+          target: "/opt/apps/sobunsobun"
+          overwrite: true
+          strip_components: 0
+
+      - name: Restart app on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/apps/sobunsobun
+            # 최신 JAR를 app.jar로 교체
+            NEW_JAR="${{ needs.build.outputs.jar_name }}"
+            mv -f "$NEW_JAR" app.jar
+            # systemd를 쓰는 경우 (권장)
+            if command -v systemctl >/dev/null 2>&1; then
+              sudo systemctl restart sobunsobun
+              sudo systemctl status sobunsobun --no-pager -l || true
+            else
+              # systemd가 없다면 수동 재기동
+              pkill -f "java .*app.jar" || true
+              nohup java -jar /opt/apps/sobunsobun/app.jar --spring.profiles.active=prod > app.log 2>&1 &
+            fi
