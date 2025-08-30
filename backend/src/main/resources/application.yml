@@ -4,14 +4,26 @@ spring:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update    # 최초 실행 후 validate 로 변경
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
+security:
+  jwt:
+    secret: ${JWT_SECRET:local-dev-please-change-THIS-IS-NOT-PROD-SECRET-1234567890}
+    access-token-validity: 1800000
+    refresh-token-validity: 5184000000
+
+oauth2:
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI}
+
 server:
   port: 8081
+  address: 0.0.0.0
