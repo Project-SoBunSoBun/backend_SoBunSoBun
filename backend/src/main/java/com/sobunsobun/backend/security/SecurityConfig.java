@@ -15,6 +15,11 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable());
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/healthz").permitAll()    // 정상 작동 체크
+                .requestMatchers(
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**"
+                ).permitAll()
                 .anyRequest().authenticated()
         );
         return http.build();
