@@ -40,6 +40,9 @@ public class SecurityConfig {
                                 "/auth/login/kakao",
                                 "/auth/callback/kakao",
                                 "/error"
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
