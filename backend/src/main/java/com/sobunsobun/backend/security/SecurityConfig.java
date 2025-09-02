@@ -37,9 +37,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/healthz",
-                                "/auth/login/kakao",
-                                "/auth/callback/kakao",
-                                "/error"
+                                "/auth/login/**",
+                                "/auth/callback/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**"

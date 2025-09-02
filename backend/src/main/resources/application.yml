@@ -22,7 +22,16 @@ oauth2:
   kakao:
     client-id: ${KAKAO_CLIENT_ID}
     client-secret: ${KAKAO_CLIENT_SECRET:}
-    redirect-uri: ${KAKAO_REDIRECT_URI}
+    authorize-uri: https://kauth.kakao.com/oauth/authorize
+    token-uri: https://kauth.kakao.com/oauth/token
+    userinfo-uri: https://kapi.kakao.com/v2/user/me
+    redirect-uri: http://localhost:8081/auth/callback/kakao
+    #추후 구글, APPLE 로그인 추가 예정
+
+  redirect:
+    kakao:  http://localhost:8081/auth/callback/kakao
+    google: ${GOOGLE_REDIRECT_URI:http://localhost:8081/auth/login/google/callback}
+    apple:  ${APPLE_REDIRECT_URI:http://localhost:8081/auth/login/apple/callback}
 
 server:
   port: 8081

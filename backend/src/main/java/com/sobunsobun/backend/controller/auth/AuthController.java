@@ -1,92 +1,80 @@
 package com.sobunsobun.backend.controller.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.application.auth.AuthService;
 import com.sobunsobun.backend.dto.auth.AuthResponse;
-import org.springframework.http.ResponseEntity;
+import com.sobunsobun.backend.infrastructure.oauth.OAuthProvider;
+import com.sobunsobun.backend.infrastructure.oauth.OAuthState;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Map;
 
+@Tag(name = "Auth - OAuth (Kakao/Google/Apple)")
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/auth/login")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService auth;
-    public AuthController(AuthService auth){ this.auth = auth; }
+    private final ObjectMapper om;
 
-    /**
-     * 카카오 동의 화면(Authorize)으로 이동할 URL을 생성해 반환.
-     * - iOS는 이 URL을 열어 로그인/동의를 진행
-     * - scope: 이메일/프로필 등 요청
-     * - prompt=login: 로그인 화면 강제(이미 동의했을 때 화면이 안 뜨는 문제 방지)
-     * - state: CSRF/리다이렉트 보호용 랜덤 문자열 (TODO: 서버에 저장 후 콜백에서 검증)
-     */
-    @GetMapping("/login/kakao")
-    public ResponseEntity<Map<String, String>> kakaoLoginUrl() {
-        // 환경변수 읽기 (application.yml -> ${KAKAO_CLIENT_ID}, ${KAKAO_REDIRECT_URI})
-        String clientId   = System.getenv("KAKAO_CLIENT_ID");
-        String redirectUri= System.getenv("KAKAO_REDIRECT_URI");
+    @Value("${app.login.page:/login}") private String loginPage;
 
-        // 안전장치: 환경변수 누락 시 500 대신 명확한 500 메시지
-        if (clientId == null || clientId.isBlank() || redirectUri == null || redirectUri.isBlank()) {
-            return ResponseEntity.internalServerError().body(
-                    Map.of("error", "kakao_config_missing",
-                            "message", "KAKAO_CLIENT_ID 또는 KAKAO_REDIRECT_URI 환경변수가 비어 있습니다.")
-            );
-        }
-
-        String scope  = "profile_nickname,profile_image,account_email";
-        String prompt = "login";
-
-        // (권장) state 값 생성 및 서버 저장(TTL) → 콜백에서 동일성 검증
-        // String state = stateService.issue(); // TODO
-        String state = null; // 샘플에선 생략
-
-        // 파라미터 안전 조립 (자동 인코딩)
-        String url = UriComponentsBuilder
-                .fromHttpUrl("https://kauth.kakao.com/oauth/authorize")
-                .queryParam("response_type", "code")
-                .queryParam("client_id", clientId)
-                .queryParam("redirect_uri", redirectUri)
-                .queryParam("scope", scope)
-                .queryParam("prompt", prompt)
-                .queryParamIfPresent("state", java.util.Optional.ofNullable(state))
-                .toUriString();
-
-        return ResponseEntity.ok(Map.of("authorizeUrl", url));
+    /** 시작: GET /auth/login/{provider}?returnTo=...&platform=web|ios */
+    @Operation(summary = "OAuth 로그인 시작(리다이렉트)")
+    @GetMapping("/{provider}")
+    public ResponseEntity<Void> start(
+            @PathVariable String provider,
+            @RequestParam String returnTo,
+            @RequestParam(defaultValue = "web") String platform,
+            HttpServletResponse res
+    ){
+        String authorize = auth.createAuthorizeUrl(OAuthProvider.from(provider), returnTo, platform);
+        res.setHeader(HttpHeaders.LOCATION, authorize);
+        return ResponseEntity.status(HttpStatus.FOUND).build();
     }
 
-    /**
-     * 카카오가 로그인/동의 완료 후 redirect_uri로 호출하는 콜백.
-     * - 정상: ?code=... 로 들어옴 → 서비스가 토큰 교환/유저조회/가입or로그인/JWT발급 수행
-     * - 실패/취소: ?error=..., error_description=... 으로 들어올 수 있음 → 클라이언트에 전달
-     * - state 사용 시: 여기서 state 검증 필수 (재전송/위변조 방지)
-     */
-    @GetMapping("/callback/kakao")
-    public ResponseEntity<?> kakaoCallback(
+    /** 콜백: GET /auth/login/{provider}/callback?code=...&state=... (실패시 error=...) */
+    @Operation(summary = "OAuth 콜백")
+    @GetMapping("/{provider}/callback")
+    public ResponseEntity<Void> callback(
+            @PathVariable String provider,
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String error,
-            @RequestParam(name = "error_description", required = false) String errorDescription,
-            @RequestParam(required = false) String state
+            @RequestParam String state,
+            HttpServletResponse res
     ){
-        // 1) 에러/취소 케이스 우선 처리
-        if (error != null) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", error, "error_description", String.valueOf(errorDescription))
-            );
+        var st = OAuthState.decode(state, om);
+        String returnTo = st.returnTo();
+
+        if (error != null || !StringUtils.hasText(code)) {
+            String fail = auth.buildFailureRedirect(loginPage, returnTo, error!=null?error:"missing_code");
+            res.setHeader(HttpHeaders.LOCATION, fail);
+            return ResponseEntity.status(HttpStatus.FOUND).build();
         }
 
-        // 2) state 검증 (사용한다면 필수)
-        // if (!stateService.verify(state)) { return ResponseEntity.status(401).body(Map.of("error","invalid_state")); }
+        String authCode = auth.onCallbackSuccess(OAuthProvider.from(provider), code);
+        String success = auth.buildSuccessRedirect(returnTo, authCode);
+        res.setHeader(HttpHeaders.LOCATION, success);
+        return ResponseEntity.status(HttpStatus.FOUND).build();
+    }
 
-        // 3) code 누락 방어
-        if (code == null || code.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "missing_code"));
-        }
-
-        // 4) 정상 플로우: code → (카카오)토큰 → (카카오)프로필 → (우리)upsert → (우리)JWT 발급
-        AuthResponse tokens = auth.loginWithKakaoCode(code);
-        return ResponseEntity.ok(tokens);
+    /** 최종 교환: POST /auth/login/{provider}/finalize  { "code": "AUTH_CODE" } */
+    @Operation(summary = "1회용 코드 → JWT 교환(finalize)")
+    @PostMapping("/{provider}/finalize")
+    public ResponseEntity<AuthResponse> finalizeLogin(
+            @PathVariable String provider,
+            @RequestBody Map<String,String> body
+    ){
+        String code = body.get("code");
+        if (!StringUtils.hasText(code)) return ResponseEntity.badRequest().build();
+        return ResponseEntity.ok(auth.exchangeAuthCode(code));
     }
 }
