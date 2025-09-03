@@ -12,26 +12,22 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
-security:
-  jwt:
-    secret: ${JWT_SECRET:local-dev-please-change-THIS-IS-NOT-PROD-SECRET-1234567890}
-    access-token-validity: 1800000
-    refresh-token-validity: 5184000000
+app:
+  base-url: http://localhost:8081
 
-oauth2:
+jwt:
+  secret: ${JWT_SECRET:dev-secret}
+  access-minutes: 30
+  refresh-days: 60
+
+oauth:
   kakao:
     client-id: ${KAKAO_CLIENT_ID}
     client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8081/auth/callback/kakao}
     authorize-uri: https://kauth.kakao.com/oauth/authorize
     token-uri: https://kauth.kakao.com/oauth/token
     userinfo-uri: https://kapi.kakao.com/v2/user/me
-    redirect-uri: http://localhost:8081/auth/callback/kakao
-    #추후 구글, APPLE 로그인 추가 예정
-
-  redirect:
-    kakao:  http://localhost:8081/auth/callback/kakao
-    google: ${GOOGLE_REDIRECT_URI:http://localhost:8081/auth/login/google/callback}
-    apple:  ${APPLE_REDIRECT_URI:http://localhost:8081/auth/login/apple/callback}
 
 server:
   port: 8081

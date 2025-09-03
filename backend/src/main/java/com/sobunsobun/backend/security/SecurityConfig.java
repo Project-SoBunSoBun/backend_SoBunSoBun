@@ -3,7 +3,7 @@ package com.sobunsobun.backend.security;
 import com.sobunsobun.backend.infrastructure.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -15,37 +15,30 @@ import org.springframework.web.cors.*;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtFilter;
-    public SecurityConfig(JwtAuthenticationFilter jwtFilter){ this.jwtFilter = jwtFilter; }
+    private final com.sobunsobun.backend.security.jwt.JwtAuthFilter jwtAuthFilter;
 
-    /**
-     * 핵심 보안 설정:
-     * - CSRF 비활성(REST/토큰 기반)
-     * - 세션 무상태(STATELESS)
-     * - 카카오 인증 경로/헬스체크는 permitAll
-     * - 그 외는 인증 필요
-     * - JWT 필터를 UsernamePasswordAuthenticationFilter 앞에 추가
-     * - 개발용 CORS(운영에서는 Origin 제한)
-     */
+    public SecurityConfig(com.sobunsobun.backend.security.jwt.JwtAuthFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
     @Bean
     SecurityFilterChain security(HttpSecurity http) throws Exception {
-        http.csrf(csrf->csrf.disable())
-                .cors(c->c.configurationSource(cors()))
-                .sessionManagement(sm->sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth->auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(
-                                "/healthz",
-                                "/auth/login/**",
-                                "/auth/callback/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**"
-                        ).permitAll()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        http.csrf(csrf -> csrf.disable());
+        http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/healthz").permitAll()
+                .requestMatchers(
+                        "/auth/**",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+        );
+        http.addFilterBefore(
+                jwtAuthFilter,
+                org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class
+        );
         return http.build();
     }
 

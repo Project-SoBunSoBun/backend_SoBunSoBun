@@ -23,17 +23,14 @@ public class SwaggerConfig {
                         .title("API 문서")
                         .version("v1")
                         .description("JWT 인증이 필요한 API의 경우 우측 상단의 Authorize 버튼을 클릭하여 토큰을 입력해주세요."))
+                        .servers(List.of(new Server().url("http://localhost:8081").description("Local")))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
                                         .name(securitySchemeName)
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
-                                        .bearerFormat("JWT")
-                                        .description("JWT 토큰을 입력해주세요. (Bearer 제외)")
-                        )
-                )
-                .addSecurityItem(new SecurityRequirement()
-                        .addList(securitySchemeName));
+                                        .bearerFormat("JWT")))
+                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName));
     }
 }

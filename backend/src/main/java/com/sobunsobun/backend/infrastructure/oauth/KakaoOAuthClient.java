@@ -1,43 +1,61 @@
 package com.sobunsobun.backend.infrastructure.oauth;
 
-import com.sobunsobun.backend.dto.auth.KakaoTokenResponse;
-import com.sobunsobun.backend.dto.auth.KakaoUserResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
 public class KakaoOAuthClient {
 
-    @Value("${oauth2.kakao.client-id}")     private String clientId;
-    @Value("${oauth2.kakao.client-secret:}")private String clientSecret;
-    @Value("${oauth2.kakao.redirect-uri}")  private String redirectUri;
+    private final WebClient webClient;
+    private final String tokenUri;
+    private final String userinfoUri;
+    private final String clientId;
+    private final String clientSecret;
 
-    private final RestTemplate rest = new RestTemplate();
-
-    public KakaoTokenResponse exchangeCodeForToken(String code) {
-        HttpHeaders h = new HttpHeaders();
-        h.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        MultiValueMap<String,String> body = new LinkedMultiValueMap<>();
-        body.add("grant_type","authorization_code");
-        body.add("client_id", clientId);
-        if (clientSecret != null && !clientSecret.isEmpty()) body.add("client_secret", clientSecret);
-        body.add("redirect_uri", redirectUri);
-        body.add("code", code);
-
-        return rest.postForEntity("https://kauth.kakao.com/oauth/token",
-                new HttpEntity<>(body, h), KakaoTokenResponse.class).getBody();
+    public KakaoOAuthClient(
+            WebClient.Builder builder,
+            @Value("${oauth.kakao.token-uri}") String tokenUri,
+            @Value("${oauth.kakao.userinfo-uri}") String userinfoUri,
+            @Value("${oauth.kakao.client-id}") String clientId,
+            @Value("${oauth.kakao.client-secret:}") String clientSecret
+    ) {
+        this.webClient = builder.build();
+        this.tokenUri = tokenUri;
+        this.userinfoUri = userinfoUri;
+        this.clientId = clientId;
+        this.clientSecret = clientSecret;
     }
 
-    public KakaoUserResponse getUser(String kakaoAccessToken) {
-        HttpHeaders h = new HttpHeaders();
-        h.setBearerAuth(kakaoAccessToken);
-        h.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    public KakaoTokenResponse exchangeCodeForToken(String code, String redirectUri) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "authorization_code");
+        form.add("client_id", clientId);
+        form.add("redirect_uri", redirectUri);
+        form.add("code", code);
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            form.add("client_secret", clientSecret);
+        }
 
-        return rest.postForEntity("https://kapi.kakao.com/v2/user/me",
-                new HttpEntity<>(h), KakaoUserResponse.class).getBody();
+        return webClient.post()
+                .uri(tokenUri)
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(BodyInserters.fromFormData(form))
+                .retrieve()
+                .bodyToMono(KakaoTokenResponse.class)
+                .block();
+    }
+
+    public KakaoUserResponse fetchUser(String accessToken) {
+        return webClient.get()
+                .uri(userinfoUri)
+                .header("Authorization", "Bearer " + accessToken)
+                .retrieve()
+                .bodyToMono(KakaoUserResponse.class)
+                .block();
     }
 }
