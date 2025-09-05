@@ -8,8 +8,10 @@ import lombok.*;
 public class AuthResponse {
     private String accessToken;   // 우리 서버 JWT (짧은 만료)
     private String refreshToken;  // 우리 서버 Refresh JWT (긴 만료)
-    private boolean newUser;
     private UserSummary user;
+
+    private long accessTokenExpiresAt;   // 만료 시각 (epoch seconds)
+    private long refreshTokenExpiresAt;
 
     @Getter @Setter @Builder
     @AllArgsConstructor @NoArgsConstructor
