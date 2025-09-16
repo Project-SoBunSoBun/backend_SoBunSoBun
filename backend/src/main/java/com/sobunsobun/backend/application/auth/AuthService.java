@@ -28,6 +28,7 @@ public class AuthService {
     private static final long ACCESS_TTL  = 30L * 60 * 1000;           // 30분
     private static final long REFRESH_TTL = 60L * 24 * 60 * 60 * 1000; // 60일
 
+
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
     private static final DateTimeFormatter KST_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST);
@@ -35,7 +36,7 @@ public class AuthService {
     private String formatKst(long epochMillis) {
         return KST_FMT.format(Instant.ofEpochMilli(epochMillis));
     }
-
+  
     public AuthResponse loginWithKakaoToken(String kakaoAccessToken) {
         var kakaoUser = kakao.getUserInfo(kakaoAccessToken).block();
         if (kakaoUser == null) {
@@ -57,6 +58,7 @@ public class AuthService {
         }
 
         var userOpt = users.findByEmail(email);
+
         User user;
         if (userOpt.isPresent()) {
             user = userOpt.get();
@@ -111,12 +113,13 @@ public class AuthService {
 
             String access  = jwt.createAccessToken(String.valueOf(user.getId()), user.getRole().name(), ACCESS_TTL);
             String newRef  = jwt.createRefreshToken(String.valueOf(user.getId()), REFRESH_TTL);
-
+          
             long accessExpMs  = jwt.parse(access).getBody().getExpiration().getTime();
             long refreshExpMs = jwt.parse(newRef).getBody().getExpiration().getTime();
 
             String accessExpAtKst  = formatKst(accessExpMs);
             String refreshExpAtKst = formatKst(refreshExpMs);
+
 
             return AuthResponse.builder()
                     .accessToken(access)
@@ -130,6 +133,7 @@ public class AuthService {
                             .build())
                     .accessTokenExpiresAtKst(accessExpAtKst)
                     .refreshTokenExpiresAtKst(refreshExpAtKst)
+
                     .build();
 
         } catch (Exception e) {

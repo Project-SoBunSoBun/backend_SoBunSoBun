@@ -1,20 +1,27 @@
 package com.sobunsobun.backend.security;
 
-<<<<<<< Updated upstream
-=======
 import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
->>>>>>> Stashed changes
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final JwtTokenProvider jwt;
+    private final UserRepository users;
+
+    /** 기본 생성 유저 경고 제거용(빈 유저 매니저 주입) */
     @Bean
     public UserDetailsService userDetailsService() {
         return new InMemoryUserDetailsManager(); // 사용자 없음

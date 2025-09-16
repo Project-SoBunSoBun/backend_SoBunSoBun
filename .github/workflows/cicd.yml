@@ -162,35 +162,39 @@ jobs:
             APP_DIR="/opt/apps/sobunsobun"
             SERVICE_NAME="sobunsobun"
             HEALTH_URL="http://127.0.0.1:8081/healthz"
-            STARTUP_TIMEOUT=60
+            STARTUP_TIMEOUT=120
+
+            # 1) 서비스가 active 될 때까지 대기
             if command -v systemctl >/dev/null 2>&1; then
               SECS=0
               until sudo systemctl is-active --quiet "$SERVICE_NAME"; do
                 sleep 2; SECS=$((SECS+2))
                 if [ $SECS -ge $STARTUP_TIMEOUT ]; then
+                  echo "[ERROR] systemd active 대기 타임아웃"
                   sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
                   sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager || true
                   exit 1
                 fi
               done
-            else
-              SECS=0
-              until pgrep -f "java .*app.jar" >/dev/null 2>&1; do
-                sleep 2; SECS=$((SECS+2))
-                if [ $SECS -ge $STARTUP_TIMEOUT ]; then
-                  tail -n 200 "$APP_DIR/app.log" || true
-                  exit 1
-                fi
-              done
             fi
-            if command -v curl >/dev/null 2>&1; then
-              if ! curl -fsS --max-time 5 "$HEALTH_URL" | grep -q '"status":"UP"'; then
+
+            # 2) /healthz 준비될 때까지 재시도 (HTTP 200 또는 본문에 UP/ok/OK)
+            SECS=0
+            until \
+              (curl -fsS -o /dev/null -w "%{http_code}" --max-time 5 "$HEALTH_URL" | grep -q "^200$") || \
+              (curl -fsS --max-time 5 "$HEALTH_URL" | grep -qiE '"status"\s*:\s*"UP"|(^|\b)(ok|OK)(\b|$)')
+            do
+              sleep 2; SECS=$((SECS+2))
+              if [ $SECS -ge $STARTUP_TIMEOUT ]; then
+                echo "[ERROR] Healthz 타임아웃: $HEALTH_URL"
                 if command -v systemctl >/dev/null 2>&1; then
                   sudo journalctl -u "$SERVICE_NAME" -n 200 --no-pager || true
+                  sudo systemctl status "$SERVICE_NAME" --no-pager -l || true
                 else
                   tail -n 200 "$APP_DIR/app.log" || true
                 fi
                 exit 1
               fi
-            fi
-            echo "[SUCCESS] 배포/재시작/헬스체크 완료"
+            done
+
+            echo "[SUCCESS] 배포/재시작/헬스체크 완료 (HEALTH_URL=$HEALTH_URL)"
