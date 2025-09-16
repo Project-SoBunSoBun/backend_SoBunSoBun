@@ -22,7 +22,7 @@ public class SwaggerConfig {
                 .info(new Info()
                         .title("API 문서")
                         .version("v1")
-                        .description("JWT 인증이 필요한 API의 경우 우측 상단의 Authorize 버튼을 클릭하여 토큰을 입력해주세요."))
+                        .description("JWT 인증이 필요한 API의 경우 우측 상단의 Authorize 버튼을 클릭하여 토큰을 입력."))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
                                 new SecurityScheme()
