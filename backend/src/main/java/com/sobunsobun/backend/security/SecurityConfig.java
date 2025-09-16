@@ -1,6 +1,6 @@
 package com.sobunsobun.backend.security;
 
-import com.sobunsobun.backend.repository.UserRepository;
+import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,8 +41,9 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/healthz",
-                                "/auth/**"
+                                "/health",
+                                "/auth/**",
+                                "/users/check-nickname"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

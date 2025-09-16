@@ -1,7 +1,8 @@
 package com.sobunsobun.backend.security;
 
 import com.sobunsobun.backend.domain.Role;
-import com.sobunsobun.backend.repository.UserRepository;
+import com.sobunsobun.backend.repository.user.UserRepository;
+
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

@@ -10,8 +10,8 @@ public class AuthResponse {
     private String refreshToken;  // 우리 서버 Refresh JWT (긴 만료)
     private UserSummary user;
 
-    private long accessTokenExpiresAt;   // 만료 시각 (epoch seconds)
-    private long refreshTokenExpiresAt;
+    private String accessTokenExpiresAtKst;
+    private String refreshTokenExpiresAtKst;
 
     @Getter @Setter @Builder
     @AllArgsConstructor @NoArgsConstructor

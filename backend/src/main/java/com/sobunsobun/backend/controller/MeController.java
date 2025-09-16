@@ -2,7 +2,8 @@ package com.sobunsobun.backend.controller;
 
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.auth.AuthResponse;
-import com.sobunsobun.backend.repository.UserRepository;
+import com.sobunsobun.backend.repository.user.UserRepository;
+
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
