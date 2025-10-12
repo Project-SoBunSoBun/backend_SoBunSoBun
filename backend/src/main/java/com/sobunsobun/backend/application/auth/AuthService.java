@@ -2,123 +2,223 @@ package com.sobunsobun.backend.application.auth;
 
 import com.sobunsobun.backend.domain.Role;
 import com.sobunsobun.backend.domain.User;
-import com.sobunsobun.backend.dto.auth.AuthResponse;
+import com.sobunsobun.backend.dto.auth.*;
 import com.sobunsobun.backend.infrastructure.oauth.KakaoOAuthClient;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
+/**
+ * 인증/인가 비즈니스 로직 서비스
+ *
+ * 담당 기능:
+ * - 카카오 OAuth 로그인/회원가입 처리
+ * - JWT 액세스/리프레시 토큰 발급 및 갱신
+ * - 이용약관 동의 기반 회원가입 플로우
+ * - 토큰 생명주기 관리
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuthService {
 
-    private final KakaoOAuthClient kakao;
-    private final UserRepository users;
-    private final JwtTokenProvider jwt;
+    private final KakaoOAuthClient kakaoOAuthClient;
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    // 요구하신 정책: 액세스 30분, 리프레시 60일
-    private static final long ACCESS_TTL  = 30L * 60 * 1000;           // 30분
-    private static final long REFRESH_TTL = 60L * 24 * 60 * 60 * 1000; // 60일
+    /** JWT 토큰 만료 시간 상수 */
+    private static final long ACCESS_TOKEN_TTL = 30L * 60 * 1000;           // 액세스 토큰: 30분
+    private static final long REFRESH_TOKEN_TTL = 60L * 24 * 60 * 60 * 1000; // 리프레시 토큰: 60일
+    private static final long LOGIN_TOKEN_TTL = 10L * 60 * 1000;             // 임시 로그인 토큰: 10분
 
+    /** 한국 시간대 및 포맷터 */
+    private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter KST_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST_ZONE);
 
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-    private static final DateTimeFormatter KST_FMT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST);
+    /**
+     * 1단계: 카카오 토큰 검증 및 사용자 정보 확인
+     *
+     * 플로우:
+     * 1. 카카오 API로 사용자 정보 조회
+     * 2. 이메일 동의 여부 확인
+     * 3. 기존 사용자 여부 판단
+     * 4. 임시 로그인 토큰 발급 (이용약관 동의용)
+     *
+     * @param kakaoAccessToken 카카오에서 발급받은 액세스 토큰
+     * @return 사용자 정보와 임시 로그인 토큰
+     * @throws ResponseStatusException 카카오 API 오류, 이메일 동의 미완료 시
+     */
+    public KakaoVerifyResponse verifyKakaoToken(String kakaoAccessToken) {
+        log.info("카카오 토큰 검증 시작");
 
-    private String formatKst(long epochMillis) {
-        return KST_FMT.format(Instant.ofEpochMilli(epochMillis));
-    }
-  
-    public AuthResponse loginWithKakaoToken(String kakaoAccessToken) {
-        var kakaoUser = kakao.getUserInfo(kakaoAccessToken).block();
+        // 1. 카카오 API 호출하여 사용자 정보 조회
+        var kakaoUser = kakaoOAuthClient.getUserInfo(kakaoAccessToken).block();
         if (kakaoUser == null) {
+            log.error("카카오 사용자 정보 조회 실패");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 사용자 조회 실패");
         }
 
+        // 2. 카카오 사용자 정보 추출
         String oauthId = String.valueOf(kakaoUser.getId());
-        String email = kakaoUser.getKakao_account() != null ? kakaoUser.getKakao_account().getEmail() : null;
-        String nickname = null;
-        String profileImageUrl = null;
+        String email = String.valueOf(kakaoUser.getKakao_account().getEmail());
 
-        if (kakaoUser.getKakao_account() != null && kakaoUser.getKakao_account().getProfile() != null) {
-            nickname = kakaoUser.getKakao_account().getProfile().getNickname();
-            profileImageUrl = kakaoUser.getKakao_account().getProfile().getProfile_image_url();
-        }
+        log.info("카카오 사용자 정보 추출 완료 - 이메일: {}, OAuth ID: {}", email, oauthId);
 
+        // 3. 이메일 동의 필수 확인
         if (email == null || email.isBlank()) {
+            log.warn("카카오 이메일 동의 미완료");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 이메일 동의가 필요합니다.");
         }
 
-        var userOpt = users.findByEmail(email);
+        // 4. 기존 사용자 여부 확인
+        boolean isNewUser = !userRepository.existsByEmail(email);
+        log.info("사용자 상태 확인 - 신규 사용자: {}", isNewUser);
 
-        User user;
-        if (userOpt.isPresent()) {
-            user = userOpt.get();
-            if (user.getOauthId() == null || !user.getOauthId().equals(oauthId)) user.setOauthId(oauthId);
-            if (nickname != null) user.setNickname(nickname);
-            if (profileImageUrl != null) user.setProfileImageUrl(profileImageUrl);
-            users.save(user);
-        } else {
-            user = User.builder()
-                    .email(email)
-                    .nickname(nickname)
-                    .oauthId(oauthId)
-                    .profileImageUrl(profileImageUrl)
-                    .role(Role.USER)
-                    .build();
-            users.save(user);
-        }
+        // 5. 임시 로그인 토큰 발급 (이용약관 동의용, 10분 만료)
+        String loginToken = jwtTokenProvider.createLoginToken(email, oauthId, LOGIN_TOKEN_TTL);
+        log.info("임시 로그인 토큰 발급 완료");
 
-        // 토큰 생성
-        String access  = jwt.createAccessToken(String.valueOf(user.getId()), user.getRole().name(), ACCESS_TTL);
-        String refresh = jwt.createRefreshToken(String.valueOf(user.getId()), REFRESH_TTL);
-
-        // 만든 토큰에서 만료시각(ms) 추출
-        long accessExpMs  = jwt.parse(access).getBody().getExpiration().getTime();
-        long refreshExpMs = jwt.parse(refresh).getBody().getExpiration().getTime();
-
-        String accessExpAtKst  = formatKst(accessExpMs);
-        String refreshExpAtKst = formatKst(refreshExpMs);
-
-        return AuthResponse.builder()
-                .accessToken(access)
-                .refreshToken(refresh)
-                .user(AuthResponse.UserSummary.builder()
-                        .id(user.getId())
-                        .email(user.getEmail())
-                        .nickname(user.getNickname())
-                        .profileImageUrl(user.getProfileImageUrl())
-                        .role(user.getRole())
-                        .build())
-                .accessTokenExpiresAtKst(accessExpAtKst)
-                .refreshTokenExpiresAtKst(refreshExpAtKst)
+        return KakaoVerifyResponse.builder()
+                .email(email)
+                .loginToken(loginToken)
+                .isNewUser(isNewUser)
                 .build();
+    }
+
+    /**
+     * 2단계: 이용약관 동의 후 회원가입/로그인 완료
+     *
+     * 플로우:
+     * 1. 임시 로그인 토큰 검증
+     * 2. 필수 약관 동의 여부 확인
+     * 3. 사용자 등록/업데이트
+     * 4. JWT 액세스/리프레시 토큰 발급
+     *
+     * @param request 약관 동의 정보 및 임시 토큰
+     * @return JWT 토큰 4개 정보 (액세스, 리프레시, 만료시간 2개)
+     * @throws ResponseStatusException 토큰 무효, 약관 미동의 시
+     */
+    @Transactional
+    public AuthResponse completeSignupWithTerms(TermsAgreementRequest request) {
+        log.info("회원가입 완료 처리 시작");
+
+        try {
+            // 1. 임시 로그인 토큰 검증 및 정보 추출
+            Claims claims = jwtTokenProvider.parse(request.getLoginToken()).getBody();
+            String email = claims.get("email", String.class);
+            String oauthId = claims.get("oauthId", String.class);
+
+            if (email == null || oauthId == null) {
+                log.error("임시 로그인 토큰에서 정보 추출 실패");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
+            }
+
+            log.info("임시 토큰 검증 완료 - 이메일: {}", email);
+
+            // 2. 필수 약관 동의 여부 확인
+            validateTermsAgreement(request);
+
+            // 3. 사용자 등록 또는 업데이트
+            User user = findOrCreateUser(email, oauthId);
+            log.info("사용자 처리 완료 - 사용자 ID: {}", user.getId());
+
+            // 4. JWT 토큰 발급
+            return generateJwtTokenResponse(user);
+
+        } catch (Exception e) {
+            if (e instanceof ResponseStatusException) {
+                throw e;
+            }
+            log.error("회원가입 완료 처리 중 오류 발생", e);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
+        }
+    }
+
+
+    /**
+     * JWT 리프레시 토큰으로 액세스 토큰 갱신
+     *
+     * 보안 정책:
+     * - 리프레시 토큰은 재발급하지 않음 (보안 강화)
+     * - 사용자 존재 및 활성 상태 확인
+     * - 새로운 액세스 토큰만 발급
+     *
+     * @param refreshToken 리프레시 토큰
+     * @return 새로운 액세스 토큰 정보
+     * @throws ResponseStatusException 토큰 무효, 사용자 없음 시
+     */
+    public AccessOnlyResponse refreshAccessOnly(String refreshToken) {
+        log.info("액세스 토큰 갱신 요청");
+
+        try {
+            // 1. 리프레시 토큰 검증 (만료, 서명 확인)
+            Jws<Claims> jws = jwtTokenProvider.parse(refreshToken);
+            Claims claims = jws.getBody();
+
+            // 2. 사용자 ID 추출 및 존재 확인
+            Long userId = Long.valueOf(claims.getSubject());
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        log.error("토큰 갱신 중 사용자 없음 - 사용자 ID: {}", userId);
+                        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "사용자를 찾을 수 없습니다.");
+                    });
+
+            log.info("토큰 갱신 사용자 확인 완료 - 사용자 ID: {}", userId);
+
+            // 3. 새로운 액세스 토큰 발급 (리프레시 토큰은 재발급하지 않음)
+            String newAccessToken = jwtTokenProvider.createAccessToken(
+                    String.valueOf(user.getId()),
+                    user.getRole().name(),
+                    ACCESS_TOKEN_TTL
+            );
+
+            log.info("새로운 액세스 토큰 발급 완료");
+
+            return AccessOnlyResponse.builder()
+                    .tokenType("Bearer")
+                    .accessToken(newAccessToken)
+                    .expiresIn(ACCESS_TOKEN_TTL / 1000) // 초 단위로 변환
+                    .build();
+
+        } catch (Exception e) {
+            if (e instanceof ResponseStatusException) {
+                throw e;
+            }
+            log.error("토큰 갱신 중 오류 발생", e);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않습니다.");
+        }
     }
 
     public AuthResponse refreshTokens(String refreshToken) {
         try {
-            var claims = jwt.parse(refreshToken).getBody();
+            var claims = jwtTokenProvider.parse(refreshToken).getBody();
             Long userId = Long.valueOf(claims.getSubject());
 
-            var user = users.findById(userId)
+            var user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "사용자 없음"));
 
-            String access  = jwt.createAccessToken(String.valueOf(user.getId()), user.getRole().name(), ACCESS_TTL);
-            String newRef  = jwt.createRefreshToken(String.valueOf(user.getId()), REFRESH_TTL);
-          
-            long accessExpMs  = jwt.parse(access).getBody().getExpiration().getTime();
-            long refreshExpMs = jwt.parse(newRef).getBody().getExpiration().getTime();
+            String access  = jwtTokenProvider.createAccessToken(String.valueOf(user.getId()), user.getRole().name(), ACCESS_TOKEN_TTL);
+            String newRef  = jwtTokenProvider.createRefreshToken(String.valueOf(user.getId()), REFRESH_TOKEN_TTL);
 
-            String accessExpAtKst  = formatKst(accessExpMs);
-            String refreshExpAtKst = formatKst(refreshExpMs);
+            long accessExpMs  = jwtTokenProvider.parse(access).getBody().getExpiration().getTime();
+            long refreshExpMs = jwtTokenProvider.parse(newRef).getBody().getExpiration().getTime();
+
+            String accessExpAtKst  = formatToKst(accessExpMs);
+            String refreshExpAtKst = formatToKst(refreshExpMs);
 
 
             return AuthResponse.builder()
@@ -139,5 +239,108 @@ public class AuthService {
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않습니다.");
         }
+    }
+
+    /**
+     * JWT 토큰 응답 생성 (공통 로직)
+     */
+    private AuthResponse generateJwtTokenResponse(User user) {
+        log.debug("JWT 토큰 응답 생성 시작 - 사용자 ID: {}", user.getId());
+
+        // 1. 토큰 생성
+        String accessToken = jwtTokenProvider.createAccessToken(
+                String.valueOf(user.getId()),
+                user.getRole().name(),
+                ACCESS_TOKEN_TTL
+        );
+        String refreshToken = jwtTokenProvider.createRefreshToken(
+                String.valueOf(user.getId()),
+                REFRESH_TOKEN_TTL
+        );
+
+        // 2. 만료 시간 추출 및 KST 변환
+        long accessExpireTime = jwtTokenProvider.parse(accessToken).getBody().getExpiration().getTime();
+        long refreshExpireTime = jwtTokenProvider.parse(refreshToken).getBody().getExpiration().getTime();
+
+        String accessExpireKst = formatToKst(accessExpireTime);
+        String refreshExpireKst = formatToKst(refreshExpireTime);
+
+        log.debug("JWT 토큰 생성 완료 - 액세스 만료: {}, 리프레시 만료: {}", accessExpireKst, refreshExpireKst);
+
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .user(AuthResponse.UserSummary.builder()
+                        .id(user.getId())
+                        .email(user.getEmail())
+                        .nickname(user.getNickname())
+                        .profileImageUrl(user.getProfileImageUrl())
+                        .role(user.getRole())
+                        .build())
+                .accessTokenExpiresAtKst(accessExpireKst)
+                .refreshTokenExpiresAtKst(refreshExpireKst)
+                .build();
+    }
+
+    /**
+     * 사용자 검색 또는 생성 (신규 회원가입용)
+     */
+    private User findOrCreateUser(String email, String oauthId) {
+        return userRepository.findByEmail(email)
+                .map(existingUser -> updateExistingUser(existingUser, oauthId))
+                .orElseGet(() -> createNewUser(email, oauthId));
+    }
+
+    /**
+     * 기존 사용자 정보 업데이트
+     */
+    private User updateExistingUser(User user, String oauthId) {
+        if (user.getOauthId() == null || !user.getOauthId().equals(oauthId)) {
+            user.setOauthId(oauthId);
+            return userRepository.save(user);
+        }
+        return user;
+    }
+
+    /**
+     * 새 사용자 생성 (임시 닉네임)
+     */
+    private User createNewUser(String email, String oauthId) {
+        User newUser = User.builder()
+                .email(email)
+                .nickname(null)
+                .oauthId(oauthId)
+                .role(Role.USER)
+                .build();
+
+        log.info("새 사용자 생성 - 이메일: {}", email);
+        return userRepository.save(newUser);
+    }
+
+    /**
+     * 약관 동의 여부 검증
+     */
+    private void validateTermsAgreement(TermsAgreementRequest request) {
+        if (!request.isServiceTermsAgreed() || !request.isPrivacyPolicyAgreed()) {
+            log.warn("필수 약관 미동의 - 서비스: {}, 개인정보: {}",
+                    request.isServiceTermsAgreed(), request.isPrivacyPolicyAgreed());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "필수 약관에 동의해야 합니다.");
+        }
+        log.debug("약관 동의 확인 완료 - 마케팅: {}", request.isMarketingOptionalAgreed());
+    }
+
+    /**
+     * 임시 닉네임 생성 (랜덤 닉네임)
+     * 추후 필요시 사용
+     */
+    private String generateTemporaryNickname() {
+        return "사용자" + (System.currentTimeMillis() % 10000);
+    }
+
+    /**
+     * 시간을 KST 문자열로 변환
+     */
+    private String formatToKst(long epochMillis) {
+        return KST_FORMATTER.format(Instant.ofEpochMilli(epochMillis));
     }
 }

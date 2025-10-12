@@ -30,13 +30,6 @@ public class KakaoOAuthClient {
         @Data
         public static class KakaoAccount {
             private String email; // 동의 받지 못하면 null
-            private Profile profile;
-
-            @Data
-            public static class Profile {
-                private String nickname;
-                private String profile_image_url;
-            }
         }
     }
 }
