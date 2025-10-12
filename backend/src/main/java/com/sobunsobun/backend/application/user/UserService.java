@@ -4,54 +4,136 @@ import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.support.util.NicknameNormalizer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * 사용자 비즈니스 로직 서비스
+ *
+ * 담당 기능:
+ * - 닉네임 중복 확인 및 정규화
+ * - 사용자 프로필 관리
+ * - 닉네임 유효성 검증
+ */
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
 
     private final UserRepository userRepository;
-    private final NicknameNormalizer normalizer;
+    private final NicknameNormalizer nicknameNormalizer;
 
-    @Transactional(readOnly = true)
+    /**
+     * 닉네임 사용 가능 여부 확인
+     *
+     * 1. 닉네임 정규화 (공백 제거, 대소문자 통일 등)
+     * 2. 유효성 검증 (길이, 문자 규칙)
+     * 3. 데이터베이스 중복 확인
+     *
+     * @param rawNickname 검증할 원본 닉네임
+     * @return 사용 가능하면 true, 불가능하면 false
+     * @throws ResponseStatusException 유효하지 않은 닉네임인 경우
+     */
     public boolean isNicknameAvailable(String rawNickname) {
-        String nickname = normalizer.normalize(rawNickname);
-        validate(nickname);
+        log.debug("닉네임 사용 가능 여부 확인 시작: {}", rawNickname);
 
-        return !userRepository.existsByNickname(nickname); // 존재하지 않음 = 사용 가능
+        // 1. 닉네임 정규화
+        String normalizedNickname = nicknameNormalizer.normalize(rawNickname);
+        log.debug("닉네임 정규화 완료: {} -> {}", rawNickname, normalizedNickname);
+
+        // 2. 유효성 검증
+        validateNicknameFormat(normalizedNickname);
+
+        // 3. 중복 확인
+        boolean isAvailable = !userRepository.existsByNickname(normalizedNickname);
+        log.debug("닉네임 중복 확인 완료: {} -> 사용가능: {}", normalizedNickname, isAvailable);
+
+        return isAvailable;
     }
 
+    /**
+     * 닉네임 정규화 (외부 호출용)
+     *
+     * @param rawNickname 원본 닉네임
+     * @return 정규화된 닉네임
+     */
+    public String normalizeNickname(String rawNickname) {
+        return nicknameNormalizer.normalize(rawNickname);
+    }
+
+    /**
+     * 사용자 닉네임 업데이트
+     *
+     * 1. 닉네임 정규화 및 검증
+     * 2. 다른 사용자와 중복 확인
+     * 3. 사용자 존재 확인
+     * 4. 닉네임 업데이트 (동시성 처리 포함)
+     *
+     * @param userId 사용자 ID
+     * @param rawNickname 새로운 닉네임
+     * @throws ResponseStatusException 사용자 없음, 중복 닉네임 등
+     */
     @Transactional
-    public void setNickname(Long userId, String rawNickname) {
-        String nickname = normalizer.normalize(rawNickname);
-        validate(nickname);
+    public void updateUserNickname(Long userId, String rawNickname) {
+        log.info("사용자 닉네임 업데이트 시작 - 사용자 ID: {}, 새 닉네임: {}", userId, rawNickname);
 
-        if (userRepository.existsByNicknameAndIdNot(nickname, userId)) {
+        // 1. 닉네임 정규화 및 검증
+        String normalizedNickname = nicknameNormalizer.normalize(rawNickname);
+        validateNicknameFormat(normalizedNickname);
+
+        // 2. 다른 사용자와 중복 확인 (자신 제외)
+        if (userRepository.existsByNicknameAndIdNot(normalizedNickname, userId)) {
+            log.warn("닉네임 중복 발생 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
         }
 
+        // 3. 사용자 존재 확인
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
 
-        user.setNickname(nickname);
+        // 4. 닉네임 업데이트 (동시성 고려한 DB 레벨 중복 체크)
+        String oldNickname = user.getNickname();
+        user.setNickname(normalizedNickname);
+
         try {
-            userRepository.saveAndFlush(user); // DB 유니크 위반 즉시 감지
+            userRepository.saveAndFlush(user); // 즉시 DB 반영하여 유니크 제약 조건 위반 감지
+            log.info("닉네임 업데이트 완료 - 사용자 ID: {}, {} -> {}", userId, oldNickname, normalizedNickname);
         } catch (DataIntegrityViolationException e) {
+            log.error("닉네임 중복 DB 오류 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname, e);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
         }
     }
 
-    private void validate(String nickname) {
+
+    /**
+     * 닉네임 형식 유효성 검증
+     *
+     * 검증 규칙:
+     * - null/공백 불허
+     * - 1~8자 제한
+     * - 한글, 영문, 숫자만 허용
+     *
+     * @param nickname 검증할 닉네임 (정규화된)
+     * @throws ResponseStatusException 유효하지 않은 경우
+     */
+    private void validateNicknameFormat(String nickname) {
         if (nickname == null || nickname.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "닉네임은 비어 있을 수 없습니다.");
         }
+
         if (nickname.length() > 8) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "닉네임은 최대 8자입니다.");
         }
+
+        // 한글, 영문, 숫자만 허용 (특수문자, 이모지 등 불허)
         if (!nickname.matches("^[가-힣a-zA-Z0-9]+$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "닉네임은 한글/영문/숫자만 가능합니다.");
         }

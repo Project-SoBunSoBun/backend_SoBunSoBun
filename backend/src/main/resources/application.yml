@@ -1,4 +1,13 @@
 spring:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true         # 요청/응답 모두 강제
+  messages:
+    basename: messages
+    encoding: UTF-8
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
