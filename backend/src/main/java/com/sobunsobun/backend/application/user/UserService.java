@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.application.user;
 
+import com.sobunsobun.backend.application.file.FileStorageService;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.support.util.NicknameNormalizer;
@@ -9,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -27,6 +29,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final NicknameNormalizer nicknameNormalizer;
+    private final FileStorageService fileStorageService;
 
     /**
      * 닉네임 사용 가능 여부 확인
@@ -137,5 +140,116 @@ public class UserService {
         if (!nickname.matches("^[가-힣a-zA-Z0-9]+$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "닉네임은 한글/영문/숫자만 가능합니다.");
         }
+    }
+
+    /**
+     * 사용자 프로필 업데이트 (닉네임 + 프로필 이미지)
+     *
+     * 회원가입 완료 시 또는 프로필 수정 시 호출됩니다.
+     *
+     * 처리 순서:
+     * 1. 닉네임 정규화 및 검증
+     * 2. 사용자 조회
+     * 3. 프로필 이미지 업로드 (선택적)
+     * 4. 기존 이미지 삭제 (새 이미지 업로드 시)
+     * 5. 닉네임 및 이미지 URL 업데이트
+     *
+     * @param userId 사용자 ID
+     * @param rawNickname 새로운 닉네임
+     * @param profileImage 프로필 이미지 파일 (선택적, null 가능)
+     * @throws ResponseStatusException 사용자 없음, 닉네임 중복, 이미지 업로드 실패 등
+     */
+    @Transactional
+    public void updateUserProfile(Long userId, String rawNickname, MultipartFile profileImage) {
+        log.info("프로필 업데이트 시작 - 사용자 ID: {}, 닉네임: {}, 이미지 있음: {}",
+                userId, rawNickname, profileImage != null && !profileImage.isEmpty());
+
+        // 1. 닉네임 정규화 및 검증
+        String normalizedNickname = nicknameNormalizer.normalize(rawNickname);
+        validateNicknameFormat(normalizedNickname);
+
+        // 2. 다른 사용자와 닉네임 중복 확인 (자신 제외)
+        if (userRepository.existsByNicknameAndIdNot(normalizedNickname, userId)) {
+            log.warn("닉네임 중복 발생 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
+        }
+
+        // 3. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
+
+        // 4. 프로필 이미지 업로드 (선택적)
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                String oldImageUrl = user.getProfileImageUrl();
+                String newImageUrl = fileStorageService.saveImage(profileImage);
+
+                user.setProfileImageUrl(newImageUrl);
+                log.info("프로필 이미지 업로드 완료 - 사용자 ID: {}, URL: {}", userId, newImageUrl);
+
+                // 기존 이미지 삭제 (로컬 파일인 경우)
+                if (oldImageUrl != null && !oldImageUrl.isBlank()) {
+                    fileStorageService.deleteIfLocal(oldImageUrl);
+                    log.info("기존 프로필 이미지 삭제 - URL: {}", oldImageUrl);
+                }
+            } catch (ResponseStatusException e) {
+                // FileStorageService에서 발생한 예외 그대로 전달
+                log.error("프로필 이미지 업로드 실패 - 사용자 ID: {}", userId, e);
+                throw e;
+            }
+        }
+
+        // 5. 닉네임 업데이트
+        String oldNickname = user.getNickname();
+        user.setNickname(normalizedNickname);
+
+        try {
+            userRepository.saveAndFlush(user);
+            log.info("프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {} -> {}, 이미지: {}",
+                    userId, oldNickname, normalizedNickname, user.getProfileImageUrl());
+        } catch (DataIntegrityViolationException e) {
+            log.error("프로필 업데이트 DB 오류 - 사용자 ID: {}", userId, e);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
+        }
+    }
+
+    /**
+     * 사용자 프로필 이미지만 업데이트
+     *
+     * 닉네임 변경 없이 이미지만 변경할 때 사용합니다.
+     *
+     * @param userId 사용자 ID
+     * @param profileImage 프로필 이미지 파일
+     * @throws ResponseStatusException 사용자 없음, 이미지 업로드 실패 등
+     */
+    @Transactional
+    public void updateProfileImage(Long userId, MultipartFile profileImage) {
+        log.info("프로필 이미지 업데이트 시작 - 사용자 ID: {}", userId);
+
+        if (profileImage == null || profileImage.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "프로필 이미지가 비어 있습니다.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
+
+        String oldImageUrl = user.getProfileImageUrl();
+        String newImageUrl = fileStorageService.saveImage(profileImage);
+
+        user.setProfileImageUrl(newImageUrl);
+        userRepository.saveAndFlush(user);
+
+        // 기존 이미지 삭제
+        if (oldImageUrl != null && !oldImageUrl.isBlank()) {
+            fileStorageService.deleteIfLocal(oldImageUrl);
+        }
+
+        log.info("프로필 이미지 업데이트 완료 - 사용자 ID: {}, URL: {}", userId, newImageUrl);
     }
 }
