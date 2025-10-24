@@ -51,7 +51,12 @@ public class SecurityConfig {
         "/auth/**",
 
         // 사용자 관련 공개 API
-        "/users/check-nickname"
+        "/users/**",
+
+        // 정적 파일 접근
+        "/files/**"
+            
+
     };
 
     /**

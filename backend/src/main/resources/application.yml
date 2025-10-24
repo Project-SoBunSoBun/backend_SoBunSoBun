@@ -22,5 +22,9 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
+file:
+  upload-dir: ${user.home}/sobunsobun/uploads
+  url-prefix: /files
+
 server:
   port: 8081
