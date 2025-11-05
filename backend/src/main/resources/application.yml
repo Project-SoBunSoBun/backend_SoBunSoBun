@@ -23,7 +23,7 @@ spring:
         format_sql: true
 
 file:
-  upload-dir: ${user.home}/sobunsobun/uploads
+  upload-dir: /var/app/sobunsobun/uploads/profliles
   url-prefix: /files
 
 server:
