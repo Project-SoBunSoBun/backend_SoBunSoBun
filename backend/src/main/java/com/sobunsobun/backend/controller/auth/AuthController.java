@@ -73,9 +73,6 @@ public class AuthController {
                 request.isServiceTermsAgreed(),
                 request.isPrivacyPolicyAgreed(),
                 request.isMarketingOptionalAgreed());
-
-
-
         AuthResponse response = authService.completeSignupWithTerms(request);
         log.info("회원가입 완료 - 사용자 ID: {}", response.getUser().getId());
 
