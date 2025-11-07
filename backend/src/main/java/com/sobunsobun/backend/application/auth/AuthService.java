@@ -10,6 +10,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,8 @@ public class AuthService {
     private final KakaoOAuthClient kakaoOAuthClient;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
+
+    private final Environment env;
 
     /** JWT 토큰 만료 시간 상수 */
     private static final long ACCESS_TOKEN_TTL = 30L * 60 * 1000;           // 액세스 토큰: 30분
@@ -114,37 +118,64 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse completeSignupWithTerms(TermsAgreementRequest request) {
-        log.info("회원가입 완료 처리 시작");
+        //백엔드 어드민 계정 로그인 (백도어)
+        String adminLogin = env.getProperty("ADMIN_TOKEN");
 
-        try {
-            // 1. 임시 로그인 토큰 검증 및 정보 추출
-            Claims claims = jwtTokenProvider.parse(request.getLoginToken()).getBody();
-            String email = claims.get("email", String.class);
-            String oauthId = claims.get("oauthId", String.class);
+        if (adminLogin != null && adminLogin.equals(request.getLoginToken())) {
+            log.info("어드민 로그인");
 
-            if (email == null || oauthId == null) {
-                log.error("임시 로그인 토큰에서 정보 추출 실패");
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
+            try {
+                String email = env.getProperty("ADMIN_EMAIL");
+                String oauthId = env.getProperty("ADMIN_OAUTH_ID");
+
+                // 3. 사용자 등록 또는 업데이트
+                User user = findOrCreateUser(email, oauthId);
+                log.info("사용자 처리 완료 - 어드민 ID: {}", user.getId());
+
+                // 4. JWT 토큰 발급
+                return generateJwtTokenResponse(user);
+
+            } catch (Exception e) {
+                if (e instanceof ResponseStatusException) {
+                    throw e;
+                }
+                log.error("회원가입 완료 처리 중 오류 발생", e);
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
 
-            log.info("임시 토큰 검증 완료 - 이메일: {}", email);
+        } else {
+            log.info("회원가입 완료 처리 시작");
 
-            // 2. 필수 약관 동의 여부 확인
-            validateTermsAgreement(request);
+            try {
+                // 1. 임시 로그인 토큰 검증 및 정보 추출
+                Claims claims = jwtTokenProvider.parse(request.getLoginToken()).getBody();
+                String email = claims.get("email", String.class);
+                String oauthId = claims.get("oauthId", String.class);
 
-            // 3. 사용자 등록 또는 업데이트
-            User user = findOrCreateUser(email, oauthId);
-            log.info("사용자 처리 완료 - 사용자 ID: {}", user.getId());
+                if (email == null || oauthId == null) {
+                    log.error("임시 로그인 토큰에서 정보 추출 실패");
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
+                }
 
-            // 4. JWT 토큰 발급
-            return generateJwtTokenResponse(user);
+                log.info("임시 토큰 검증 완료 - 이메일: {}", email);
 
-        } catch (Exception e) {
-            if (e instanceof ResponseStatusException) {
-                throw e;
+                // 2. 필수 약관 동의 여부 확인
+                validateTermsAgreement(request);
+
+                // 3. 사용자 등록 또는 업데이트
+                User user = findOrCreateUser(email, oauthId);
+                log.info("사용자 처리 완료 - 사용자 ID: {}", user.getId());
+
+                // 4. JWT 토큰 발급
+                return generateJwtTokenResponse(user);
+
+            } catch (Exception e) {
+                if (e instanceof ResponseStatusException) {
+                    throw e;
+                }
+                log.error("회원가입 완료 처리 중 오류 발생", e);
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
-            log.error("회원가입 완료 처리 중 오류 발생", e);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
         }
     }
 
