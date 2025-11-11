@@ -22,12 +22,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByEmail(String email);
 
-    /**
-     * OAuth ID로 사용자 조회
-     * @param oauthId 카카오 OAuth ID
-     * @return 사용자 정보 (Optional)
-     */
-    Optional<User> findByOauthId(String oauthId);
 
     /**
      * 이메일 존재 여부 확인

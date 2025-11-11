@@ -101,11 +101,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 log.debug("인증 성공 - 사용자 ID: {}, URI: {}", userId, request.getRequestURI());
             }
+            // 토큰이 없어도 정상 (공개 API는 인증 불필요)
 
         } catch (Exception e) {
             // JWT 관련 모든 예외를 캐치하여 인증 실패로 처리
-            // 로그는 남기지만 예외를 전파하지 않아 정상적인 필터 체인 진행
-            log.debug("JWT 인증 실패 - URI: {}, 오류: {}",
+            log.warn("JWT 인증 실패 - URI: {}, 오류: {}",
                     request.getRequestURI(), e.getMessage());
         }
 
@@ -124,13 +124,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String extractTokenFromRequest(HttpServletRequest request) {
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (StringUtils.hasText(authorizationHeader) &&
-            authorizationHeader.startsWith(BEARER_PREFIX)) {
-
-            String token = authorizationHeader.substring(BEARER_PREFIX_LENGTH);
-            log.debug("Authorization 헤더에서 토큰 추출 성공");
-            return token;
+        if (StringUtils.hasText(authorizationHeader)) {
+            if (authorizationHeader.startsWith(BEARER_PREFIX)) {
+                String token = authorizationHeader.substring(BEARER_PREFIX_LENGTH);
+                log.debug("Authorization 헤더에서 토큰 추출 성공 (길이: {})", token.length());
+                return token;
+            } else {
+                log.warn("Authorization 헤더가 Bearer로 시작하지 않음: {}", authorizationHeader.substring(0, Math.min(20, authorizationHeader.length())));
+            }
         }
+        // Authorization 헤더가 없어도 정상 (공개 API는 인증 불필요)
 
         return null;
     }

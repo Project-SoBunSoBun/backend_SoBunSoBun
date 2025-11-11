@@ -229,8 +229,14 @@ public class UserService {
     public void updateProfileImage(Long userId, MultipartFile profileImage) {
         log.info("프로필 이미지 업데이트 시작 - 사용자 ID: {}", userId);
 
-        if (profileImage == null || profileImage.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "프로필 이미지가 비어 있습니다.");
+        // 파일 상태 로그
+        if (profileImage == null) {
+            log.info("프로필 이미지 파일: null (프로필 이미지 삭제)");
+        } else if (profileImage.isEmpty()) {
+            log.info("프로필 이미지 파일: empty (프로필 이미지 삭제)");
+        } else {
+            log.info("프로필 이미지 파일: {} ({}bytes)",
+                    profileImage.getOriginalFilename(), profileImage.getSize());
         }
 
         User user = userRepository.findById(userId)
@@ -240,16 +246,23 @@ public class UserService {
                 });
 
         String oldImageUrl = user.getProfileImageUrl();
+        log.info("기존 프로필 이미지 URL: {}", oldImageUrl);
+
+        // 파일이 null이거나 비어있으면 null 저장, 아니면 새 이미지 저장
         String newImageUrl = fileStorageService.saveImage(profileImage);
+        log.info("새 프로필 이미지 URL: {}", newImageUrl);
 
         user.setProfileImageUrl(newImageUrl);
         userRepository.saveAndFlush(user);
 
-        // 기존 이미지 삭제
-        if (oldImageUrl != null && !oldImageUrl.isBlank()) {
+        log.info("DB 업데이트 완료 - 프로필 이미지 URL이 {}로 변경됨", newImageUrl);
+
+        // 기존 이미지가 있고 새 이미지가 다르면 삭제
+        if (oldImageUrl != null && !oldImageUrl.isBlank() && !oldImageUrl.equals(newImageUrl)) {
+            log.info("기존 이미지 삭제 시도: {}", oldImageUrl);
             fileStorageService.deleteIfLocal(oldImageUrl);
         }
 
-        log.info("프로필 이미지 업데이트 완료 - 사용자 ID: {}, URL: {}", userId, newImageUrl);
+        log.info("프로필 이미지 업데이트 완료 - 사용자 ID: {}, 최종 URL: {}", userId, newImageUrl);
     }
 }
