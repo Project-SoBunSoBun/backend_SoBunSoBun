@@ -22,9 +22,28 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
+  # Jackson DateTime 직렬화 설정
+  jackson:
+    time-zone: Asia/Seoul                    # KST 타임존
+    serialization:
+      write-dates-as-timestamps: false       # Timestamp 대신 ISO 8601 사용
+    deserialization:
+      adjust-dates-to-context-time-zone: true
+
 file:
   upload-dir: /var/app/sobunsobun/uploads/profiles
   url-prefix: /files
+
+# SpringDoc/Swagger 설정
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
 
 server:
   port: 8081

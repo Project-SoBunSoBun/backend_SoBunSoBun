@@ -133,7 +133,7 @@ public class UserController {
      * @return 업데이트 결과
      */
     @Operation(summary = "프로필 업데이트 (닉네임 + 이미지)",
-            description = "닉네임과 프로필 이미지를 업데이트합니다. 이미지는 선택사항입니다.")
+            description = "닉네임과 프로필 이미지를 업데이트합니다. 이미지를 보내지 않거나 빈 값을 보내면 null로 저장됩니다.")
     @PatchMapping(value = "/me/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateMyProfile(
             @Parameter(hidden = true)
@@ -146,15 +146,23 @@ public class UserController {
             @Pattern(regexp = "^[가-힣a-zA-Z0-9]+$", message = "닉네임은 한글/영문/숫자만 가능합니다.")
             String nickname,
 
-            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하, 선택사항)")
+            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하, 선택사항 - 없으면 null 저장)")
             @RequestParam(required = false)
             MultipartFile profileImage) {
 
         Long userId = principal.id();
-        log.info("프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
-                userId, nickname, profileImage != null ? profileImage.getOriginalFilename() : "없음");
 
-        // 프로필 업데이트 (닉네임 + 이미지)
+        String imageInfo;
+        if (profileImage != null && !profileImage.isEmpty()) {
+            imageInfo = profileImage.getOriginalFilename();
+        } else {
+            imageInfo = "null 저장 (이미지 삭제)";
+        }
+
+        log.info("프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
+                userId, nickname, imageInfo);
+
+        // 프로필 업데이트 (닉네임 + 이미지) - 이미지가 없으면 null 저장
         userService.updateUserProfile(userId, nickname, profileImage);
 
         log.info("프로필 업데이트 완료 - 사용자 ID: {}", userId);
@@ -178,21 +186,23 @@ public class UserController {
      * @return 업데이트 결과
      */
     @Operation(summary = "프로필 이미지만 업데이트",
-            description = "프로필 이미지만 변경합니다. 닉네임은 변경되지 않습니다.")
+            description = "프로필 이미지만 변경합니다. 빈 값을 보내면 null로 저장됩니다.")
     @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateMyProfileImage(
             @Parameter(hidden = true)
             @AuthenticationPrincipal JwtUserPrincipal principal,
 
-            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하)")
-            @RequestParam
+            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하, 비어있으면 null 저장)")
+            @RequestParam(required = false)
             MultipartFile profileImage) {
 
         Long userId = principal.id();
-        log.info("프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}",
-                userId, profileImage.getOriginalFilename());
+        String fileName = (profileImage != null && !profileImage.isEmpty())
+                ? profileImage.getOriginalFilename()
+                : "빈 파일 (null 저장)";
+        log.info("프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}", userId, fileName);
 
-        // 이미지만 업데이트
+        // 이미지만 업데이트 (빈 파일이면 null 저장)
         userService.updateProfileImage(userId, profileImage);
 
         log.info("프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);

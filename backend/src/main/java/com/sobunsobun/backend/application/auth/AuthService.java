@@ -1,9 +1,12 @@
 package com.sobunsobun.backend.application.auth;
 
+import com.sobunsobun.backend.domain.AuthProvider;
 import com.sobunsobun.backend.domain.Role;
 import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.domain.UserStatus;
 import com.sobunsobun.backend.dto.auth.*;
 import com.sobunsobun.backend.infrastructure.oauth.KakaoOAuthClient;
+import com.sobunsobun.backend.repository.AuthProviderRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -39,6 +43,7 @@ public class AuthService {
 
     private final KakaoOAuthClient kakaoOAuthClient;
     private final UserRepository userRepository;
+    private final AuthProviderRepository authProviderRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
     private final Environment env;
@@ -88,8 +93,8 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 이메일 동의가 필요합니다.");
         }
 
-        // 4. 기존 사용자 여부 확인
-        boolean isNewUser = !userRepository.existsByEmail(email);
+        // 4. 기존 사용자 여부 확인 (카카오 OAuth ID로 조회)
+        boolean isNewUser = !authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId).isPresent();
         log.info("사용자 상태 확인 - 신규 사용자: {}", isNewUser);
 
         // 5. 임시 로그인 토큰 발급 (이용약관 동의용, 10분 만료)
@@ -234,43 +239,6 @@ public class AuthService {
         }
     }
 
-    public AuthResponse refreshTokens(String refreshToken) {
-        try {
-            var claims = jwtTokenProvider.parse(refreshToken).getBody();
-            Long userId = Long.valueOf(claims.getSubject());
-
-            var user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "사용자 없음"));
-
-            String access  = jwtTokenProvider.createAccessToken(String.valueOf(user.getId()), user.getRole().name(), ACCESS_TOKEN_TTL);
-            String newRef  = jwtTokenProvider.createRefreshToken(String.valueOf(user.getId()), REFRESH_TOKEN_TTL);
-
-            long accessExpMs  = jwtTokenProvider.parse(access).getBody().getExpiration().getTime();
-            long refreshExpMs = jwtTokenProvider.parse(newRef).getBody().getExpiration().getTime();
-
-            String accessExpAtKst  = formatToKst(accessExpMs);
-            String refreshExpAtKst = formatToKst(refreshExpMs);
-
-
-            return AuthResponse.builder()
-                    .accessToken(access)
-                    .refreshToken(newRef)
-                    .user(AuthResponse.UserSummary.builder()
-                            .id(user.getId())
-                            .email(user.getEmail())
-                            .nickname(user.getNickname())
-                            .profileImageUrl(user.getProfileImageUrl())
-                            .role(user.getRole())
-                            .build())
-                    .accessTokenExpiresAtKst(accessExpAtKst)
-                    .refreshTokenExpiresAtKst(refreshExpAtKst)
-
-                    .build();
-
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않습니다.");
-        }
-    }
 
     /**
      * JWT 토큰 응답 생성 (공통 로직)
@@ -306,6 +274,7 @@ public class AuthService {
                         .email(user.getEmail())
                         .nickname(user.getNickname())
                         .profileImageUrl(user.getProfileImageUrl())
+                        .address(user.getAddress())
                         .role(user.getRole())
                         .build())
                 .accessTokenExpiresAtKst(accessExpireKst)
@@ -315,37 +284,44 @@ public class AuthService {
 
     /**
      * 사용자 검색 또는 생성 (신규 회원가입용)
+     * AuthProvider로 카카오 OAuth ID 관리
      */
     private User findOrCreateUser(String email, String oauthId) {
-        return userRepository.findByEmail(email)
-                .map(existingUser -> updateExistingUser(existingUser, oauthId))
-                .orElseGet(() -> createNewUser(email, oauthId));
+        // 1. AuthProvider로 기존 사용자 확인
+        return authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId)
+                .map(AuthProvider::getUser)
+                .orElseGet(() -> createNewUserWithAuthProvider(email, oauthId));
     }
 
     /**
-     * 기존 사용자 정보 업데이트
+     * 새 사용자 생성 및 AuthProvider 연결 (카카오 로그인)
      */
-    private User updateExistingUser(User user, String oauthId) {
-        if (user.getOauthId() == null || !user.getOauthId().equals(oauthId)) {
-            user.setOauthId(oauthId);
-            return userRepository.save(user);
-        }
-        return user;
-    }
+    private User createNewUserWithAuthProvider(String email, String oauthId) {
+        log.info("새 사용자 생성 시작 - 이메일: {}", email);
 
-    /**
-     * 새 사용자 생성 (임시 닉네임)
-     */
-    private User createNewUser(String email, String oauthId) {
+        // 1. User 엔티티 생성
         User newUser = User.builder()
                 .email(email)
-                .nickname(null)
-                .oauthId(oauthId)
+                .nickname(null) // 프로필 설정 화면에서 설정
+                .mannerScore(BigDecimal.ZERO)
                 .role(Role.USER)
+                .status(UserStatus.ACTIVE)
                 .build();
 
-        log.info("새 사용자 생성 - 이메일: {}", email);
-        return userRepository.save(newUser);
+        User savedUser = userRepository.save(newUser);
+        log.info("사용자 저장 완료 - 사용자 ID: {}", savedUser.getId());
+
+        // 2. AuthProvider 생성 및 연결
+        AuthProvider authProvider = AuthProvider.builder()
+                .user(savedUser)
+                .provider("KAKAO")
+                .providerUserId(oauthId)
+                .build();
+
+        authProviderRepository.save(authProvider);
+        log.info("카카오 AuthProvider 연결 완료");
+
+        return savedUser;
     }
 
     /**
@@ -360,13 +336,6 @@ public class AuthService {
         log.debug("약관 동의 확인 완료 - 마케팅: {}", request.isMarketingOptionalAgreed());
     }
 
-    /**
-     * 임시 닉네임 생성 (랜덤 닉네임)
-     * 추후 필요시 사용
-     */
-    private String generateTemporaryNickname() {
-        return "사용자" + (System.currentTimeMillis() % 10000);
-    }
 
     /**
      * 시간을 KST 문자열로 변환

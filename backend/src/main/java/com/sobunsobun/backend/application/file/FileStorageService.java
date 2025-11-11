@@ -36,7 +36,18 @@ public class FileStorageService {
     // 5MB
     private static final long MAX_BYTES = 5L * 1024 * 1024;
 
+    /**
+     * 이미지 파일 저장
+     * @param file 업로드된 파일 (null 또는 비어있으면 null 반환)
+     * @return 저장된 파일 URL (파일이 없으면 null)
+     */
     public String saveImage(MultipartFile file) {
+        // 파일이 null이거나 비어있으면 null 반환
+        if (file == null || file.isEmpty()) {
+            log.info("파일이 비어있어 null 반환");
+            return null;
+        }
+
         validateImage(file);
         try {
             Path root = Paths.get(uploadDir);
@@ -74,9 +85,6 @@ public class FileStorageService {
     }
 
     private void validateImage(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일이 비어 있습니다.");
-        }
         if (file.getSize() > MAX_BYTES) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "파일 용량이 5MB를 초과합니다.");
         }

@@ -5,37 +5,110 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * 사용자 엔티티
+ * 소분소분 서비스의 회원 정보를 저장
+ */
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(name = "`user`")
 public class User {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable=false, unique=true, length=255)
+    /**
+     * 이메일 (OAuth에서 받아옴, nullable - 선택 동의 항목)
+     */
+    @Column(unique = true, length = 190)
     private String email;
 
-    @Column(nullable=false, length=100)
+    /**
+     * 닉네임 (프로필 설정 단계에서 입력, 초기에는 null 가능)
+     */
+    @Column(unique = true, length = 40)
     private String nickname;
 
-    @Column(name="oauth_id", nullable=false, unique=true, length=100)
-    private String oauthId;
-
-    @Column(name="profile_image_url", length=500)
+    /**
+     * 프로필 이미지 URL (최대 500자)
+     */
+    @Column(name = "profile_image_url", length = 500)
     private String profileImageUrl;
 
+    /**
+     * 주소
+     */
+    @Column(name = "address", length = 255)
+    private String address;
+
+    /**
+     * 매너 점수 (0.00 ~ 5.00)
+     */
+    @Column(name = "manner_score", precision = 3, scale = 2)
+    private BigDecimal mannerScore;
+
+    /**
+     * 사용자 권한
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable=false, length=20)
+    @Column(nullable = false, length = 20)
     private Role role;
 
-    @CreationTimestamp
-    @Column(name="create_dt", nullable=false)
-    private LocalDateTime createDt;
+    /**
+     * 사용자 상태
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserStatus status;
 
+    /**
+     * OAuth 인증 제공자 목록 (카카오, 애플 등)
+     */
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<AuthProvider> authProviders = new ArrayList<>();
+
+    /**
+     * 생성 일시
+     */
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    /**
+     * 수정 일시
+     */
     @UpdateTimestamp
-    @Column(name="update_dt", nullable=false)
-    private LocalDateTime updateDt;
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    /**
+     * OAuth 제공자 추가 헬퍼 메서드
+     */
+    public void addAuthProvider(AuthProvider authProvider) {
+        authProviders.add(authProvider);
+        authProvider.setUser(this);
+    }
+
+    /**
+     * 기본값 설정
+     */
+    @PrePersist
+    public void prePersist() {
+        if (this.mannerScore == null) {
+            this.mannerScore = BigDecimal.ZERO;
+        }
+        if (this.role == null) {
+            this.role = Role.USER;
+        }
+        if (this.status == null) {
+            this.status = UserStatus.ACTIVE;
+        }
+    }
 }

@@ -55,7 +55,7 @@ public class SecurityConfig {
 
         // 정적 파일 접근
         "/files/**"
-            
+
 
     };
 
@@ -160,6 +160,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                     // 공개 엔드포인트: 인증 없이 접근 가능
                     .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+
+                    // 게시글 조회(GET)는 공개, 생성/수정/삭제는 인증 필요
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/posts/**").permitAll()
 
                     // 나머지 모든 요청: 인증 필요
                     .anyRequest().authenticated()
