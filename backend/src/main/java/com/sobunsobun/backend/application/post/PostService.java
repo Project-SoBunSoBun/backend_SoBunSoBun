@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 /**
  * 공동구매 게시글 비즈니스 로직 서비스
  *
@@ -151,6 +153,25 @@ public class PostService {
     }
 
     /**
+     * 여러 카테고리로 게시글 목록 조회 (모집 중만)
+     *
+     * @param categoriesList 카테고리 코드 리스트
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @return 페이징된 게시글 목록
+     */
+    public PostListResponse getPostsByMultipleCategories(List<String> categoriesList, int page, int size) {
+        log.info("여러 카테고리 게시글 목록 조회 - 카테고리: {}, 페이지: {}, 크기: {}", categoriesList, page, size);
+
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<GroupPost> postPage = postRepository.findByCategoriesInAndStatus(
+                categoriesList, PostStatus.OPEN, pageable);
+
+        return convertToListResponse(postPage);
+    }
+
+    /**
      * 내가 작성한 게시글 목록 조회 (최신순)
      *
      * @param userId 사용자 ID
@@ -276,7 +297,7 @@ public class PostService {
                         .profileImageUrl(post.getOwner().getProfileImageUrl())
                         .build())
                 .title(post.getTitle())
-                .categories(post.getCategories())
+                .categoryCode(post.getCategories())
                 .content(post.getContent())
                 .itemsText(post.getItemsText())
                 .notesText(post.getNotesText())

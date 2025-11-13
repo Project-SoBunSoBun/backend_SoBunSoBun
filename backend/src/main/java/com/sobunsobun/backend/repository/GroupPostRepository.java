@@ -5,6 +5,8 @@ import com.sobunsobun.backend.domain.PostStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -32,8 +34,20 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     Page<GroupPost> findByCategoriesAndStatusOrderByCreatedAtDesc(String categories, PostStatus status, Pageable pageable);
 
     /**
+     * 여러 카테고리로 게시글 조회 (모집 중인 것만)
+     *
+     * @param categories 카테고리 코드 리스트
+     * @param status     게시글 상태
+     * @param pageable   페이징 정보
+     * @return 페이징된 게시글 목록
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.categories IN :categories AND p.status = :status ORDER BY p.createdAt DESC")
+    Page<GroupPost> findByCategoriesInAndStatus(@Param("categories") List<String> categories,
+                                                  @Param("status") PostStatus status,
+                                                  Pageable pageable);
+
+    /**
      * 마감일이 지난 OPEN 상태 게시글 조회
      */
     List<GroupPost> findByStatusAndDeadlineAtBefore(PostStatus status, LocalDateTime dateTime);
 }
-

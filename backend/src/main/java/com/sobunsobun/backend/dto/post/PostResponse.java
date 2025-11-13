@@ -33,9 +33,9 @@ public class PostResponse {
     private String title;
 
     /**
-     * 카테고리
+     * 카테고리 코드 (4자리, iOS에서 관리)
      */
-    private String categories;
+    private String categoryCode;
 
     /**
      * 게시글 내용
