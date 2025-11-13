@@ -1,0 +1,19 @@
+# 운영 환경 설정
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false  # SQL 포맷팅 비활성화
+    show-sql: false        # SQL 콘솔 출력 비활성화
+
+# 로깅 설정 (운영 환경)
+logging:
+  config: classpath:log4j2-prod.xml
+  level:
+    root: INFO
+    com.sobunsobun.backend: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
+
