@@ -43,6 +43,7 @@ dependencies {
 		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
 	}
 
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
 	// Log4j2
@@ -50,6 +51,8 @@ dependencies {
 
 	// Swagger/OpenAPI (Spring 6.2 완전 지원)
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
