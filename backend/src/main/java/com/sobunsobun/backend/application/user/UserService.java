@@ -43,7 +43,7 @@ public class UserService {
      * @throws ResponseStatusException 유효하지 않은 닉네임인 경우
      */
     public boolean isNicknameAvailable(String rawNickname) {
-        log.debug("닉네임 사용 가능 여부 확인 시작: {}", rawNickname);
+        log.info("[사용자 작동] 닉네임 중복 확인 - 닉네임: {}", rawNickname);
 
         // 1. 닉네임 정규화
         String normalizedNickname = nicknameNormalizer.normalize(rawNickname);
@@ -108,9 +108,9 @@ public class UserService {
 
         try {
             userRepository.saveAndFlush(user); // 즉시 DB 반영하여 유니크 제약 조건 위반 감지
-            log.info("닉네임 업데이트 완료 - 사용자 ID: {}, {} -> {}", userId, oldNickname, normalizedNickname);
+            log.info("[사용자 작동] 닉네임 업데이트 완료 - 사용자 ID: {}, {} -> {}", userId, oldNickname, normalizedNickname);
         } catch (DataIntegrityViolationException e) {
-            log.error("닉네임 중복 DB 오류 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname, e);
+            log.error("닉네임 중복 DB 오류 {}: 사용자 ID: {}, 닉네임: {}", e.getClass().getSimpleName(), userId, normalizedNickname);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
         }
     }
@@ -161,7 +161,7 @@ public class UserService {
      */
     @Transactional
     public void updateUserProfile(Long userId, String rawNickname, MultipartFile profileImage) {
-        log.info("프로필 업데이트 시작 - 사용자 ID: {}, 닉네임: {}, 이미지 있음: {}",
+        log.info("[사용자 작동] 프로필 업데이트 시도 - 사용자 ID: {}, 닉네임: {}, 이미지 있음: {}",
                 userId, rawNickname, profileImage != null && !profileImage.isEmpty());
 
         // 1. 닉네임 정규화 및 검증
@@ -197,7 +197,7 @@ public class UserService {
                 }
             } catch (ResponseStatusException e) {
                 // FileStorageService에서 발생한 예외 그대로 전달
-                log.error("프로필 이미지 업로드 실패 - 사용자 ID: {}", userId, e);
+                log.error("프로필 이미지 업로드 실패 {}: 사용자 ID: {}", e.getClass().getSimpleName(), userId);
                 throw e;
             }
         }
@@ -208,10 +208,10 @@ public class UserService {
 
         try {
             userRepository.saveAndFlush(user);
-            log.info("프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {} -> {}, 이미지: {}",
+            log.info("[사용자 작동] 프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {} -> {}, 이미지: {}",
                     userId, oldNickname, normalizedNickname, user.getProfileImageUrl());
         } catch (DataIntegrityViolationException e) {
-            log.error("프로필 업데이트 DB 오류 - 사용자 ID: {}", userId, e);
+            log.error("프로필 업데이트 DB 오류 {}: 사용자 ID: {}", e.getClass().getSimpleName(), userId);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
         }
     }
@@ -227,7 +227,7 @@ public class UserService {
      */
     @Transactional
     public void updateProfileImage(Long userId, MultipartFile profileImage) {
-        log.info("프로필 이미지 업데이트 시작 - 사용자 ID: {}", userId);
+        log.info("[사용자 작동] 프로필 이미지 업데이트 시도 - 사용자 ID: {}", userId);
 
         // 파일 상태 로그
         if (profileImage == null) {
@@ -263,6 +263,82 @@ public class UserService {
             fileStorageService.deleteIfLocal(oldImageUrl);
         }
 
-        log.info("프로필 이미지 업데이트 완료 - 사용자 ID: {}, 최종 URL: {}", userId, newImageUrl);
+        log.info("[사용자 작동] 프로필 이미지 업데이트 완료 - 사용자 ID: {}, 최종 URL: {}", userId, newImageUrl);
+    }
+
+    /**
+     * 위치 인증 정보 조회
+     *
+     * 위치 인증 여부, 만료 여부, 남은 시간 등을 계산하여 반환합니다.
+     * 위치 인증은 24시간 후 만료됩니다.
+     *
+     * @param userId 사용자 ID
+     * @return 위치 인증 정보
+     * @throws ResponseStatusException 사용자 없음
+     */
+    public com.sobunsobun.backend.dto.user.LocationVerificationResponse getLocationVerification(Long userId) {
+        log.info("[사용자 작동] 위치 인증 정보 조회 - 사용자 ID: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
+
+        java.time.LocalDateTime locationVerifiedAt = user.getLocationVerifiedAt();
+        boolean isVerified = locationVerifiedAt != null;
+        boolean isExpired = false;
+        Long remainingMinutes = null;
+
+        // 위치 인증 만료 여부 계산 (24시간 기준)
+        if (isVerified) {
+            java.time.LocalDateTime expirationTime = locationVerifiedAt.plusHours(24);
+            isExpired = java.time.LocalDateTime.now().isAfter(expirationTime);
+
+            if (!isExpired) {
+                remainingMinutes = java.time.Duration.between(
+                        java.time.LocalDateTime.now(),
+                        expirationTime
+                ).toMinutes();
+            }
+        }
+
+        log.info("위치 인증 정보 조회 완료 - 사용자 ID: {}, 인증됨: {}, 만료됨: {}, 남은 시간: {}분",
+                userId, isVerified, isExpired, remainingMinutes);
+
+        return com.sobunsobun.backend.dto.user.LocationVerificationResponse.builder()
+                .address(user.getAddress())
+                .locationVerifiedAt(locationVerifiedAt)
+                .isVerified(isVerified)
+                .isExpired(isExpired)
+                .remainingMinutes(remainingMinutes)
+                .build();
+    }
+
+    /**
+     * 위치 인증 업데이트
+     *
+     * 사용자의 주소와 위치 인증 시간을 업데이트합니다.
+     * 위치 인증은 24시간 동안 유효합니다.
+     *
+     * @param userId 사용자 ID
+     * @param address 주소
+     * @throws ResponseStatusException 사용자 없음
+     */
+    @Transactional
+    public void updateLocationVerification(Long userId, String address) {
+        log.info("[사용자 작동] 위치 인증 업데이트 - 사용자 ID: {}, 주소: {}", userId, address);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
+
+        user.setAddress(address);
+        user.setLocationVerifiedAt(java.time.LocalDateTime.now());
+        userRepository.saveAndFlush(user);
+
+        log.info("[사용자 작동] 위치 인증 업데이트 완료 - 사용자 ID: {}, 인증 시간: {}", userId, user.getLocationVerifiedAt());
     }
 }

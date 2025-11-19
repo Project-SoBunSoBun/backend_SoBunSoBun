@@ -11,6 +11,7 @@ import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -72,7 +73,7 @@ public class AuthService {
      * @throws ResponseStatusException 카카오 API 오류, 이메일 동의 미완료 시
      */
     public KakaoVerifyResponse verifyKakaoToken(String kakaoAccessToken) {
-        log.info("카카오 토큰 검증 시작");
+        log.info("[사용자 작동] 카카오 로그인 시도");
 
         // 1. 카카오 API 호출하여 사용자 정보 조회
         var kakaoUser = kakaoOAuthClient.getUserInfo(kakaoAccessToken).block();
@@ -85,7 +86,7 @@ public class AuthService {
         String oauthId = String.valueOf(kakaoUser.getId());
         String email = String.valueOf(kakaoUser.getKakao_account().getEmail());
 
-        log.info("카카오 사용자 정보 추출 완료 - 이메일: {}, OAuth ID: {}", email, oauthId);
+        log.info("[사용자 작동] 카카오 로그인 정보 확인 - 이메일: {}", email);
 
         // 3. 이메일 동의 필수 확인
         if (email == null || email.isBlank()) {
@@ -127,7 +128,7 @@ public class AuthService {
         String adminLogin = env.getProperty("ADMIN_TOKEN");
 
         if (adminLogin != null && adminLogin.equals(request.getLoginToken())) {
-            log.info("어드민 로그인");
+            log.info("[사용자 작동] 어드민 로그인 시도");
 
             try {
                 String email = env.getProperty("ADMIN_EMAIL");
@@ -135,7 +136,7 @@ public class AuthService {
 
                 // 3. 사용자 등록 또는 업데이트
                 User user = findOrCreateUser(email, oauthId);
-                log.info("사용자 처리 완료 - 어드민 ID: {}", user.getId());
+                log.info("[사용자 작동] 어드민 로그인 성공 - 사용자 ID: {}", user.getId());
 
                 // 4. JWT 토큰 발급
                 return generateJwtTokenResponse(user);
@@ -144,12 +145,12 @@ public class AuthService {
                 if (e instanceof ResponseStatusException) {
                     throw e;
                 }
-                log.error("회원가입 완료 처리 중 오류 발생", e);
+                log.error("어드민 로그인 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
 
         } else {
-            log.info("회원가입 완료 처리 시작");
+            log.info("[사용자 작동] 회원가입 이용약관 동의 처리 시작");
 
             try {
                 // 1. 임시 로그인 토큰 검증 및 정보 추출
@@ -158,7 +159,7 @@ public class AuthService {
                 String oauthId = claims.get("oauthId", String.class);
 
                 if (email == null || oauthId == null) {
-                    log.error("임시 로그인 토큰에서 정보 추출 실패");
+                    log.debug("임시 로그인 토큰에서 정보 추출 실패");
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
                 }
 
@@ -169,16 +170,20 @@ public class AuthService {
 
                 // 3. 사용자 등록 또는 업데이트
                 User user = findOrCreateUser(email, oauthId);
-                log.info("사용자 처리 완료 - 사용자 ID: {}", user.getId());
+                log.info("[사용자 작동] 회원가입 완료 - 사용자 ID: {}, 이메일: {}", user.getId(), email);
 
                 // 4. JWT 토큰 발급
                 return generateJwtTokenResponse(user);
 
+            } catch (JwtException e) {
+                // JWT 관련 예외는 간단한 로그만 기록
+                log.error("회원가입 완료 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
             } catch (Exception e) {
                 if (e instanceof ResponseStatusException) {
                     throw e;
                 }
-                log.error("회원가입 완료 처리 중 오류 발생", e);
+                log.error("회원가입 완료 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
         }
@@ -222,7 +227,7 @@ public class AuthService {
                     ACCESS_TOKEN_TTL
             );
 
-            log.info("새로운 액세스 토큰 발급 완료");
+            log.info("[사용자 작동] 액세스 토큰 갱신 완료 - 사용자 ID: {}", userId);
 
             return AccessOnlyResponse.builder()
                     .tokenType("Bearer")
@@ -234,7 +239,7 @@ public class AuthService {
             if (e instanceof ResponseStatusException) {
                 throw e;
             }
-            log.error("토큰 갱신 중 오류 발생", e);
+            log.error("토큰 갱신 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 유효하지 않습니다.");
         }
     }

@@ -105,8 +105,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (Exception e) {
             // JWT 관련 모든 예외를 캐치하여 인증 실패로 처리
-            log.warn("JWT 인증 실패 - URI: {}, 오류: {}",
-                    request.getRequestURI(), e.getMessage());
+            log.debug("JWT 인증 실패 {}: URI: {}", e.getClass().getSimpleName(), request.getRequestURI());
         }
 
         // 다음 필터로 진행 (인증 성공/실패 무관하게 진행)
