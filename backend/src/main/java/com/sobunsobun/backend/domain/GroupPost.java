@@ -39,9 +39,11 @@ public class GroupPost {
     private String title;
 
     /**
-     * 카테고리 코드 ('01', '02', '03' 등)
+     * 카테고리 코드 (4자리, iOS에서 관리)
+     * 대분류(2자리) + 소분류(2자리)
+     * 예: 식품-과일(0001), 생활용품-디지털/가전(0101)
      */
-    @Column(name = "categorie", nullable = false, length = 20)
+    @Column(name = "categories", nullable = false, length = 4, columnDefinition = "CHAR(4)")
     private String categories;
 
     /**
@@ -113,6 +115,8 @@ public class GroupPost {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+
+
     /**
      * 기본값 설정
      */
@@ -126,4 +130,3 @@ public class GroupPost {
         }
     }
 }
-

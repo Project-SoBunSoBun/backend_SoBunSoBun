@@ -48,6 +48,12 @@ public class User {
     private String address;
 
     /**
+     * 위치 인증 일시 (마지막 위치 인증 시간)
+     */
+    @Column(name = "location_verified_at")
+    private LocalDateTime locationVerifiedAt;
+
+    /**
      * 매너 점수 (0.00 ~ 5.00)
      */
     @Column(name = "manner_score", precision = 3, scale = 2)

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 /**
  * 공동구매 게시글 비즈니스 로직 서비스
  *
@@ -43,7 +45,7 @@ public class PostService {
      */
     @Transactional
     public PostResponse createPost(Long userId, PostCreateRequest request) {
-        log.info("게시글 생성 시작 - 사용자 ID: {}, 제목: {}", userId, request.getTitle());
+        log.info("[사용자 작동] 게시글 생성 시도 - 사용자 ID: {}, 제목: {}", userId, request.getTitle());
 
         // 1. 사용자 조회
         User user = userRepository.findById(userId)
@@ -70,7 +72,7 @@ public class PostService {
 
         // 3. 저장
         GroupPost savedPost = postRepository.save(post);
-        log.info("게시글 생성 완료 - 게시글 ID: {}", savedPost.getId());
+        log.info("[사용자 작동] 게시글 생성 완료 - 게시글 ID: {}, 사용자 ID: {}", savedPost.getId(), userId);
 
         return convertToResponse(savedPost);
     }
@@ -82,7 +84,7 @@ public class PostService {
      * @return 게시글 정보
      */
     public PostResponse getPost(Long postId) {
-        log.info("게시글 조회 - ID: {}", postId);
+        log.info("[사용자 작동] 게시글 조회 - 게시글 ID: {}", postId);
 
         GroupPost post = postRepository.findById(postId)
                 .orElseThrow(() -> {
@@ -127,7 +129,7 @@ public class PostService {
 
             return convertToListResponse(postPage);
         } catch (IllegalArgumentException e) {
-            log.error("잘못된 상태 값 - 입력: {}", status);
+            log.error("잘못된 상태 값 입력 {}: {}", e.getClass().getSimpleName(), status);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, CANCELLED)");
         }
     }
@@ -146,6 +148,25 @@ public class PostService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<GroupPost> postPage = postRepository.findByCategoriesAndStatusOrderByCreatedAtDesc(
                 categories, PostStatus.OPEN, pageable);
+
+        return convertToListResponse(postPage);
+    }
+
+    /**
+     * 여러 카테고리로 게시글 목록 조회 (모집 중만)
+     *
+     * @param categoriesList 카테고리 코드 리스트
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @return 페이징된 게시글 목록
+     */
+    public PostListResponse getPostsByMultipleCategories(List<String> categoriesList, int page, int size) {
+        log.info("여러 카테고리 게시글 목록 조회 - 카테고리: {}, 페이지: {}, 크기: {}", categoriesList, page, size);
+
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<GroupPost> postPage = postRepository.findByCategoriesInAndStatus(
+                categoriesList, PostStatus.OPEN, pageable);
 
         return convertToListResponse(postPage);
     }
@@ -177,7 +198,7 @@ public class PostService {
      */
     @Transactional
     public PostResponse updatePost(Long postId, Long userId, PostUpdateRequest request) {
-        log.info("게시글 수정 시작 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
+        log.info("[사용자 작동] 게시글 수정 시도 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
 
         // 1. 게시글 조회
         GroupPost post = postRepository.findById(postId)
@@ -227,12 +248,12 @@ public class PostService {
             try {
                 post.setStatus(PostStatus.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
-                log.error("잘못된 상태 값 - 입력: {}", request.getStatus());
+                log.error("잘못된 상태 값 입력 {}: {}", e.getClass().getSimpleName(), request.getStatus());
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, CANCELLED)");
             }
         }
 
-        log.info("게시글 수정 완료 - 게시글 ID: {}", postId);
+        log.info("[사용자 작동] 게시글 수정 완료 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
         return convertToResponse(post);
     }
 
@@ -244,7 +265,7 @@ public class PostService {
      */
     @Transactional
     public void deletePost(Long postId, Long userId) {
-        log.info("게시글 삭제 시작 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
+        log.info("[사용자 작동] 게시글 삭제 시도 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
 
         // 1. 게시글 조회
         GroupPost post = postRepository.findById(postId)
@@ -261,7 +282,7 @@ public class PostService {
 
         // 3. 삭제
         postRepository.delete(post);
-        log.info("게시글 삭제 완료 - 게시글 ID: {}", postId);
+        log.info("[사용자 작동] 게시글 삭제 완료 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
     }
 
     /**
@@ -276,7 +297,7 @@ public class PostService {
                         .profileImageUrl(post.getOwner().getProfileImageUrl())
                         .build())
                 .title(post.getTitle())
-                .categories(post.getCategories())
+                .categoryCode(post.getCategories())
                 .content(post.getContent())
                 .itemsText(post.getItemsText())
                 .notesText(post.getNotesText())

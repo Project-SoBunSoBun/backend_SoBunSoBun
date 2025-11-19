@@ -15,18 +15,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 공동구매 게시글 API 컨트롤러
  *
  * 엔드포인트:
- * - POST   /api/posts                      : 게시글 생성 (인증 필요)
- * - GET    /api/posts                      : 전체 게시글 목록 조회 (공개)
- * - GET    /api/posts/{id}                 : 게시글 단건 조회 (공개)
- * - PUT    /api/posts/{id}                 : 게시글 수정 (인증 필요, 작성자만)
- * - DELETE /api/posts/{id}                 : 게시글 삭제 (인증 필요, 작성자만)
- * - GET    /api/posts/status/{status}      : 상태별 게시글 조회 (공개)
- * - GET    /api/posts/categories/{categories}: 카테고리별 게시글 조회 (공개)
- * - GET    /api/posts/my                   : 내 게시글 목록 조회 (인증 필요)
+ * - POST   /api/posts                          : 게시글 생성 (인증 필요)
+ * - GET    /api/posts                          : 전체 게시글 목록 조회 (공개)
+ * - GET    /api/posts/{id}                     : 게시글 단건 조회 (공개)
+ * - PUT    /api/posts/{id}                     : 게시글 수정 (인증 필요, 작성자만)
+ * - DELETE /api/posts/{id}                     : 게시글 삭제 (인증 필요, 작성자만)
+ * - GET    /api/posts/status/{status}          : 상태별 게시글 조회 (공개)
+ * - GET    /api/posts/categories/{categories}  : 단일 카테고리 게시글 조회 (공개)
+ * - POST   /api/posts/categories/filter        : 여러 카테고리 게시글 조회 (공개, 배열로 전달)
+ * - GET    /api/posts/my                       : 내 게시글 목록 조회 (인증 필요)
+ *
+ * 참고: 카테고리 코드(4자리)는 iOS 클라이언트에서 관리
  */
 @Slf4j
 @RestController
@@ -142,7 +147,7 @@ public class PostController {
             description = "카테고리별 모집 중인 게시글 목록을 조회합니다"
     )
     public ResponseEntity<PostListResponse> getPostsByCategories(
-            @Parameter(description = "카테고리 코드", required = true)
+            @Parameter(description = "카테고리 코드 (4자리)", required = true, example = "0001")
             @PathVariable String categories,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
@@ -152,6 +157,35 @@ public class PostController {
         log.info("카테고리별 게시글 목록 조회 요청 - 카테고리: {}, 페이지: {}, 크기: {}", categories, page, size);
         PostListResponse response = postService.getPostsByCategories(categories, page, size);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 여러 카테고리로 게시글 목록 조회 (모집 중인 것만)
+     * 순수 배열 형식으로 반환
+     *
+     * @param categoriesList 카테고리 코드 배열
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @return 200 OK, 게시글 배열
+     */
+    @PostMapping("/categories/filter")
+    @Operation(
+            summary = "여러 카테고리로 게시글 조회",
+            description = "여러 카테고리 코드를 배열로 받아 해당하는 모집 중인 게시글을 배열로 반환합니다"
+    )
+    public ResponseEntity<List<PostResponse>> getPostsByMultipleCategories(
+            @Parameter(description = "카테고리 코드 배열", required = true,
+                       example = "[\"0001\", \"0003\", \"0102\", \"0105\", \"0106\"]")
+            @RequestBody List<String> categoriesList,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기", example = "20")
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        log.info("여러 카테고리 게시글 목록 조회 요청 - 카테고리: {}, 페이지: {}, 크기: {}", categoriesList, page, size);
+        PostListResponse response = postService.getPostsByMultipleCategories(categoriesList, page, size);
+        // 순수 배열로 반환 (페이징 정보 제외)
+        return ResponseEntity.ok(response.getPosts());
     }
 
     /**

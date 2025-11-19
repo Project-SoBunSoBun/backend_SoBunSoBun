@@ -64,7 +64,7 @@ public class FileStorageService {
             log.info("Saved profile image: {}", target);
             return accessUrl;
         } catch (IOException e) {
-            log.error("파일 저장 실패", e);
+            log.error("파일 저장 실패 {}: {}", e.getClass().getSimpleName(), e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 실패");
         }
     }

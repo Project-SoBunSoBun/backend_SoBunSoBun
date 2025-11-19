@@ -47,3 +47,14 @@ springdoc:
 
 server:
   port: 8081
+
+# 로깅 설정 (Log4j2)
+logging:
+  config: classpath:log4j2-spring.xml
+  level:
+    root: INFO
+    com.sobunsobun.backend: DEBUG
+  file:
+    path: logs
+    name: sobunsobun
+

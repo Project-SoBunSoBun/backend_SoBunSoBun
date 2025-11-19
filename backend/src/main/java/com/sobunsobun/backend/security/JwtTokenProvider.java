@@ -200,7 +200,7 @@ public class JwtTokenProvider {
             parse(token);
             return true;
         } catch (Exception e) {
-            log.debug("JWT 토큰 유효성 검사 실패: {}", e.getMessage());
+            log.debug("JWT 토큰 유효성 검사 실패 {}", e.getClass().getSimpleName());
             return false;
         }
     }

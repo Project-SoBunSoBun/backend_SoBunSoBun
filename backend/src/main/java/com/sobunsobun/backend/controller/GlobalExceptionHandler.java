@@ -27,7 +27,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException e) {
-        log.error("비즈니스 예외 발생: {}", e.getReason(), e);
+        log.error("비즈니스 예외 발생 {}: {}", e.getClass().getSimpleName(), e.getReason());
 
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("error", getErrorCode(e.getStatusCode().value()));
@@ -41,17 +41,16 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException e) {
-        log.error("유효성 검사 실패: {}", e.getMessage());
-
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", "validation_failed");
-
         // 첫 번째 필드 에러 메시지 사용
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .orElse("유효성 검사에 실패했습니다");
 
+        log.error("유효성 검사 실패 {}: {}", e.getClass().getSimpleName(), message);
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", "validation_failed");
         errorResponse.put("message", message);
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
@@ -62,7 +61,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleException(Exception e) {
-        log.error("예상하지 못한 예외 발생", e);
+        log.error("예상하지 못한 예외 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
 
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("error", "internal_server_error");

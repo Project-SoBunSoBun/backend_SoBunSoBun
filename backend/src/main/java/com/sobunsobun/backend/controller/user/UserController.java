@@ -56,7 +56,7 @@ public class UserController {
             description = "닉네임이 사용 가능한지 확인합니다. 회원가입 없이 호출 가능합니다.")
     @GetMapping("/check-nickname")
     public ResponseEntity<Map<String, Object>> checkNicknameAvailability(
-            @Parameter(description = "확인할 닉네임 (1-8자, 한글/영문/숫자만)", example = "정무나가")
+            @Parameter(description = "확인할 닉네임 (1-8자, 한글/영문/숫자만)", example = "몽규명보 둘다 나가")
             @RequestParam
             @NotBlank(message = "닉네임은 비어 있을 수 없습니다.")
             @Size(max = 8, message = "닉네임은 최대 8자입니다.")
