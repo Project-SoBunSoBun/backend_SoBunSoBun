@@ -16,6 +16,9 @@ import java.net.URI;
 public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
+    // 채팅방 만들기
+    // 내 채팅방 모두 가져오기
+    // 소켓 채팅방 입장
 
     @PostMapping("/api/chat/rooms")
     public ResponseEntity<ChatRoomResponse> createRoom(@AuthenticationPrincipal JwtUserPrincipal principal,
@@ -32,6 +35,6 @@ public class ChatRoomController {
     public ChatRoomResponse getRoom(@AuthenticationPrincipal JwtUserPrincipal principal,
                                           @PathVariable Long roomId) {
         Long userId = principal.id();
-        return chatRoomService.getRoomDetail(roomId);
+        return chatRoomService.getMyRoom(userId, roomId);
     }
 }

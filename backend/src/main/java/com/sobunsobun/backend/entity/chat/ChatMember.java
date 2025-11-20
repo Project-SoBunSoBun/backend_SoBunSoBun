@@ -2,11 +2,17 @@ package com.sobunsobun.backend.entity.chat;
 
 import com.sobunsobun.backend.domain.User;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Table(name = "chat_member")
 @Entity
 @Builder
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ChatMember {
 
     @Id
