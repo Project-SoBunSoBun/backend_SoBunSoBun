@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.service.chat;
 
 import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomRequest;
 import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.entity.chat.ChatRoom;
@@ -29,14 +30,14 @@ public class ChatRoomService {
 
 
     @Transactional
-    public void createChatRoom(Long ownerId, CreateChatRoomRequest request) {
+    public ChatRoomResponse createChatRoom(Long ownerId, CreateChatRoomRequest request) {
         Set<Long> memberIds = new HashSet<>(request.getMemberIds());
         memberIds.add(ownerId);
 
         if (request.getType() == ChatRoomType.PRIVATE && memberIds.size() != 2) {
             throw new IllegalArgumentException("1:1 채팅방은 정확히 두 명이어야 합니다.");
         }
-        ChatRoom room = new ChatRoom(request.getTitle(), request.getType(), ownerId);
+        ChatRoom room = new ChatRoom(request.getTitle(), request.getType(), ownerId, request.getPostId());
         room = chatRoomRepository.save(room);
 
         List<ChatMember> memberList = new ArrayList<>();
@@ -51,12 +52,23 @@ public class ChatRoomService {
 
             memberList.add(chatMember);
         }
-        chatMemberRepository.saveAll(memberList);
+        memberList = chatMemberRepository.saveAll(memberList);
+
+        return ChatRoomResponse.builder()
+                .roomId(room.getId())
+                .postId(request.getPostId())
+                .title(room.getTitle())
+                .chatMembers(memberList)
+                .build();
     }
 
+    @Transactional
+    public ChatRoomResponse getMyRoom(Long ownerId, Long roomId) {
+//        chatRoomRepository.findByIdAndOwnerId(roomId, ownerId).orElseThrow(
+//                () -> new EntityNotFoundException("")
+//        );
+    }
 
-
-    //getRoom(Long roomId)
     //List<ChatRoomSummary> getMyRooms(Long userId);
     //void invite(Long roomId, Long targetUserId);
 }

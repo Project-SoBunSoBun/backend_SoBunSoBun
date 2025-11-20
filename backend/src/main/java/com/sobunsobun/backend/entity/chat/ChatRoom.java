@@ -24,8 +24,11 @@ public class ChatRoom {
     @Column(nullable = false, length = 20)
     private ChatRoomType type;
 
-    @Column(nullable = false)
+    @Column(name = "owner_id", nullable = false)
     private Long ownerId;
+
+    @Column(name = "post_id")
+    private Long postId;
 
     @CreationTimestamp
     @Column(name = "create_at", nullable = false, updatable = false)
@@ -35,9 +38,10 @@ public class ChatRoom {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updateAt;
 
-    public ChatRoom(String title, ChatRoomType type, Long ownerId) {
+    public ChatRoom(String title, ChatRoomType type, Long ownerId, Long postId) {
         this.title = title;
         this.type = type;
         this.ownerId = ownerId;
+        this.postId = postId;
     }
 }

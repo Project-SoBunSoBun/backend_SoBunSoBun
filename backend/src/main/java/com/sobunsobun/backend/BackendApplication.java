@@ -3,8 +3,12 @@ package com.sobunsobun.backend;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.mongodb.config.EnableMongoAuditing;
+
 
 @Slf4j
+
+@EnableMongoAuditing
 @SpringBootApplication
 public class BackendApplication {
 

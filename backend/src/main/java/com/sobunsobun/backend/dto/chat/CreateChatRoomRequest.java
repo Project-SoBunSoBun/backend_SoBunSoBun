@@ -12,4 +12,5 @@ public class CreateChatRoomRequest {
     private String title;
     private List<Long> memberIds;
     private ChatRoomType type;
+    private Long postId;
 }
