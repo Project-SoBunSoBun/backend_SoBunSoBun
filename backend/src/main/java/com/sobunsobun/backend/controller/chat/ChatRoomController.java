@@ -37,4 +37,11 @@ public class ChatRoomController {
         Long userId = principal.id();
         return chatRoomService.getMyRoom(userId, roomId);
     }
+
+//    @GetMapping("api/chat/rooms/info")
+//    public ChatRoomResponse getRoomInfoList(@AuthenticationPrincipal JwtUserPrincipal principal,
+//                                            @PathVariable Long roomId) {
+//        Long userId = principal.id();
+//
+//    }
 }

@@ -4,7 +4,9 @@ import com.sobunsobun.backend.dto.chat.ChatMessageRequest;
 import com.sobunsobun.backend.dto.chat.ChatMessageResponse;
 import com.sobunsobun.backend.entity.chat.ChatMessage;
 import com.sobunsobun.backend.entity.chat.ChatRoom;
+import com.sobunsobun.backend.exception.ChatAuthException;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +20,7 @@ public class ChatMessageService {
     @Transactional
     public ChatMessageResponse sendMessage(Long roomId, ChatMessageRequest request) {
         ChatRoom room = chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new ChatRoomNotFoundException(roomId));
+                .orElseThrow(() -> new EntityNotFoundException(""));
 
 
 
