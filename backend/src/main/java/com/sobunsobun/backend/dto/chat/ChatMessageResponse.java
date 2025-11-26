@@ -1,4 +1,34 @@
 package com.sobunsobun.backend.dto.chat;
 
+import com.sobunsobun.backend.entity.chat.ChatMessage;
+import com.sobunsobun.backend.enumClass.ChatType;
+import java.time.Instant;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ChatMessageResponse {
+
+    private String id;
+    private Long roomId;
+    private Long senderId;
+    private ChatType type;
+    private String content;
+    private Instant sentAt;
+
+    public static ChatMessageResponse from(ChatMessage message) {
+        return ChatMessageResponse.builder()
+                .id(message.getId())
+                .roomId(message.getRoomId())
+                .senderId(message.getSenderId())
+                .type(message.getType())
+                .content(message.getContent())
+                .sentAt(message.getCreatedAt())
+                .build();
+    }
 }

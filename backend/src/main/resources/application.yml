@@ -30,6 +30,13 @@ spring:
     deserialization:
       adjust-dates-to-context-time-zone: true
 
+  redis:
+    host: localhost
+    port: 6378
+
+server:
+  port: 8080
+
 file:
   upload-dir: /var/app/sobunsobun/uploads/profiles
   url-prefix: /files
@@ -44,9 +51,6 @@ springdoc:
     tags-sorter: alpha
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
-
-server:
-  port: 8081
 
 # 로깅 설정 (Log4j2)
 logging:

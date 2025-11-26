@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.config;
 
+import com.sobunsobun.backend.infrastructure.chat.RedisChatSubscriber;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -52,7 +53,6 @@ public class RedisConfig {
     // 4) Subscriber에 들어갈 리스너 어댑터
     @Bean
     public MessageListenerAdapter chatMessageListenerAdapter(RedisChatSubscriber subscriber) {
-        // onMessage(String message) 를 호출하도록 매핑
         return new MessageListenerAdapter(subscriber, "onMessage");
     }
 }

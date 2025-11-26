@@ -7,7 +7,6 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 
 @Slf4j
-
 @EnableMongoAuditing
 @SpringBootApplication
 public class BackendApplication {

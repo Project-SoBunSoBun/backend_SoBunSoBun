@@ -3,7 +3,7 @@ package com.sobunsobun.backend.controller.chat;
 import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomRequest;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
-import com.sobunsobun.backend.service.chat.ChatRoomService;
+import com.sobunsobun.backend.application.chat.ChatRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

@@ -29,6 +29,7 @@ services:
       - mongo_data:/data/db
   mongo-express:
     image: mongo-express
+    container_name: mongo_express_sobunsobun
     restart: always
     ports:
       - "8081:8081"

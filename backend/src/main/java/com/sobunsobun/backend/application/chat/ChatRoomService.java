@@ -1,4 +1,4 @@
-package com.sobunsobun.backend.service.chat;
+package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
