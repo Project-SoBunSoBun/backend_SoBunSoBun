@@ -57,7 +57,9 @@ public class SecurityConfig {
         "/files/**",
 
         // websocket
-        "/ws"
+        "/ws/**",
+        "test-chat.html"
+
     };
 
     /**

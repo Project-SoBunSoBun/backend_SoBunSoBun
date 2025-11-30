@@ -12,10 +12,6 @@ import lombok.*;
 public class ChatMessageRequest {
     @NotNull
     private ChatType type;
-    @NotNull
-    private Long senderId;
-    @NotNull
-    private Long roomId;
 
     private String content;
 

@@ -3,6 +3,7 @@ package com.sobunsobun.backend.entity.chat;
 import com.sobunsobun.backend.enumClass.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -11,6 +12,7 @@ import java.time.LocalDateTime;
 @Table(name = "chat_room")
 @Entity
 @Getter
+@NoArgsConstructor
 public class ChatRoom {
 
     @Id

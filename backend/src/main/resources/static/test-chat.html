@@ -2,55 +2,386 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <title>STOMP Chat Test</title>
+    <title>STOMP Chat Test - 2 Clients + Auth</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        .top-panel {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .client {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .client h2 {
+            margin-top: 0;
+        }
+        pre {
+            background: #111;
+            color: #0f0;
+            padding: 8px;
+            height: 250px;
+            overflow: auto;
+            font-size: 12px;
+        }
+        input {
+            margin: 2px 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 4px;
+        }
+        .btn-block {
+            width: 100%;
+        }
+        .actions-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .actions-row > div {
+            min-width: 220px;
+        }
+        label {
+            font-size: 13px;
+        }
+    </style>
 </head>
 <body>
-<h1>Chat Test</h1>
-<input id="roomId" value="1" />
-<input id="msg" placeholder="메시지 입력" />
-<button onclick="sendMessage()">전송</button>
+<h1>2-Client Chat Test (JWT + Room 생성)</h1>
 
-<pre id="log"></pre>
+<!-- 1,2,3 통합 제어 패널 -->
+<div class="top-panel">
+    <h2>상단 제어 패널 (1,2,3 통합)</h2>
+
+    <div class="actions-row">
+        <!-- 1) 회원가입 완료 & 토큰 저장 -->
+        <div>
+            <label>
+                1) loginToken:
+                <input id="loginTokenInput" placeholder="loginToken 입력" />
+            </label>
+            <button onclick="completeSignup()">회원가입 완료 (토큰 발급)</button>
+            <button onclick="showStoredToken()">저장된 accessToken 확인</button>
+        </div>
+
+        <!-- 2) 방 만들기 & STOMP 연결 -->
+        <div>
+            <label style="display:block;">2) 방 만들기 (JWT 필요)</label>
+            <button onclick="createRoomAndConnect()">방 만들기 & A/B 연결</button>
+        </div>
+
+        <!-- 3) 기존 방 연결만 하기 -->
+        <div>
+            <label>
+                3) 기존 roomId:
+                <input id="existingRoomIdInput" placeholder="이미 존재하는 roomId 입력" />
+            </label>
+            <button onclick="connectExistingRoom()">기존 방에 연결 (A/B 둘 다)</button>
+        </div>
+    </div>
+
+    <pre id="topLog"></pre>
+</div>
+
+<div class="container">
+    <!-- Client A -->
+    <div class="client">
+        <h2>Client A</h2>
+        <label>
+            Room ID:
+            <input id="roomIdA" value="1" />
+        </label>
+        <br />
+        <label>
+            메시지:
+            <input id="msgA" placeholder="메시지 입력" />
+        </label>
+        <br />
+        <button class="btn-block" onclick="sendMessageA()">A → 전송</button>
+        <pre id="logA"></pre>
+    </div>
+
+    <!-- Client B -->
+    <div class="client">
+        <h2>Client B</h2>
+        <label>
+            Room ID:
+            <input id="roomIdB" value="1" />
+        </label>
+        <br />
+        <label>
+            메시지:
+            <input id="msgB" placeholder="메시지 입력" />
+        </label>
+        <br />
+        <button class="btn-block" onclick="sendMessageB()">B → 전송</button>
+        <pre id="logB"></pre>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
-    let stompClient = null;
-
-    function log(msg) {
-      document.getElementById('log').textContent += msg + "\n";
+    // ===== 공통 로그 함수 =====
+    function topLog(msg) {
+        const area = document.getElementById("topLog");
+        if (area) area.textContent += msg + "\n";
+    }
+    function logA(msg) {
+        document.getElementById('logA').textContent += msg + "\n";
+    }
+    function logB(msg) {
+        document.getElementById('logB').textContent += msg + "\n";
     }
 
-    function connect() {
-      const socket = new SockJS('http://localhost:8080/ws/chat'); // 네 WebSocketConfig 엔드포인트
-      stompClient = Stomp.over(socket);
-      stompClient.debug = null; // 로그 조용히 하고 싶으면
+    // ===== 1) /auth/complete-signup 호출해서 accessToken 저장 =====
+    async function completeSignup() {
+        const loginToken = document.getElementById("loginTokenInput").value.trim();
+        if (!loginToken) {
+            topLog("⚠ loginToken을 먼저 입력하세요.");
+            return;
+        }
 
-      stompClient.connect({}, (frame) => {
-        log('CONNECTED: ' + frame);
-        const roomId = document.getElementById('roomId').value;
-        stompClient.subscribe('/topic/rooms/' + roomId, (message) => {
-          log('RECV: ' + message.body);
+        try {
+            const res = await fetch("http://localhost:8080/auth/complete-signup", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    loginToken: loginToken,
+                    serviceTermsAgreed: true,
+                    privacyPolicyAgreed: true,
+                    marketingOptionalAgreed: true
+                }),
+                credentials: "include"
+            });
+
+            const body = await res.json();
+            console.log("complete-signup response:", body);
+            topLog("응답: " + JSON.stringify(body));
+
+            if (!res.ok) {
+                topLog("❌ complete-signup 실패: " + res.status);
+                return;
+            }
+
+            const accessToken =
+                body.accessToken ||
+                body.token ||
+                body.jwt ||
+                body.loginToken;
+
+            if (!accessToken) {
+                topLog("⚠ 응답 바디에서 토큰을 찾지 못했습니다. 실제 JSON 구조를 확인해서 필드명을 수정하세요.");
+                return;
+            }
+
+            localStorage.setItem("accessToken", accessToken);
+            topLog("✅ accessToken 저장 완료: " + accessToken.substring(0, 25) + "...");
+        } catch (e) {
+            console.error(e);
+            topLog("❌ complete-signup 호출 중 오류: " + e);
+        }
+    }
+
+    function showStoredToken() {
+        const t = localStorage.getItem("accessToken");
+        if (!t) {
+            topLog("ℹ 저장된 accessToken 이 없습니다.");
+        } else {
+            topLog("📦 저장된 accessToken: " + t);
+        }
+    }
+
+    // ===== STOMP 클라이언트 =====
+    let stompClientA = null;
+    let stompClientB = null;
+
+    function disconnectClients() {
+        if (stompClientA && stompClientA.connected) {
+            stompClientA.disconnect(() => logA("DISCONNECTED"));
+        }
+        if (stompClientB && stompClientB.connected) {
+            stompClientB.disconnect(() => logB("DISCONNECTED"));
+        }
+        stompClientA = null;
+        stompClientB = null;
+    }
+
+    // ===== 2) 방 생성 + STOMP 연결 =====
+    async function createRoomAndConnect() {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            topLog("⚠ accessToken 없음. 먼저 위에서 complete-signup 버튼으로 토큰을 발급받으세요.");
+            return;
+        }
+
+        try {
+            const requestBody = {
+                title: "테스트 채팅방",
+                memberIds: [1, 2],
+                type: "PRIVATE",
+                postId: 1
+            };
+
+            topLog("방 생성 요청 바디: " + JSON.stringify(requestBody));
+
+            const res = await fetch("http://localhost:8080/api/chat/rooms", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: JSON.stringify(requestBody),
+                credentials: "include"
+            });
+
+            const raw = await res.text();
+            topLog(`RAW 응답 (status=${res.status}): ${raw}`);
+
+            let data = {};
+            try {
+                data = raw ? JSON.parse(raw) : {};
+            } catch (parseErr) {
+                topLog("❌ JSON 파싱 실패: " + parseErr);
+                console.error("JSON parse error:", parseErr);
+                return;
+            }
+
+            console.log("create room response:", data);
+            topLog("파싱된 JSON: " + JSON.stringify(data));
+
+            if (!res.ok) {
+                topLog("❌ 방 생성 실패: " + res.status);
+                return;
+            }
+
+            const roomId = data.roomId ?? data.id;
+            if (!roomId) {
+                topLog("⚠ 응답에서 roomId 를 찾지 못했습니다. 실제 JSON 구조 확인 필요.");
+                return;
+            }
+
+            document.getElementById("roomIdA").value = roomId;
+            document.getElementById("roomIdB").value = roomId;
+            topLog("✅ 방 생성 성공, roomId = " + roomId);
+
+            disconnectClients();
+            connectClientA(roomId, token);
+            connectClientB(roomId, token);
+        } catch (e) {
+            console.error(e);
+            topLog("❌ 방 생성 중 오류: " + e);
+        }
+    }
+
+    // ===== 3) 기존 방에 연결만 하기 =====
+    function connectExistingRoom() {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+            topLog("⚠ accessToken 없음. 먼저 complete-signup으로 토큰을 발급받으세요.");
+            return;
+        }
+
+        const roomId = document.getElementById("existingRoomIdInput").value.trim();
+        if (!roomId) {
+            topLog("⚠ roomId 를 입력하세요.");
+            return;
+        }
+
+        document.getElementById("roomIdA").value = roomId;
+        document.getElementById("roomIdB").value = roomId;
+
+        topLog("ℹ 기존 roomId = " + roomId + " 로 연결 시도 중...");
+
+        disconnectClients();
+        connectClientA(roomId, token);
+        connectClientB(roomId, token);
+    }
+
+    // ===== STOMP 연결 =====
+    function connectClientA(roomId, token) {
+        const socket = new SockJS('http://localhost:8080/ws/connect');
+        stompClientA = Stomp.over(socket);
+        stompClientA.debug = null;
+
+        const connectHeaders = {
+            Authorization: "Bearer " + token
+        };
+
+        stompClientA.connect(connectHeaders, (frame) => {
+            logA('CONNECTED: ' + frame);
+            stompClientA.subscribe('/sub/rooms/' + roomId, (message) => {
+                logA('RECV: ' + message.body);
+            });
+        }, (error) => {
+            logA('ERROR: ' + error);
         });
-      }, (error) => {
-        log('ERROR: ' + error);
-      });
     }
 
-    function sendMessage() {
-      const roomId = document.getElementById('roomId').value;
-      const msg = document.getElementById('msg').value;
+    function connectClientB(roomId, token) {
+        const socket = new SockJS('http://localhost:8080/ws/connect');
+        stompClientB = Stomp.over(socket);
+        stompClientB.debug = null;
 
-      const payload = {
-        content: msg,
-        // 네 DTO에 맞게 필드 추가 (senderId, type 등)
-      };
+        const connectHeaders = {
+            Authorization: "Bearer " + token
+        };
 
-      stompClient.send('/app/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
-      log('SEND: ' + JSON.stringify(payload));
+        stompClientB.connect(connectHeaders, (frame) => {
+            logB('CONNECTED: ' + frame);
+            stompClientB.subscribe('/sub/rooms/' + roomId, (message) => {
+                logB('RECV: ' + message.body);
+            });
+        }, (error) => {
+            logB('ERROR: ' + error);
+        });
     }
 
-    connect();
+    // ===== 메시지 전송 =====
+    function sendMessageA() {
+        if (!stompClientA || !stompClientA.connected) {
+            logA('WARN: 아직 연결되지 않았습니다. 먼저 방 만들기 또는 기존 방 연결을 하세요.');
+            return;
+        }
+        const roomId = document.getElementById('roomIdA').value;
+        const msg = document.getElementById('msgA').value;
+
+        const payload = {
+            content: msg
+        };
+
+        stompClientA.send('/pub/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
+        logA('SEND: ' + JSON.stringify(payload));
+    }
+
+    function sendMessageB() {
+        if (!stompClientB || !stompClientB.connected) {
+            logB('WARN: 아직 연결되지 않았습니다. 먼저 방 만들기 또는 기존 방 연결을 하세요.');
+            return;
+        }
+        const roomId = document.getElementById('roomIdB').value;
+        const msg = document.getElementById('msgB').value;
+
+        const payload = {
+            content: msg
+        };
+
+        stompClientB.send('/pub/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
+        logB('SEND: ' + JSON.stringify(payload));
+    }
 </script>
 </body>
 </html>

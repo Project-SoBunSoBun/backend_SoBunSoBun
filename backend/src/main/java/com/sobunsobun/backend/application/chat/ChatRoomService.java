@@ -5,6 +5,7 @@ import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomRequest;
 import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.entity.chat.ChatRoom;
+import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import com.sobunsobun.backend.enumClass.ChatRoomType;
 import com.sobunsobun.backend.exception.ChatAuthException;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
@@ -36,14 +37,12 @@ public class ChatRoomService {
         Set<Long> memberIds = new HashSet<>(request.getMemberIds());
         memberIds.add(ownerId);
 
-        if (request.getType() == ChatRoomType.PRIVATE && memberIds.size() != 2) {
-            throw new IllegalArgumentException("1:1 채팅방은 정확히 두 명이어야 합니다.");
-        }
+        validateCreationRules(request.getType(), memberIds.size());
 
         ChatRoom room = new ChatRoom(request.getTitle(), request.getType(), ownerId, request.getPostId());
         room = chatRoomRepository.save(room);
 
-        List<ChatMember> members = saveMembers(room.getId(), memberIds);
+        List<ChatMember> members = saveMembers(room.getId(), ownerId, memberIds);
 
         return ChatRoomResponse.builder()
                 .roomId(room.getId())
@@ -54,18 +53,33 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public List<ChatMember> saveMembers(Long roomId, Set<Long> memberIds) {
+    public List<ChatMember> saveMembers(Long roomId, Long ownerId, Set<Long> memberIds) {
+        // 모든 유저 조회
         List<User> users = userRepository.findAllById(memberIds);
 
         if (users.size() != memberIds.size()) {
-            throw new EntityNotFoundException("존재하지 않는 유저가 포함되어 있습니다.");
+            //throw new EntityNotFoundException("존재하지 않는 유저가 포함되어 있습니다.");
         }
 
-        List<ChatMember> members = users.stream()
+        // OWNER 먼저, 그 다음 MEMBER 순서로 정렬
+        List<User> sortedUsers = users.stream()
+                .sorted((u1, u2) -> {
+                    if (u1.getId().equals(ownerId)) return -1;
+                    if (u2.getId().equals(ownerId)) return 1;
+                    return u1.getId().compareTo(u2.getId()); // 필요하면 닉네임 정렬 등 변경 가능
+                })
+                .toList();
+
+        // 매핑: owner → OWNER, others → MEMBER
+        List<ChatMember> members = sortedUsers.stream()
                 .map(user -> ChatMember.builder()
                         .roomId(roomId)
                         .member(user)
-                        .build())
+                        .role(user.getId().equals(ownerId)
+                                ? ChatMemberRole.OWNER
+                                : ChatMemberRole.MEMBER)
+                        .build()
+                )
                 .toList();
 
         return chatMemberRepository.saveAll(members);
@@ -124,6 +138,13 @@ public class ChatRoomService {
                 )
                 .toList();
     }
+
+    void validateCreationRules(ChatRoomType chatRoomType, int memberSize) {
+        if (chatRoomType == ChatRoomType.PRIVATE && memberSize != 2) {
+            throw new IllegalArgumentException("1:1 채팅방은 정확히 두 명이어야 합니다.");
+        }
+    }
+
 
     //void invite(Long roomId, Long targetUserId);
 }

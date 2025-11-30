@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.entity.chat;
 
 import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,10 @@ public class ChatMember {
 
     @Column(name = "room_id", nullable = false)
     private Long roomId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private ChatMemberRole role;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "member_id")

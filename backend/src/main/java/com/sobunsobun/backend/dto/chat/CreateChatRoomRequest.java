@@ -3,11 +3,13 @@ package com.sobunsobun.backend.dto.chat;
 import com.sobunsobun.backend.enumClass.ChatRoomType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
 @Getter
 @AllArgsConstructor
+@NoArgsConstructor
 public class CreateChatRoomRequest {
     private String title;
     private List<Long> memberIds;

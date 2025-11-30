@@ -37,9 +37,9 @@ public class ChatMessage {
     @Indexed
     private Instant createdAt;
 
-    public ChatMessage(ChatMessageRequest request) {
-        this.roomId = request.getRoomId();
-        this.senderId = request.getSenderId();
+    public ChatMessage(Long roomId, Long senderId, ChatMessageRequest request) {
+        this.roomId = roomId;
+        this.senderId = senderId;
         this.type = request.getType();
         this.content = request.getContent();
     }

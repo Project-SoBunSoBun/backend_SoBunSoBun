@@ -26,8 +26,6 @@ public class RedisChatPublisher {
             // (2) Redis pub
             stringRedisTemplate.convertAndSend(buildChannel(roomId), payload);
 
-            log.debug("Redis Publish 완료 → channel={}, payload={}", buildChannel(roomId), payload);
-
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("채팅 메시지 직렬화(JSON 변환)에 실패했습니다.", e);
         }

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -16,21 +17,22 @@ import java.nio.charset.StandardCharsets;
 public class RedisChatSubscriber implements MessageListener {
 
     private final ObjectMapper objectMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
+        String payload = new String(message.getBody(), StandardCharsets.UTF_8);
+
         try {
-            String json = new String(message.getBody(), StandardCharsets.UTF_8);
-            log.debug("Redis 메시지 수신: {}", json);
+            ChatMessageResponse response = objectMapper.readValue(payload, ChatMessageResponse.class);
+            Long roomId = response.getRoomId(); // 혹은 getRoomId()
 
-            ChatMessageResponse payload =
-                    objectMapper.readValue(json, ChatMessageResponse.class);
-
-            // 이후 로직 처리…
+            // STOMP 구독자들에게 브로드캐스트
+            String destination = "/sub/rooms/" + roomId;
+            messagingTemplate.convertAndSend(destination, response);
 
         } catch (Exception e) {
-            log.error("Redis 채팅 메시지 파싱 오류: {}",
-                    new String(message.getBody(), StandardCharsets.UTF_8), e);
+            log.error("Redis 채팅 메시지 수신 처리 중 오류가 발생했습니다. payload={}", payload, e);
         }
     }
 }

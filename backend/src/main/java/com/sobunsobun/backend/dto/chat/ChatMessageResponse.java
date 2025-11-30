@@ -2,11 +2,14 @@ package com.sobunsobun.backend.dto.chat;
 
 import com.sobunsobun.backend.entity.chat.ChatMessage;
 import com.sobunsobun.backend.enumClass.ChatType;
-import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.Instant;
+
+import static com.sobunsobun.backend.support.util.TimeUtil.normalizeToKstIso;
 
 @Getter
 @Builder
@@ -19,7 +22,7 @@ public class ChatMessageResponse {
     private Long senderId;
     private ChatType type;
     private String content;
-    private Instant sentAt;
+    private String sentAt;
 
     public static ChatMessageResponse from(ChatMessage message) {
         return ChatMessageResponse.builder()
@@ -28,7 +31,7 @@ public class ChatMessageResponse {
                 .senderId(message.getSenderId())
                 .type(message.getType())
                 .content(message.getContent())
-                .sentAt(message.getCreatedAt())
+                .sentAt(normalizeToKstIso(message.getCreatedAt()))
                 .build();
     }
 }

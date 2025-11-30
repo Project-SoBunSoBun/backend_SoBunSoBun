@@ -14,6 +14,16 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+  data:
+    mongodb:
+      host: ${MONGO_HOST}
+      port: ${MONGO_PORT}
+      username: ${MONGO_USERNAME}
+      password: ${MONGO_PASSWORD}
+      database: ${MONGO_DATABASE}
+      authentication-database: ${MONGO_AUTH_DB}
+
+
   jpa:
     hibernate:
       ddl-auto: validate

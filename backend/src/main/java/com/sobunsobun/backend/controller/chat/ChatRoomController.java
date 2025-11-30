@@ -26,9 +26,7 @@ public class ChatRoomController {
         Long userId = principal.id();
         ChatRoomResponse response = chatRoomService.createChatRoom(userId, request);
 
-        return ResponseEntity
-                .created(URI.create("/api/chat/rooms/" + response.getRoomId()))
-                .body(response);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/api/chat/rooms/{roomId}")

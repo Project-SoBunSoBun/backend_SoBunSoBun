@@ -1,6 +1,8 @@
 package com.sobunsobun.backend.config.websocket;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -8,18 +10,26 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws/chat")         // 클라: new SockJS('/ws/chat')
+        registry.addEndpoint("/ws/connect")         // websocket 연결
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic", "/queue"); // 구독 prefix
-        registry.setApplicationDestinationPrefixes("/app"); // 전송 prefix
+        registry.enableSimpleBroker("/sub/rooms"); // 채팅방 구독
+        registry.setApplicationDestinationPrefixes("/pub"); // 유저 -> 서버 전송
+    }
+
+    @Override   // jwt principal 받아오기 위함
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(stompAuthChannelInterceptor);
     }
 }
