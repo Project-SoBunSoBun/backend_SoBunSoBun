@@ -95,6 +95,12 @@ public class GroupPost {
     private Integer maxMembers;
 
     /**
+     * 현재 참여 인원
+     */
+    @Column(name = "joined_members")
+    private Integer joinedMembers;
+
+    /**
      * 게시글 상태
      */
     @Enumerated(EnumType.STRING)
@@ -124,6 +130,9 @@ public class GroupPost {
     public void prePersist() {
         if (this.minMembers == null) {
             this.minMembers = 2;
+        }
+        if (this.joinedMembers == null) {
+            this.joinedMembers = 1;
         }
         if (this.status == null) {
             this.status = PostStatus.OPEN;

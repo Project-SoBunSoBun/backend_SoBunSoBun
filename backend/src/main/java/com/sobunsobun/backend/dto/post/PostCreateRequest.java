@@ -74,5 +74,10 @@ public class PostCreateRequest {
      * 최대 인원
      */
     private Integer maxMembers;
+
+    /**
+     * 현재 참여 인원 (기본값: 1)
+     */
+    private Integer joinedMembers;
 }
 

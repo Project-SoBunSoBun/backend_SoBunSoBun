@@ -72,6 +72,11 @@ public class PostUpdateRequest {
     private Integer maxMembers;
 
     /**
+     * 현재 참여 인원
+     */
+    private Integer joinedMembers;
+
+    /**
      * 게시글 상태 (OPEN, CLOSED, CANCELLED)
      */
     private String status;
