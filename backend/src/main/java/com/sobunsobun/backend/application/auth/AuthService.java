@@ -55,8 +55,9 @@ public class AuthService {
 
     /** 한국 시간대 및 포맷터 */
     private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
+    // ISO 8601 with offset (e.g. 2025-11-24T23:36:50+09:00)
     private static final DateTimeFormatter KST_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST_ZONE);
+            DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(KST_ZONE);
 
     /**
      * 1단계: 카카오 토큰 검증 및 사용자 정보 확인

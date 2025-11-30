@@ -65,6 +65,7 @@ public class PostService {
                 .deadlineAt(request.getDeadlineAt())
                 .minMembers(request.getMinMembers())
                 .maxMembers(request.getMaxMembers())
+                .joinedMembers(request.getJoinedMembers())
                 .status(PostStatus.OPEN)
                 .build();
 
@@ -223,6 +224,9 @@ public class PostService {
         if (request.getMaxMembers() != null) {
             post.setMaxMembers(request.getMaxMembers());
         }
+        if (request.getJoinedMembers() != null) {
+            post.setJoinedMembers(request.getJoinedMembers());
+        }
         if (request.getStatus() != null) {
             try {
                 post.setStatus(PostStatus.valueOf(request.getStatus().toUpperCase()));
@@ -285,6 +289,7 @@ public class PostService {
                 .deadlineAt(post.getDeadlineAt())
                 .minMembers(post.getMinMembers())
                 .maxMembers(post.getMaxMembers())
+                .joinedMembers(post.getJoinedMembers())
                 .status(post.getStatus())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

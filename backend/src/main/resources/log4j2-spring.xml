@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <!-- 변수 정의 -->
+    <Properties>
+        <Property name="LOG_PATH">logs</Property>
+        <Property name="LOG_FILE">sobunsobun</Property>
+        <Property name="LOG_PATTERN">%d{ISO_OFFSET_DATE_TIME}{Asia/Seoul} [%thread] %-5level %logger{36} - %msg%n</Property>
+        <Property name="CONSOLE_LOG_PATTERN">%clr{%d{ISO_OFFSET_DATE_TIME}{Asia/Seoul}}{faint} %clr{[%thread]}{magenta} %clr{%-5level}{highlight} %clr{%logger{36}}{cyan} - %msg%n</Property>
+    </Properties>
+
+    <!-- Appenders 정의 -->
+    <Appenders>
+        <!-- 콘솔 출력 -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!-- 전체 로그 파일 (일별 롤링) -->
+        <RollingFile name="File"
+                     fileName="${LOG_PATH}/${LOG_FILE}.log"
+                     filePattern="${LOG_PATH}/${LOG_FILE}-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!-- 일별로 롤링 -->
+                <TimeBasedTriggeringPolicy/>
+                <!-- 10MB마다 롤링 -->
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <!-- 최대 30개 파일 보관 -->
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- 에러 로그만 별도 파일 -->
+        <RollingFile name="ErrorFile"
+                     fileName="${LOG_PATH}/${LOG_FILE}-error.log"
+                     filePattern="${LOG_PATH}/${LOG_FILE}-error-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+            <Filters>
+                <!-- ERROR 레벨만 허용 -->
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </RollingFile>
+
+        <!-- SQL 로그 전용 파일 (개발 환경용) -->
+        <RollingFile name="SqlFile"
+                     fileName="${LOG_PATH}/${LOG_FILE}-sql.log"
+                     filePattern="${LOG_PATH}/${LOG_FILE}-sql-%d{yyyy-MM-dd}-%i.log">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="7"/>
+        </RollingFile>
+    </Appenders>
+
+    <!-- Loggers 정의 -->
+    <Loggers>
+        <!-- 애플리케이션 로거 -->
+        <Logger name="com.sobunsobun.backend" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+        <!-- Spring Framework 로거 -->
+        <Logger name="org.springframework.web" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <Logger name="org.springframework.security" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- Hibernate SQL 로거 -->
+        <Logger name="org.hibernate.SQL" level="debug" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="SqlFile"/>
+        </Logger>
+
+        <!-- Hibernate 파라미터 바인딩 로거 -->
+        <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="trace" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="SqlFile"/>
+        </Logger>
+
+        <!-- Hibernate 일반 로거 -->
+        <Logger name="org.hibernate" level="info" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+        </Logger>
+
+        <!-- JDBC 로거 -->
+        <Logger name="jdbc.sqlonly" level="info" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="SqlFile"/>
+        </Logger>
+
+        <Logger name="jdbc.resultsettable" level="info" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Root Logger -->
+        <Root level="info">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="File"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
