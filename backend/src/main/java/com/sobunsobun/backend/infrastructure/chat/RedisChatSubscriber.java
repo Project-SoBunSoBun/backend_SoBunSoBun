@@ -28,7 +28,7 @@ public class RedisChatSubscriber implements MessageListener {
             Long roomId = response.getRoomId(); // 혹은 getRoomId()
 
             // STOMP 구독자들에게 브로드캐스트
-            String destination = "/sub/rooms/" + roomId;
+            String destination = "/sub/chat/rooms/" + roomId;
             messagingTemplate.convertAndSend(destination, response);
 
         } catch (Exception e) {

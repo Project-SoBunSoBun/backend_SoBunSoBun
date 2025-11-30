@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
-
 import static com.sobunsobun.backend.support.util.TimeUtil.normalizeToKstIso;
 
 @Getter

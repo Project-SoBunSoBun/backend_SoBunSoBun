@@ -323,7 +323,7 @@
 
         stompClientA.connect(connectHeaders, (frame) => {
             logA('CONNECTED: ' + frame);
-            stompClientA.subscribe('/sub/rooms/' + roomId, (message) => {
+            stompClientA.subscribe('/sub/chat/rooms/' + roomId, (message) => {
                 logA('RECV: ' + message.body);
             });
         }, (error) => {
@@ -342,7 +342,7 @@
 
         stompClientB.connect(connectHeaders, (frame) => {
             logB('CONNECTED: ' + frame);
-            stompClientB.subscribe('/sub/rooms/' + roomId, (message) => {
+            stompClientB.subscribe('/sub/chat/rooms/' + roomId, (message) => {
                 logB('RECV: ' + message.body);
             });
         }, (error) => {
@@ -363,7 +363,7 @@
             content: msg
         };
 
-        stompClientA.send('/pub/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
+        stompClientA.send('/pub/chat/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
         logA('SEND: ' + JSON.stringify(payload));
     }
 
@@ -379,7 +379,7 @@
             content: msg
         };
 
-        stompClientB.send('/pub/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
+        stompClientB.send('/pub/chat/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
         logB('SEND: ' + JSON.stringify(payload));
     }
 </script>

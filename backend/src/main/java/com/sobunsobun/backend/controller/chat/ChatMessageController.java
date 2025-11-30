@@ -23,7 +23,7 @@ public class ChatMessageController {
     private static final Logger log = LoggerFactory.getLogger(ChatMessageController.class);
     private final ChatMessageService chatMessageService;
 
-    @MessageMapping("/rooms/{roomId}/send")
+    @MessageMapping("/chat/rooms/{roomId}/send")
     public void sendMessage(@DestinationVariable("roomId") Long roomId,
                             Principal principal,
                             ChatMessageRequest request) {
