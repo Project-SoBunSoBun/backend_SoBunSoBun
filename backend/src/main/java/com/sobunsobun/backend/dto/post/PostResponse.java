@@ -78,6 +78,11 @@ public class PostResponse {
     private Integer maxMembers;
 
     /**
+     * 현재 참여 인원
+     */
+    private Integer joinedMembers;
+
+    /**
      * 게시글 상태
      */
     private PostStatus status;
