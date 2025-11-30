@@ -4,26 +4,33 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.dto.chat.ChatMessageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class RedisChatSubscriber {
-
-    private static final String DESTINATION_PREFIX = "/topic/rooms/";
+public class RedisChatSubscriber implements MessageListener {
 
     private final ObjectMapper objectMapper;
-    private final SimpMessagingTemplate messagingTemplate;
 
-    public void onMessage(String message) {
+    @Override
+    public void onMessage(Message message, byte[] pattern) {
         try {
-            ChatMessageResponse response = objectMapper.readValue(message, ChatMessageResponse.class);
-            messagingTemplate.convertAndSend(DESTINATION_PREFIX + response.getRoomId(), response);
-        } catch (Exception ex) {
-            log.error("Redis 채팅 메시지 수신 처리 중 오류가 발생했습니다. payload={}", message, ex);
+            String json = new String(message.getBody(), StandardCharsets.UTF_8);
+            log.debug("Redis 메시지 수신: {}", json);
+
+            ChatMessageResponse payload =
+                    objectMapper.readValue(json, ChatMessageResponse.class);
+
+            // 이후 로직 처리…
+
+        } catch (Exception e) {
+            log.error("Redis 채팅 메시지 파싱 오류: {}",
+                    new String(message.getBody(), StandardCharsets.UTF_8), e);
         }
     }
 }
-

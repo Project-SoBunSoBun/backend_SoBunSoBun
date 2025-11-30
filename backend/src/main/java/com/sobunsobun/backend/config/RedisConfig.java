@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
@@ -22,13 +23,13 @@ public class RedisConfig {
     @Value("${spring.redis.port}")
     private int port;
 
-    // 1) 연결 팩토리
+    // 연결 팩토리
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
         return new LettuceConnectionFactory(host, port);
     }
 
-    // 2) 문자열 기반 템플릿
+    // 문자열 기반 템플릿
     @Bean
     public RedisTemplate<String, String> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, String> template = new RedisTemplate<>();
@@ -36,7 +37,12 @@ public class RedisConfig {
         return template;
     }
 
-    // 3) 리스너 컨테이너 (구독 전용)
+    @Bean
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
+        return new StringRedisTemplate(factory);
+    }
+
+    // 리스너 컨테이너 (구독 전용)
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(
             RedisConnectionFactory connectionFactory,
@@ -50,7 +56,7 @@ public class RedisConfig {
         return container;
     }
 
-    // 4) Subscriber에 들어갈 리스너 어댑터
+    // Subscriber에 들어갈 리스너 어댑터
     @Bean
     public MessageListenerAdapter chatMessageListenerAdapter(RedisChatSubscriber subscriber) {
         return new MessageListenerAdapter(subscriber, "onMessage");
