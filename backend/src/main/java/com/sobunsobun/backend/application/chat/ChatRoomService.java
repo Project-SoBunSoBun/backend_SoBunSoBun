@@ -85,8 +85,24 @@ public class ChatRoomService {
         return chatMemberRepository.saveAll(members);
     }
 
+//    public void setChatRoomTitle(CreateChatRoomRequest request) {
+//        if (request.getTitle() != null) return;
+//
+//        if (request.getType().equals(ChatRoomType.PRIVATE)) {
+//            Long userId = request.getMemberIds().get(0);
+//            User user = userRepository.findById(userId).orElseThrow(
+//                    () -> new EntityNotFoundException("존재하지 않는 유저입니다.")
+//            );
+//
+//            request.setTitle(user.getNickname());
+//        } else {
+//            chatMemberRepository.findByMemberId()
+//
+//        }
+//    }
+
     @Transactional(readOnly = true)
-    public ChatRoomResponse getMyRoom(Long userId, Long roomId) {
+    public ChatRoomResponse getChatRoomDetail(Long userId, Long roomId) {
         List<ChatMember> members = chatMemberRepository.findByRoomId(roomId);
 
         boolean isMember = members.stream()
