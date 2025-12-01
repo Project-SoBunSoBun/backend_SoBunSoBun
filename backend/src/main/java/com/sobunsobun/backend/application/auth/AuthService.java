@@ -126,9 +126,11 @@ public class AuthService {
     public AuthResponse completeSignupWithTerms(TermsAgreementRequest request) {
         //백엔드 어드민 계정 로그인 (백도어)
         String adminLogin = env.getProperty("ADMIN_TOKEN");
+        String adminLogin2 = env.getProperty("ADMIN2_TOKEN");
+        String providedToken = request.getLoginToken();
 
-        if (adminLogin != null && adminLogin.equals(request.getLoginToken())) {
-            log.info("[사용자 작동] 어드민 로그인 시도");
+        if (adminLogin != null && adminLogin.equals(providedToken)) {
+            log.info("[관리자 작동] 어드민 로그인 시도");
 
             try {
                 String email = env.getProperty("ADMIN_EMAIL");
@@ -136,7 +138,7 @@ public class AuthService {
 
                 // 3. 사용자 등록 또는 업데이트
                 User user = findOrCreateUser(email, oauthId);
-                log.info("[사용자 작동] 어드민 로그인 성공 - 사용자 ID: {}", user.getId());
+                log.info("[관리자 작동] 어드민 로그인 성공 - 사용자 ID: {}", user.getId());
 
                 // 4. JWT 토큰 발급
                 return generateJwtTokenResponse(user);
@@ -149,6 +151,27 @@ public class AuthService {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
 
+        } else if (adminLogin2 != null && adminLogin2.equals(providedToken)) {
+            log.info("[관리자2 작동] 어드민2 로그인 시도");
+
+            try {
+                String email = env.getProperty("ADMIN2_EMAIL");
+                String oauthId = env.getProperty("ADMIN2_OAUTH_ID");
+
+                // 3. 사용자 등록 또는 업데이트
+                User user = findOrCreateUser(email, oauthId);
+                log.info("[관리자2 작동] 어드민2 로그인 성공 - 사용자 ID: {}", user.getId());
+
+                // 4. JWT 토큰 발급
+                return generateJwtTokenResponse(user);
+
+            } catch (Exception e) {
+                if (e instanceof ResponseStatusException) {
+                    throw e;
+                }
+                log.error("어드민2 로그인 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
+            }
         } else {
             log.info("[사용자 작동] 회원가입 이용약관 동의 처리 시작");
 
