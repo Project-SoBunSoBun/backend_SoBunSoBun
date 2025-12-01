@@ -14,14 +14,16 @@ public class ChatRoomResponse {
     Long roomId;
     Long postId;
     String title;
+    String imageUrl;
     ChatRoomType chatRoomType;
     List<ChatMemberResponse> chatMembers;
 
     @Builder
-    public ChatRoomResponse(Long roomId, Long postId, String title, ChatRoomType chatRoomType, List<ChatMember> chatMembers) {
+    public ChatRoomResponse(Long roomId, Long postId, String title, String imageUrl, ChatRoomType chatRoomType, List<ChatMember> chatMembers) {
         this.roomId = roomId;
         this.postId = postId;
         this.title = title;
+        this.imageUrl = imageUrl;
         this.chatRoomType = chatRoomType;
         this.chatMembers = new ArrayList<>();
 

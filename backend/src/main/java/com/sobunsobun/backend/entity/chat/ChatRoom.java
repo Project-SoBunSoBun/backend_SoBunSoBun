@@ -4,6 +4,7 @@ import com.sobunsobun.backend.enumClass.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -32,6 +33,10 @@ public class ChatRoom {
     @Column(name = "post_id")
     private Long postId;
 
+    @Setter
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @CreationTimestamp
     @Column(name = "create_at", nullable = false, updatable = false)
     private LocalDateTime createAt;
@@ -40,10 +45,11 @@ public class ChatRoom {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updateAt;
 
-    public ChatRoom(String title, ChatRoomType type, Long ownerId, Long postId) {
+    public ChatRoom(String title, ChatRoomType type, Long ownerId, Long postId, String imageUrl) {
         this.title = title;
         this.type = type;
         this.ownerId = ownerId;
         this.postId = postId;
+        this.imageUrl = imageUrl;
     }
 }

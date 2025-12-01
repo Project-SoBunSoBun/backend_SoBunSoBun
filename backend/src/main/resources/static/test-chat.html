@@ -2,386 +2,883 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <title>STOMP Chat Test - 2 Clients + Auth</title>
+    <title>채팅 테스트 - 2 클라이언트</title>
     <style>
-        body {
-            font-family: sans-serif;
-        }
-        .top-panel {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 12px;
-        }
-        .container {
-            display: flex;
-            gap: 20px;
-        }
-        .client {
-            flex: 1;
-            border: 1px solid #ccc;
-            padding: 10px;
-        }
-        .client h2 {
-            margin-top: 0;
-        }
-        pre {
-            background: #111;
-            color: #0f0;
-            padding: 8px;
-            height: 250px;
-            overflow: auto;
-            font-size: 12px;
-        }
-        input {
-            margin: 2px 0;
-            width: 100%;
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
-        button {
-            margin-top: 4px;
+
+        html, body {
+            height: 100%;
+            overflow: hidden; /* 페이지 자체 스크롤 제거 */
         }
-        .btn-block {
-            width: 100%;
-        }
-        .actions-row {
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f0f0;
             display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
+            flex-direction: column;
+        }
+
+        /* 상단 토큰 입력 패널 */
+        .top-input-panel {
+            flex: 0 0 auto;
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+        }
+        .top-input-panel h3 {
+            margin: 0 0 6px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        .top-input-panel input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .top-input-panel button {
+            width: 100%;
+            padding: 8px;
+            background: #3b5998;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .top-input-panel button:hover {
+            background: #2d4373;
+        }
+
+        /* 메인 영역: 좌우 2 클라이언트 */
+        .container {
+            flex: 1 1 auto;
+            display: flex;
+            gap: 2px;
+            height: 100%;
+            overflow: hidden; /* 내부에서만 스크롤 나도록 */
+        }
+
+        .client-wrapper {
+            flex: 1;
+            display: flex;
+            background: white;
+            position: relative;
+        }
+
+        /* 채팅방 목록 페이지 */
+        .room-list-page {
+            position: absolute;
+            inset: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        .room-list-page.hidden {
+            display: none; /* 방에 들어가면 목록은 안 보이게 */
+        }
+
+        /* 채팅방 페이지 */
+        .chat-page {
+            position: absolute;
+            inset: 0;
+            background: white;
+            display: none;
+            flex-direction: column;
+        }
+        .chat-page.active {
+            display: flex;
+        }
+
+        .page-header {
+            padding: 10px 12px;
+            background: #3b5998;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .back-button:hover {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .page-title {
+            flex: 1;
+        }
+
+        .status {
+            padding: 5px 8px;
+            font-size: 11px;
+            text-align: center;
+            background: #fff3cd;
+            border-bottom: 1px solid #ffc107;
+            flex: 0 0 auto;
+        }
+        .status.connected {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .room-list-controls {
+            padding: 8px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            flex: 0 0 auto;
+        }
+        .room-list-controls button {
+            width: 100%;
+            padding: 6px;
+            background: #3b5998;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .room-list-controls button:hover {
+            background: #2d4373;
+        }
+
+        .room-items {
+            flex: 1 1 auto;
+            overflow-y: auto;
+        }
+
+        .room-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+        }
+        .room-item:hover {
+            background: #f5f5f5;
+        }
+        .room-item.active {
+            background: #e3f2fd;
+        }
+        .room-item-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .room-item-info {
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* 채팅 메시지 영역 */
+        .messages {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 12px;
+            background: #ffffff;
+        }
+        .message {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .message.mine {
+            flex-direction: row-reverse; /* 내 메시지는 오른쪽 */
+        }
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .message-content {
+            max-width: 70%;
+            margin: 0 8px;
+        }
+        .message.mine .message-content {
+            display: flex;
+            flex-direction: column;
             align-items: flex-end;
         }
-        .actions-row > div {
-            min-width: 220px;
+        .message-sender {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 3px;
         }
-        label {
+        .message.mine .message-sender {
+            display: none;
+        }
+        .message-bubble {
+            padding: 8px 11px;
+            border-radius: 16px;
+            background: #f0f0f0;
+            display: inline-block;
+            word-wrap: break-word;
             font-size: 13px;
+        }
+        .message.mine .message-bubble {
+            background: #3b5998;
+            color: white;
+        }
+        .message-time {
+            font-size: 10px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        /* 입력 영역 */
+        .input-area {
+            padding: 8px 10px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            display: flex;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        .input-area button {
+            padding: 8px 16px;
+            background: #3b5998;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .input-area button:hover {
+            background: #2d4373;
+        }
+        .input-area button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 로그 패널 */
+        .log-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 140px;
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 8px;
+            overflow-y: auto;
+            display: none;
+            z-index: 900;
+        }
+        .log-panel.show {
+            display: block;
+        }
+        .toggle-log {
+            position: fixed;
+            bottom: 8px;
+            right: 8px;
+            padding: 6px 12px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            font-size: 11px;
         }
     </style>
 </head>
 <body>
-<h1>2-Client Chat Test (JWT + Room 생성)</h1>
 
-<!-- 1,2,3 통합 제어 패널 -->
-<div class="top-panel">
-    <h2>상단 제어 패널 (1,2,3 통합)</h2>
-
-    <div class="actions-row">
-        <!-- 1) 회원가입 완료 & 토큰 저장 -->
-        <div>
-            <label>
-                1) loginToken:
-                <input id="loginTokenInput" placeholder="loginToken 입력" />
-            </label>
-            <button onclick="completeSignup()">회원가입 완료 (토큰 발급)</button>
-            <button onclick="showStoredToken()">저장된 accessToken 확인</button>
-        </div>
-
-        <!-- 2) 방 만들기 & STOMP 연결 -->
-        <div>
-            <label style="display:block;">2) 방 만들기 (JWT 필요)</label>
-            <button onclick="createRoomAndConnect()">방 만들기 & A/B 연결</button>
-        </div>
-
-        <!-- 3) 기존 방 연결만 하기 -->
-        <div>
-            <label>
-                3) 기존 roomId:
-                <input id="existingRoomIdInput" placeholder="이미 존재하는 roomId 입력" />
-            </label>
-            <button onclick="connectExistingRoom()">기존 방에 연결 (A/B 둘 다)</button>
-        </div>
-    </div>
-
-    <pre id="topLog"></pre>
+<!-- 공통 입력 패널 -->
+<div class="top-input-panel">
+    <h3>🔑 카카오 액세스 토큰 입력 (양쪽 클라이언트 공통)</h3>
+    <input id="sharedToken" type="text" placeholder="카카오 액세스 토큰을 입력하세요" />
+    <button onclick="loginBothClients()">양쪽 클라이언트 로그인</button>
 </div>
 
 <div class="container">
     <!-- Client A -->
-    <div class="client">
-        <h2>Client A</h2>
-        <label>
-            Room ID:
-            <input id="roomIdA" value="1" />
-        </label>
-        <br />
-        <label>
-            메시지:
-            <input id="msgA" placeholder="메시지 입력" />
-        </label>
-        <br />
-        <button class="btn-block" onclick="sendMessageA()">A → 전송</button>
-        <pre id="logA"></pre>
+    <div class="client-wrapper">
+        <!-- 채팅방 목록 페이지 -->
+        <div class="room-list-page" id="roomListPageA">
+            <div class="page-header">
+                <div class="page-title">클라이언트 A - 채팅방 목록</div>
+            </div>
+            <div class="status" id="statusA">토큰을 입력하고 로그인하세요</div>
+            <div class="room-list-controls">
+                <button onclick="clientA.loadRooms()">채팅방 목록 새로고침</button>
+                <button onclick="clientA.createRoom()">새 채팅방 만들기</button>
+            </div>
+            <div class="room-items" id="roomListA"></div>
+        </div>
+
+        <!-- 채팅방 페이지 -->
+        <div class="chat-page" id="chatPageA">
+            <div class="page-header">
+                <button class="back-button" onclick="clientA.goBack()">←</button>
+                <div class="page-title" id="roomNameA">채팅방</div>
+            </div>
+            <div class="messages" id="messagesA"></div>
+            <div class="input-area">
+                <input id="inputA" type="text" placeholder="메시지를 입력하세요" disabled />
+                <button id="sendBtnA" onclick="clientA.sendMessage()" disabled>전송</button>
+            </div>
+        </div>
     </div>
 
     <!-- Client B -->
-    <div class="client">
-        <h2>Client B</h2>
-        <label>
-            Room ID:
-            <input id="roomIdB" value="1" />
-        </label>
-        <br />
-        <label>
-            메시지:
-            <input id="msgB" placeholder="메시지 입력" />
-        </label>
-        <br />
-        <button class="btn-block" onclick="sendMessageB()">B → 전송</button>
-        <pre id="logB"></pre>
+    <div class="client-wrapper">
+        <!-- 채팅방 목록 페이지 -->
+        <div class="room-list-page" id="roomListPageB">
+            <div class="page-header">
+                <div class="page-title">클라이언트 B - 채팅방 목록</div>
+            </div>
+            <div class="status" id="statusB">토큰을 입력하고 로그인하세요</div>
+            <div class="room-list-controls">
+                <button onclick="clientB.loadRooms()">채팅방 목록 새로고침</button>
+                <button onclick="clientB.createRoom()">새 채팅방 만들기</button>
+            </div>
+            <div class="room-items" id="roomListB"></div>
+        </div>
+
+        <!-- 채팅방 페이지 -->
+        <div class="chat-page" id="chatPageB">
+            <div class="page-header">
+                <button class="back-button" onclick="clientB.goBack()">←</button>
+                <div class="page-title" id="roomNameB">채팅방</div>
+            </div>
+            <div class="messages" id="messagesB"></div>
+            <div class="input-area">
+                <input id="inputB" type="text" placeholder="메시지를 입력하세요" disabled />
+                <button id="sendBtnB" onclick="clientB.sendMessage()" disabled>전송</button>
+            </div>
+        </div>
     </div>
 </div>
+
+<button class="toggle-log" onclick="toggleLog()">로그 표시/숨김</button>
+<div class="log-panel" id="logPanel"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script>
-    // ===== 공통 로그 함수 =====
-    function topLog(msg) {
-        const area = document.getElementById("topLog");
-        if (area) area.textContent += msg + "\n";
-    }
-    function logA(msg) {
-        document.getElementById('logA').textContent += msg + "\n";
-    }
-    function logB(msg) {
-        document.getElementById('logB').textContent += msg + "\n";
+    const API_BASE = 'http://localhost:8080';
+
+    // 로그 함수
+    function log(msg) {
+        const panel = document.getElementById('logPanel');
+        const time = new Date().toLocaleTimeString();
+        panel.textContent += `[${time}] ${msg}\n`;
+        panel.scrollTop = panel.scrollHeight;
     }
 
-    // ===== 1) /auth/complete-signup 호출해서 accessToken 저장 =====
-    async function completeSignup() {
-        const loginToken = document.getElementById("loginTokenInput").value.trim();
-        if (!loginToken) {
-            topLog("⚠ loginToken을 먼저 입력하세요.");
-            return;
+    function toggleLog() {
+        document.getElementById('logPanel').classList.toggle('show');
+    }
+
+    class ChatClient {
+        constructor(id, uiClientId) {
+            this.id = id;                    // A / B
+            this.uiClientId = uiClientId;    // 'A' / 'B' (좌우 관점)
+            this.token = null;
+            this.stompClient = null;
+            this.currentRoom = null;
+            this.currentRoomId = null;
+            this.rooms = [];
+            this.userInfo = null;
+            this.subscription = null;
+            this.storageKey = `chat_token_${id}`;
+            this.messageToggle = false;
         }
 
-        try {
-            const res = await fetch("http://localhost:8080/auth/complete-signup", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    loginToken: loginToken,
-                    serviceTermsAgreed: true,
-                    privacyPolicyAgreed: true,
-                    marketingOptionalAgreed: true
-                }),
-                credentials: "include"
+        // localStorage에서 토큰 로드
+        loadTokenFromStorage() {
+            const stored = localStorage.getItem(this.storageKey);
+            if (stored) {
+                this.token = stored;
+                log(`${this.id}: localStorage에서 토큰 로드됨`);
+                return true;
+            }
+            return false;
+        }
+
+        saveTokenToStorage() {
+            if (this.token) {
+                localStorage.setItem(this.storageKey, this.token);
+                log(`${this.id}: localStorage에 토큰 저장됨`);
+            }
+        }
+
+        clearTokenFromStorage() {
+            localStorage.removeItem(this.storageKey);
+            log(`${this.id}: localStorage에서 토큰 삭제됨`);
+        }
+
+        setStatus(message, type = 'normal') {
+            const status = document.getElementById(`status${this.id}`);
+            status.textContent = message;
+            status.className = 'status';
+            if (type === 'connected') status.classList.add('connected');
+            if (type === 'error') status.classList.add('error');
+        }
+
+        async login(kakaoToken) {
+            try {
+                this.setStatus('로그인 처리 중...');
+                log(`${this.id}: 로그인 시작`);
+
+                const res = await fetch(`${API_BASE}/auth/complete-signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        loginToken: kakaoToken,
+                        serviceTermsAgreed: true,
+                        privacyPolicyAgreed: true,
+                        marketingOptionalAgreed: false
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(`로그인 실패: ${error}`);
+                }
+
+                const data = await res.json();
+                this.token = data.accessToken;
+                this.myUserId = data.user?.id ?? this.getSenderIdFromToken();
+                log(`${this.id}: JWT 발급 완료 - 사용자 ID: ${this.myUserId}`);
+
+                this.saveTokenToStorage();
+
+                await this.loadRooms();
+                await this.connectWebSocket();
+                this.setStatus('연결됨', 'connected');
+                log(`${this.id}: 로그인 성공`);
+
+            } catch (error) {
+                this.setStatus('로그인 실패', 'error');
+                log(`${this.id}: 로그인 실패 - ${error}`);
+                throw error;
+            }
+        }
+
+        async autoLogin() {
+            if (this.loadTokenFromStorage()) {
+                try {
+                    this.myUserId = this.getSenderIdFromToken();
+                    this.setStatus('자동 로그인 중...');
+                    await this.loadRooms();
+                    await this.connectWebSocket();
+                    this.setStatus('연결됨 (자동)', 'connected');
+                    log(`${this.id}: 자동 로그인 성공`);
+                    return true;
+                } catch (error) {
+                    this.setStatus('토큰 만료 - 다시 로그인하세요', 'error');
+                    log(`${this.id}: 자동 로그인 실패 - ${error}`);
+                    this.clearTokenFromStorage();
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        async loadRooms() {
+            if (!this.token) {
+                alert('먼저 로그인하세요');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+
+                if (!res.ok) throw new Error('채팅방 목록 조회 실패');
+
+                this.rooms = await res.json();
+                this.renderRoomList();
+                log(`${this.id}: 채팅방 ${this.rooms.length}개 로드됨`);
+            } catch (error) {
+                log(`${this.id}: 채팅방 목록 로드 실패 - ${error}`);
+                alert('채팅방 목록을 불러오지 못했습니다');
+            }
+        }
+
+        renderRoomList() {
+            const container = document.getElementById(`roomList${this.id}`);
+            container.innerHTML = '';
+
+            if (this.rooms.length === 0) {
+                container.innerHTML =
+                    '<div style="padding: 16px; text-align: center; color: #999; font-size: 12px;">채팅방이 없습니다</div>';
+                return;
+            }
+
+            this.rooms.forEach(room => {
+                const div = document.createElement('div');
+                div.className = 'room-item';
+                if (this.currentRoomId === room.roomId) {
+                    div.classList.add('active');
+                }
+
+                const members = room.chatMembers || [];
+                const memberNames = members.map(m => m.nickname).join(', ');
+
+                div.innerHTML = `
+                    <div class="room-item-title">${room.title || '제목 없음'}</div>
+                    <div class="room-item-info">멤버: ${memberNames}</div>
+                `;
+
+                div.onclick = () => this.selectRoom(room);
+                container.appendChild(div);
             });
-
-            const body = await res.json();
-            console.log("complete-signup response:", body);
-            topLog("응답: " + JSON.stringify(body));
-
-            if (!res.ok) {
-                topLog("❌ complete-signup 실패: " + res.status);
-                return;
-            }
-
-            const accessToken =
-                body.accessToken ||
-                body.token ||
-                body.jwt ||
-                body.loginToken;
-
-            if (!accessToken) {
-                topLog("⚠ 응답 바디에서 토큰을 찾지 못했습니다. 실제 JSON 구조를 확인해서 필드명을 수정하세요.");
-                return;
-            }
-
-            localStorage.setItem("accessToken", accessToken);
-            topLog("✅ accessToken 저장 완료: " + accessToken.substring(0, 25) + "...");
-        } catch (e) {
-            console.error(e);
-            topLog("❌ complete-signup 호출 중 오류: " + e);
         }
-    }
 
-    function showStoredToken() {
-        const t = localStorage.getItem("accessToken");
-        if (!t) {
-            topLog("ℹ 저장된 accessToken 이 없습니다.");
+        async selectRoom(room) {
+            if (this.subscription) {
+                this.subscription.unsubscribe();
+                this.subscription = null;
+            }
+
+            this.currentRoom = room;
+            this.currentRoomId = room.roomId;
+            this.renderRoomList();
+
+            document.getElementById(`roomName${this.id}`).textContent = room.title || '제목 없음';
+            document.getElementById(`messages${this.id}`).innerHTML = '';
+
+            document.getElementById(`input${this.id}`).disabled = false;
+            document.getElementById(`sendBtn${this.id}`).disabled = false;
+
+            if (this.stompClient && this.stompClient.connected) {
+                this.subscribeToRoom(room.roomId);
+            }
+
+            this.showChatPage();
+            log(`${this.id}: 채팅방 "${room.title}" 선택됨 (ID: ${room.roomId})`);
+        }
+
+        showChatPage() {
+            document.getElementById(`roomListPage${this.id}`).classList.add('hidden');
+            document.getElementById(`chatPage${this.id}`).classList.add('active');
+        }
+
+        goBack() {
+            document.getElementById(`roomListPage${this.id}`).classList.remove('hidden');
+            document.getElementById(`chatPage${this.id}`).classList.remove('active');
+
+            if (this.subscription) {
+                this.subscription.unsubscribe();
+                this.subscription = null;
+            }
+
+            log(`${this.id}: 채팅방 목록으로 돌아감`);
+        }
+
+        async connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                const socket = new SockJS(`${API_BASE}/ws/connect`);
+                this.stompClient = Stomp.over(socket);
+                this.stompClient.debug = (msg) => log(`${this.id} WS: ${msg}`);
+
+                this.stompClient.connect(
+                    { Authorization: `Bearer ${this.token}` },
+                    (frame) => {
+                        log(`${this.id}: WebSocket 연결됨`);
+
+                        if (this.currentRoomId) {
+                            this.subscribeToRoom(this.currentRoomId);
+                        }
+
+                        resolve();
+                    },
+                    (error) => {
+                        log(`${this.id}: WebSocket 연결 실패 - ${error}`);
+                        reject(error);
+                    }
+                );
+            });
+        }
+
+        subscribeToRoom(roomId) {
+            if (!this.stompClient || !this.stompClient.connected) {
+                log(`${this.id}: WebSocket이 연결되지 않음`);
+                return;
+            }
+
+            this.subscription = this.stompClient.subscribe(
+                `/sub/chat/rooms/${roomId}`,
+                (message) => {
+                    log(`${this.id}: RECV raw: ${message.body}`);
+
+                    let data;
+                    try {
+                        data = JSON.parse(message.body);
+                    } catch (e) {
+                        data = { content: message.body };
+                    }
+
+                    // 서버에서 받은 메시지 → isLocal = false
+                    this.displayMessage(data, false);
+                }
+            );
+
+            log(`${this.id}: 채팅방 ${roomId} 구독 시작`);
+        }
+
+        // isLocal: 내가 지금 보낸 메시지(로컬 에코)인지 여부
+    displayMessage(data, isLocal = false) {
+        const container = document.getElementById(`messages${this.id}`);
+        const div = document.createElement('div');
+
+        let isMine;
+
+        if (isLocal) {
+            // 내가 막 보낸 메시지는 무조건 내 말풍선(오른쪽)
+            isMine = true;
         } else {
-            topLog("📦 저장된 accessToken: " + t);
+            // 서버에서 받은 메시지는 A/B 관점에 따라 좌/우 번갈아가며 표시
+            this.messageToggle = !this.messageToggle;
+            isMine = this.uiClientId === 'A'
+                ? this.messageToggle
+                : !this.messageToggle;
         }
+
+        div.className = isMine ? 'message mine' : 'message';
+
+        let avatarContent = '';
+        if (data.senderProfileImage) {
+            avatarContent = `<img src="${data.senderProfileImage}" alt="${data.senderName || 'User'}" />`;
+        } else {
+            const initial = (data.senderName || data.senderId || 'U').charAt(0).toUpperCase();
+            avatarContent = initial;
+        }
+
+        const time = data.sentAt ? new Date(data.sentAt).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : '';
+
+        div.innerHTML = `
+            <div class="message-avatar">${avatarContent}</div>
+            <div class="message-content">
+                <div class="message-sender">${data.senderName || (data.senderId ? `User ${data.senderId}` : '')}</div>
+                <div class="message-bubble">${this.escapeHtml(data.content || '')}</div>
+                <div class="message-time">${time}</div>
+            </div>
+        `;
+
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
     }
 
-    // ===== STOMP 클라이언트 =====
-    let stompClientA = null;
-    let stompClientB = null;
+        sendMessage() {
+            if (!this.stompClient || !this.stompClient.connected) {
+                alert('WebSocket이 연결되지 않았습니다');
+                return;
+            }
 
-    function disconnectClients() {
-        if (stompClientA && stompClientA.connected) {
-            stompClientA.disconnect(() => logA("DISCONNECTED"));
-        }
-        if (stompClientB && stompClientB.connected) {
-            stompClientB.disconnect(() => logB("DISCONNECTED"));
-        }
-        stompClientA = null;
-        stompClientB = null;
-    }
+            if (!this.currentRoomId) {
+                alert('채팅방을 먼저 선택하세요');
+                return;
+            }
 
-    // ===== 2) 방 생성 + STOMP 연결 =====
-    async function createRoomAndConnect() {
-        const token = localStorage.getItem("accessToken");
-        if (!token) {
-            topLog("⚠ accessToken 없음. 먼저 위에서 complete-signup 버튼으로 토큰을 발급받으세요.");
-            return;
-        }
+            const input = document.getElementById(`input${this.id}`);
+            const content = input.value.trim();
+            if (!content) return;
 
-        try {
-            const requestBody = {
-                title: "테스트 채팅방",
-                memberIds: [1, 2],
-                type: "PRIVATE",
-                postId: 1
+            const payload = {
+                type: 'TALK',
+                content: content
             };
 
-            topLog("방 생성 요청 바디: " + JSON.stringify(requestBody));
+            // 1) 서버로 전송
+            this.stompClient.send(
+                `/pub/chat/rooms/${this.currentRoomId}/send`,
+                {},
+                JSON.stringify(payload)
+            );
 
-            const res = await fetch("http://localhost:8080/api/chat/rooms", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify(requestBody),
-                credentials: "include"
-            });
+            // 2) 내 화면에 바로 표시 (로컬 에코)
+            this.displayMessage({
+                content,
+                senderName: '나',
+                senderId: this.myUserId,
+                sentAt: new Date().toISOString()
+            }, true);
 
-            const raw = await res.text();
-            topLog(`RAW 응답 (status=${res.status}): ${raw}`);
+            input.value = '';
+            log(`${this.id}: 메시지 전송 - "${content}"`);
+        }
 
-            let data = {};
+        async createRoom() {
+            if (!this.token) {
+                alert('먼저 로그인하세요');
+                return;
+            }
+
+            const title = prompt('채팅방 제목을 입력하세요:');
+            if (!title) return;
+
+            const memberIdsStr = prompt('초대할 멤버 ID를 쉼표로 구분하여 입력하세요 (예: 1,2,3):');
+            if (!memberIdsStr) return;
+
+            const memberIds = memberIdsStr.split(',')
+                .map(id => parseInt(id.trim()))
+                .filter(id => !isNaN(id));
+
             try {
-                data = raw ? JSON.parse(raw) : {};
-            } catch (parseErr) {
-                topLog("❌ JSON 파싱 실패: " + parseErr);
-                console.error("JSON parse error:", parseErr);
-                return;
+                const res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.token}`
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        memberIds: memberIds,
+                        type: 'GROUP',
+                        postId: null
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(error);
+                }
+
+                const newRoom = await res.json();
+                log(`${this.id}: 채팅방 생성됨 - ${newRoom.title} (ID: ${newRoom.roomId})`);
+
+                await this.loadRooms();
+                alert('채팅방이 생성되었습니다!');
+            } catch (error) {
+                log(`${this.id}: 채팅방 생성 실패 - ${error}`);
+                alert('채팅방 생성에 실패했습니다: ' + error.message);
             }
+        }
 
-            console.log("create room response:", data);
-            topLog("파싱된 JSON: " + JSON.stringify(data));
-
-            if (!res.ok) {
-                topLog("❌ 방 생성 실패: " + res.status);
-                return;
+        getSenderIdFromToken() {
+            if (!this.token) return null;
+            try {
+                const base64Url = this.token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const payload = JSON.parse(jsonPayload);
+                return payload.userId || payload.sub || payload.id;
+            } catch (e) {
+                return null;
             }
+        }
 
-            const roomId = data.roomId ?? data.id;
-            if (!roomId) {
-                topLog("⚠ 응답에서 roomId 를 찾지 못했습니다. 실제 JSON 구조 확인 필요.");
-                return;
-            }
-
-            document.getElementById("roomIdA").value = roomId;
-            document.getElementById("roomIdB").value = roomId;
-            topLog("✅ 방 생성 성공, roomId = " + roomId);
-
-            disconnectClients();
-            connectClientA(roomId, token);
-            connectClientB(roomId, token);
-        } catch (e) {
-            console.error(e);
-            topLog("❌ 방 생성 중 오류: " + e);
+        escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         }
     }
 
-    // ===== 3) 기존 방에 연결만 하기 =====
-    function connectExistingRoom() {
-        const token = localStorage.getItem("accessToken");
+    // 클라이언트 인스턴스 생성
+    const clientA = new ChatClient('A', 'A'); // 왼쪽 화면
+    const clientB = new ChatClient('B', 'B'); // 오른쪽 화면
+
+    async function loginBothClients() {
+        const token = document.getElementById('sharedToken').value.trim();
+
         if (!token) {
-            topLog("⚠ accessToken 없음. 먼저 complete-signup으로 토큰을 발급받으세요.");
+            alert('카카오 액세스 토큰을 입력하세요');
             return;
         }
 
-        const roomId = document.getElementById("existingRoomIdInput").value.trim();
-        if (!roomId) {
-            topLog("⚠ roomId 를 입력하세요.");
-            return;
+        log('양쪽 클라이언트 로그인 시작');
+
+        try {
+            await Promise.all([
+                clientA.login(token),
+                clientB.login(token)
+            ]);
+            log('✅ 양쪽 클라이언트 로그인 완료');
+        } catch (error) {
+            log('❌ 로그인 실패: ' + error.message);
+            alert('로그인 실패: ' + error.message);
         }
-
-        document.getElementById("roomIdA").value = roomId;
-        document.getElementById("roomIdB").value = roomId;
-
-        topLog("ℹ 기존 roomId = " + roomId + " 로 연결 시도 중...");
-
-        disconnectClients();
-        connectClientA(roomId, token);
-        connectClientB(roomId, token);
     }
 
-    // ===== STOMP 연결 =====
-    function connectClientA(roomId, token) {
-        const socket = new SockJS('http://localhost:8080/ws/connect');
-        stompClientA = Stomp.over(socket);
-        stompClientA.debug = null;
+    document.getElementById('inputA').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientA.sendMessage();
+    });
+    document.getElementById('inputB').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientB.sendMessage();
+    });
 
-        const connectHeaders = {
-            Authorization: "Bearer " + token
-        };
+    document.getElementById('sharedToken').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loginBothClients();
+    });
 
-        stompClientA.connect(connectHeaders, (frame) => {
-            logA('CONNECTED: ' + frame);
-            stompClientA.subscribe('/sub/chat/rooms/' + roomId, (message) => {
-                logA('RECV: ' + message.body);
-            });
-        }, (error) => {
-            logA('ERROR: ' + error);
-        });
-    }
+    window.addEventListener('load', async () => {
+        log('채팅 테스트 페이지 로드됨');
+        log('자동 로그인 시도 중...');
 
-    function connectClientB(roomId, token) {
-        const socket = new SockJS('http://localhost:8080/ws/connect');
-        stompClientB = Stomp.over(socket);
-        stompClientB.debug = null;
-
-        const connectHeaders = {
-            Authorization: "Bearer " + token
-        };
-
-        stompClientB.connect(connectHeaders, (frame) => {
-            logB('CONNECTED: ' + frame);
-            stompClientB.subscribe('/sub/chat/rooms/' + roomId, (message) => {
-                logB('RECV: ' + message.body);
-            });
-        }, (error) => {
-            logB('ERROR: ' + error);
-        });
-    }
-
-    // ===== 메시지 전송 =====
-    function sendMessageA() {
-        if (!stompClientA || !stompClientA.connected) {
-            logA('WARN: 아직 연결되지 않았습니다. 먼저 방 만들기 또는 기존 방 연결을 하세요.');
-            return;
-        }
-        const roomId = document.getElementById('roomIdA').value;
-        const msg = document.getElementById('msgA').value;
-
-        const payload = {
-            content: msg
-        };
-
-        stompClientA.send('/pub/chat/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
-        logA('SEND: ' + JSON.stringify(payload));
-    }
-
-    function sendMessageB() {
-        if (!stompClientB || !stompClientB.connected) {
-            logB('WARN: 아직 연결되지 않았습니다. 먼저 방 만들기 또는 기존 방 연결을 하세요.');
-            return;
-        }
-        const roomId = document.getElementById('roomIdB').value;
-        const msg = document.getElementById('msgB').value;
-
-        const payload = {
-            content: msg
-        };
-
-        stompClientB.send('/pub/chat/rooms/' + roomId + '/send', {}, JSON.stringify(payload));
-        logB('SEND: ' + JSON.stringify(payload));
-    }
+        await clientA.autoLogin();
+        await clientB.autoLogin();
+    });
 </script>
+
 </body>
 </html>
