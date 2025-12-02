@@ -15,7 +15,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 공동구매 게시글 API 컨트롤러
@@ -104,6 +108,11 @@ public class PostController {
     ) {
         log.info("전체 게시글 목록 조회 요청 - 페이지: {}, 크기: {}", page, size);
         PostListResponse response = postService.getAllPosts(page, size);
+        log.info("응답 데이터 - 게시글 수: {}, 전체: {}, 페이지: {}/{}",
+                 response.getPosts() == null ? 0 : response.getPosts().size(),
+                 response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements(),
+                 response.getPageInfo() == null ? 0 : response.getPageInfo().getCurrentPage(),
+                 response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalPages());
         return ResponseEntity.ok(response);
     }
 
@@ -155,8 +164,47 @@ public class PostController {
             @RequestParam(defaultValue = "20") int size
     ) {
         log.info("카테고리별 게시글 목록 조회 요청 - 카테고리: {}, 페이지: {}, 크기: {}", categories, page, size);
-        PostListResponse response = postService.getPostsByCategories(categories, page, size);
-        return ResponseEntity.ok(response);
+
+        // URL 디코딩
+        String decoded = URLDecoder.decode(categories, StandardCharsets.UTF_8);
+
+        // 클라이언트(예: iOS)가 배열 표현을 보낼 수 있음: ["0001","0002"] 또는 ["0001", "0002"]
+        // 또는 CSV 형태 "0001,0002" 또는 단일 값 "0001"
+        try {
+            // JSON-like array 처리
+            if (decoded.startsWith("[") && decoded.endsWith("]")) {
+                String inner = decoded.substring(1, decoded.length() - 1);
+                List<String> categoryList = Arrays.stream(inner.split(","))
+                        .map(s -> s.trim().replaceAll("^\"|\"$", "")) // 양쪽 큰따옴표 제거
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toList());
+
+                // 여러 카테고리 처리 서비스 호출
+                PostListResponse response = postService.getPostsByMultipleCategories(categoryList, page, size);
+                return ResponseEntity.ok(response);
+            }
+
+            // CSV 처리 (쉼표 포함)
+            if (decoded.contains(",")) {
+                List<String> categoryList = Arrays.stream(decoded.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toList());
+
+                PostListResponse response = postService.getPostsByMultipleCategories(categoryList, page, size);
+                return ResponseEntity.ok(response);
+            }
+
+            // 단일 카테고리
+            PostListResponse response = postService.getPostsByCategories(decoded, page, size);
+            log.info("단일 카테고리 응답 - 게시글 수: {}, 전체: {}",
+                     response.getPosts() == null ? 0 : response.getPosts().size(),
+                     response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("카테고리 파싱 오류 - 입력값: {}, 에러: {}", categories, e.toString());
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /**
@@ -262,4 +310,3 @@ public class PostController {
         return ResponseEntity.noContent().build();
     }
 }
-

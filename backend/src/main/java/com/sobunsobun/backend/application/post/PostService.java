@@ -109,6 +109,9 @@ public class PostService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<GroupPost> postPage = postRepository.findAll(pageable);
 
+        log.info("DB 조회 결과 - 전체 게시글 수: {}, 현재 페이지 게시글 수: {}, 총 페이지: {}",
+                 postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
+
         return convertToListResponse(postPage);
     }
 
@@ -150,6 +153,9 @@ public class PostService {
         Page<GroupPost> postPage = postRepository.findByCategoriesAndStatusOrderByCreatedAtDesc(
                 categories, PostStatus.OPEN, pageable);
 
+        log.info("DB 조회 결과 - 카테고리: {}, 전체: {}, 현재 페이지: {}, 총 페이지: {}",
+                 categories, postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
+
         return convertToListResponse(postPage);
     }
 
@@ -164,10 +170,16 @@ public class PostService {
     public PostListResponse getPostsByMultipleCategories(List<String> categoriesList, int page, int size) {
         log.info("여러 카테고리 게시글 목록 조회 - 카테고리: {}, 페이지: {}, 크기: {}", categoriesList, page, size);
 
+        // REGEXP 패턴 생성: "0001|0002|0003" 형태
+        String categoryPattern = String.join("|", categoriesList);
+        log.info("생성된 REGEXP 패턴: {}", categoryPattern);
 
         Pageable pageable = PageRequest.of(page, size);
         Page<GroupPost> postPage = postRepository.findByCategoriesInAndStatus(
-                categoriesList, PostStatus.OPEN, pageable);
+                categoryPattern, PostStatus.OPEN.name(), pageable);
+
+        log.info("DB 조회 결과 - 카테고리 패턴: {}, 전체: {}, 현재 페이지: {}, 총 페이지: {}",
+                 categoryPattern, postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
 
         return convertToListResponse(postPage);
     }
