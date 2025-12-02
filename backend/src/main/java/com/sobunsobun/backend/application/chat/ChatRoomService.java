@@ -106,13 +106,13 @@ public class ChatRoomService {
 
     @Transactional(readOnly = true)
     public List<ChatRoomResponse> getMyRooms(Long userId) {
-        List<ChatMember> members = chatMemberService.getMembersByUserId(userId);
+        List<ChatMember> RoomList = chatMemberService.getMembersByUserId(userId);
 
-        if (members.isEmpty()) {
+        if (RoomList.isEmpty()) {
             return List.of();
         }
 
-        Set<Long> roomIds = members.stream()
+        Set<Long> roomIds = RoomList.stream()
                 .map(ChatMember::getRoomId)
                 .collect(Collectors.toSet());
 

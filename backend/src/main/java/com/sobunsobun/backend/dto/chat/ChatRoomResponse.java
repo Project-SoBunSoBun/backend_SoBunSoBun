@@ -27,17 +27,18 @@ public class ChatRoomResponse {
         this.chatRoomType = chatRoomType;
         this.chatMembers = new ArrayList<>();
 
-        chatMembers.forEach(chatMember -> {
-            User user = chatMember.getMember();
-
-            this.chatMembers.add(
-                    ChatMemberResponse.builder()
-                            .userId(user.getId())
-                            .nickname(user.getNickname())
-                            .profileImageUrl(user.getProfileImageUrl())
-                            .memberRole(chatMember.getRole())
-                            .build()
-            );
-        });
+        if (chatMembers != null) {
+            chatMembers.forEach(chatMember -> {
+                User user = chatMember.getMember();
+                this.chatMembers.add(
+                        ChatMemberResponse.builder()
+                                .userId(user.getId())
+                                .nickname(user.getNickname())
+                                .profileImageUrl(user.getProfileImageUrl())
+                                .memberRole(chatMember.getRole())
+                                .build()
+                );
+            });
+        }
     }
 }

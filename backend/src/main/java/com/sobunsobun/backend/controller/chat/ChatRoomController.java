@@ -49,7 +49,7 @@ public class ChatRoomController {
 
     @GetMapping("/api/chat/rooms/{roomId}")
     public ResponseEntity<ChatRoomResponse> getChatRoomDetail(@AuthenticationPrincipal JwtUserPrincipal principal,
-                                          @PathVariable Long roomId) {
+                                          @PathVariable("roomId") Long roomId) {
         Long userId = principal.id();
         ChatRoomResponse response = chatRoomService.getChatRoomDetail(userId, roomId);
 
@@ -59,7 +59,7 @@ public class ChatRoomController {
     @PostMapping(value = "/api/chat/rooms/{roomId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateChatRoomImage(
             @AuthenticationPrincipal JwtUserPrincipal principal,
-            @PathVariable Long roomId,
+            @PathVariable("roomId") Long roomId,
             @RequestPart("roomImage") MultipartFile roomImage) {
 
         Long userId = principal.id();
@@ -81,9 +81,9 @@ public class ChatRoomController {
     @GetMapping("/api/chat/rooms/{roomId}/messages")
     public ResponseEntity<ChatMessagePage> getMessages(
             @AuthenticationPrincipal JwtUserPrincipal principal,
-            @PathVariable Long roomId,
-            @RequestParam(required = false) Long cursorMillis,
-            @RequestParam(defaultValue = "30") int size
+            @PathVariable("roomId") Long roomId,
+            @RequestParam(value = "cursorMillis", required = false) Long cursorMillis,
+            @RequestParam(value = "size", defaultValue = "30") int size
     ) {
         Long userId = principal.id();
         Instant cursor = (cursorMillis == null) ? null : Instant.ofEpochMilli(cursorMillis);

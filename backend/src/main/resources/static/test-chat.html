@@ -268,6 +268,28 @@
             margin-top: 3px;
         }
 
+        /* 날짜 구분선 */
+        .date-separator {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .date-separator::before,
+        .date-separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .date-separator-text {
+            padding: 0 16px;
+            font-size: 12px;
+            color: #666;
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 4px 12px;
+        }
+
         /* 입력 영역 */
         .input-area {
             padding: 8px 10px;
@@ -437,7 +459,7 @@
             this.userInfo = null;
             this.subscription = null;
             this.storageKey = `chat_token_${id}`;
-            this.messageToggle = false;
+            this.lastMessageDate = null;     // 마지막 메시지 날짜 추적
         }
 
         // localStorage에서 토큰 로드
@@ -596,14 +618,22 @@
             document.getElementById(`roomName${this.id}`).textContent = room.title || '제목 없음';
             document.getElementById(`messages${this.id}`).innerHTML = '';
 
+            // 날짜 추적 초기화
+            this.lastMessageDate = null;
+
             document.getElementById(`input${this.id}`).disabled = false;
             document.getElementById(`sendBtn${this.id}`).disabled = false;
+
+            // 채팅 페이지를 먼저 표시
+            this.showChatPage();
+
+            // 페이지가 표시된 후 채팅 내역 불러오기
+            await this.loadChatHistory(room.roomId);
 
             if (this.stompClient && this.stompClient.connected) {
                 this.subscribeToRoom(room.roomId);
             }
 
-            this.showChatPage();
             log(`${this.id}: 채팅방 "${room.title}" 선택됨 (ID: ${room.roomId})`);
         }
 
@@ -649,6 +679,100 @@
             });
         }
 
+        async loadChatHistory(roomId, cursorMillis = null, size = 30) {
+            if (!this.token) {
+                log(`${this.id}: 토큰이 없어 채팅 내역을 불러올 수 없습니다`);
+                return;
+            }
+
+            try {
+                let url = `${API_BASE}/api/chat/rooms/${roomId}/messages?size=${size}`;
+                if (cursorMillis) {
+                    url += `&cursorMillis=${cursorMillis}`;
+                }
+
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+
+                if (!res.ok) {
+                    throw new Error('채팅 내역 조회 실패');
+                }
+
+                const data = await res.json();
+                log(`${this.id}: 채팅 내역 ${data.messages.length}개 로드됨 (hasNext: ${data.hasNext})`);
+
+                // API는 최신순(DESC)으로 내려주므로 역순으로 정렬하여 오래된 메시지부터 표시
+                const messages = data.messages.reverse();
+
+                messages.forEach(msg => {
+                    this.displayHistoryMessage(msg);
+                });
+
+                // DOM 렌더링 완료 후 스크롤을 최하단으로 이동
+                requestAnimationFrame(() => {
+                    const container = document.getElementById(`messages${this.id}`);
+                    container.scrollTop = container.scrollHeight;
+                    log(`${this.id}: 스크롤을 최하단으로 이동 (scrollTop: ${container.scrollTop}, scrollHeight: ${container.scrollHeight})`);
+                });
+
+                // 더 많은 메시지가 있으면 스크롤 이벤트 리스너 추가 가능
+                if (data.hasNext) {
+                    log(`${this.id}: 더 많은 메시지가 있습니다 (nextCursor: ${data.nextCursorMillis})`);
+                    // TODO: 스크롤 상단 도달 시 이전 메시지 로드
+                }
+
+            } catch (error) {
+                log(`${this.id}: 채팅 내역 로드 실패 - ${error}`);
+            }
+        }
+
+        displayHistoryMessage(data) {
+            const container = document.getElementById(`messages${this.id}`);
+
+            // 날짜 구분선 추가
+            if (data.sentAt) {
+                const messageDate = this.getDateString(data.sentAt);
+                if (this.lastMessageDate !== messageDate) {
+                    this.addDateSeparator(container, messageDate);
+                    this.lastMessageDate = messageDate;
+                }
+            }
+
+            // 메시지 표시
+            const div = document.createElement('div');
+
+            // 내 메시지인지 확인
+            const isMine = data.senderId === this.myUserId;
+            log(`${this.id}: displayHistory - senderId: ${data.senderId}, myUserId: ${this.myUserId}, isMine: ${isMine}`);
+
+            div.className = isMine ? 'message mine' : 'message';
+
+            let avatarContent = '';
+            if (data.senderProfileImage) {
+                avatarContent = `<img src="${data.senderProfileImage}" alt="${data.senderName || 'User'}" />`;
+            } else {
+                const initial = (data.senderName || data.senderId || 'U').toString().charAt(0).toUpperCase();
+                avatarContent = initial;
+            }
+
+            const time = data.sentAt ? new Date(data.sentAt).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : '';
+
+            div.innerHTML = `
+                <div class="message-avatar">${avatarContent}</div>
+                <div class="message-content">
+                    <div class="message-sender">${data.senderName || (data.senderId ? `User ${data.senderId}` : '')}</div>
+                    <div class="message-bubble">${this.escapeHtml(data.content || '')}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+
+            container.appendChild(div);
+        }
+
         subscribeToRoom(roomId) {
             if (!this.stompClient || !this.stompClient.connected) {
                 log(`${this.id}: WebSocket이 연결되지 않음`);
@@ -667,8 +791,7 @@
                         data = { content: message.body };
                     }
 
-                    // 서버에서 받은 메시지 → isLocal = false
-                    this.displayMessage(data, false);
+                    this.displayMessage(data);
                 }
             );
 
@@ -676,23 +799,21 @@
         }
 
         // isLocal: 내가 지금 보낸 메시지(로컬 에코)인지 여부
-    displayMessage(data, isLocal = false) {
+    displayMessage(data) {
         const container = document.getElementById(`messages${this.id}`);
-        const div = document.createElement('div');
 
-        let isMine;
-
-        if (isLocal) {
-            // 내가 막 보낸 메시지는 무조건 내 말풍선(오른쪽)
-            isMine = true;
-        } else {
-            // 서버에서 받은 메시지는 A/B 관점에 따라 좌/우 번갈아가며 표시
-            this.messageToggle = !this.messageToggle;
-            isMine = this.uiClientId === 'A'
-                ? this.messageToggle
-                : !this.messageToggle;
+        // 날짜 구분선 추가
+        if (data.sentAt) {
+            const messageDate = this.getDateString(data.sentAt);
+            if (this.lastMessageDate !== messageDate) {
+                this.addDateSeparator(container, messageDate);
+                this.lastMessageDate = messageDate;
+            }
         }
 
+        const div = document.createElement('div');
+        const isMine = data.senderId && this.myUserId && data.senderId === this.myUserId;
+        log(`${this.id}: displayMessage - senderId: ${data.senderId}, myUserId: ${this.myUserId}, isMine: ${isMine}`);
         div.className = isMine ? 'message mine' : 'message';
 
         let avatarContent = '';
@@ -747,14 +868,6 @@
                 {},
                 JSON.stringify(payload)
             );
-
-            // 2) 내 화면에 바로 표시 (로컬 에코)
-            this.displayMessage({
-                content,
-                senderName: '나',
-                senderId: this.myUserId,
-                sentAt: new Date().toISOString()
-            }, true);
 
             input.value = '';
             log(`${this.id}: 메시지 전송 - "${content}"`);
@@ -820,6 +933,37 @@
             } catch (e) {
                 return null;
             }
+        }
+
+        getDateString(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            // 날짜를 YYYY-MM-DD 형식으로 비교
+            const dateStr = date.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            if (dateStr === todayStr) {
+                return '오늘';
+            } else if (dateStr === yesterdayStr) {
+                return '어제';
+            } else {
+                // YYYY년 MM월 DD일 형식
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                return `${year}년 ${month}월 ${day}일`;
+            }
+        }
+
+        addDateSeparator(container, dateText) {
+            const separator = document.createElement('div');
+            separator.className = 'date-separator';
+            separator.innerHTML = `<div class="date-separator-text">${dateText}</div>`;
+            container.appendChild(separator);
         }
 
         escapeHtml(text) {
