@@ -754,6 +754,10 @@
             this.subscription = null;
             this.storageKey = `chat_token_${id}`;
             this.lastMessageDate = null;     // 마지막 메시지 날짜 추적
+            this.hasMoreMessages = false;    // 더 불러올 메시지가 있는지
+            this.nextCursor = null;          // 다음 페이지 커서
+            this.isLoadingMessages = false;  // 메시지 로딩 중인지
+            this.scrollListener = null;      // 스크롤 이벤트 리스너
         }
 
         // localStorage에서 토큰 로드
@@ -920,6 +924,13 @@
                 this.subscription = null;
             }
 
+            // 이전 스크롤 리스너 제거
+            if (this.scrollListener) {
+                const container = document.getElementById(`messages${this.id}`);
+                container.removeEventListener('scroll', this.scrollListener);
+                this.scrollListener = null;
+            }
+
             this.currentRoom = room;
             this.currentRoomId = room.roomId;
             this.renderRoomList();
@@ -927,8 +938,11 @@
             document.getElementById(`roomName${this.id}`).textContent = room.title || '제목 없음';
             document.getElementById(`messages${this.id}`).innerHTML = '';
 
-            // 날짜 추적 초기화
+            // 페이징 관련 초기화
             this.lastMessageDate = null;
+            this.hasMoreMessages = false;
+            this.nextCursor = null;
+            this.isLoadingMessages = false;
 
             document.getElementById(`input${this.id}`).disabled = false;
             document.getElementById(`sendBtn${this.id}`).disabled = false;
@@ -938,6 +952,9 @@
 
             // 페이지가 표시된 후 채팅 내역 불러오기
             await this.loadChatHistory(room.roomId);
+
+            // 스크롤 이벤트 리스너 추가
+            this.setupScrollListener();
 
             if (this.stompClient && this.stompClient.connected) {
                 this.subscribeToRoom(room.roomId);
@@ -958,6 +975,13 @@
             if (this.subscription) {
                 this.subscription.unsubscribe();
                 this.subscription = null;
+            }
+
+            // 스크롤 리스너 제거
+            if (this.scrollListener) {
+                const container = document.getElementById(`messages${this.id}`);
+                container.removeEventListener('scroll', this.scrollListener);
+                this.scrollListener = null;
             }
 
             log(`${this.id}: 채팅방 목록으로 돌아감`);
@@ -988,7 +1012,7 @@
             });
         }
 
-        async loadChatHistory(roomId, cursorMillis = null, size = 30) {
+        async loadChatHistory(roomId, cursorMillis = null, size = 30, isPrepend = false) {
             if (!this.token) {
                 log(`${this.id}: 토큰이 없어 채팅 내역을 불러올 수 없습니다`);
                 return;
@@ -1011,24 +1035,103 @@
                 const data = await res.json();
                 log(`${this.id}: 채팅 내역 ${data.messages.length}개 로드됨 (hasNext: ${data.hasNext})`);
 
+                // 페이징 정보 저장
+                this.hasMoreMessages = data.hasNext;
+                this.nextCursor = data.nextCursorMillis;
+
                 // API는 최신순(DESC)으로 내려주므로 역순으로 정렬하여 오래된 메시지부터 표시
                 const messages = data.messages.reverse();
 
-                messages.forEach(msg => {
-                    this.displayHistoryMessage(msg);
-                });
+                const container = document.getElementById(`messages${this.id}`);
 
-                // DOM 렌더링 완료 후 스크롤을 최하단으로 이동
-                requestAnimationFrame(() => {
-                    const container = document.getElementById(`messages${this.id}`);
-                    container.scrollTop = container.scrollHeight;
-                    log(`${this.id}: 스크롤을 최하단으로 이동 (scrollTop: ${container.scrollTop}, scrollHeight: ${container.scrollHeight})`);
-                });
+                if (isPrepend) {
+                    // 이전 메시지를 맨 앞에 추가하는 경우 (스크롤 위치 유지)
+                    const oldScrollHeight = container.scrollHeight;
 
-                // 더 많은 메시지가 있으면 스크롤 이벤트 리스너 추가 가능
+                    // 기존 첫 번째 메시지의 날짜 저장
+                    const firstExistingMessage = container.querySelector('.message');
+                    let firstExistingDate = null;
+                    if (firstExistingMessage) {
+                        // 첫 메시지의 날짜를 찾기 위해 데이터 속성 사용
+                        const timeElement = firstExistingMessage.querySelector('.message-time');
+                        if (timeElement && timeElement.dataset.timestamp) {
+                            firstExistingDate = this.getDateString(timeElement.dataset.timestamp);
+                        }
+                    }
+
+                    // Fragment를 생성하여 새 메시지들을 추가
+                    const fragment = document.createDocumentFragment();
+                    let prevMessageDate = null;
+
+                    messages.forEach((msg, index) => {
+                        // 날짜 구분선 추가
+                        if (msg.sentAt) {
+                            const messageDate = this.getDateString(msg.sentAt);
+                            if (prevMessageDate !== messageDate) {
+                                const separator = document.createElement('div');
+                                separator.className = 'date-separator';
+                                separator.innerHTML = `<div class="date-separator-text">${messageDate}</div>`;
+                                fragment.appendChild(separator);
+                                prevMessageDate = messageDate;
+                            }
+                        }
+
+                        // 메시지 추가
+                        const messageElement = this.createMessageElement(msg);
+                        fragment.appendChild(messageElement);
+                    });
+
+                    // 새 메시지의 마지막 날짜와 기존 첫 메시지 날짜 비교
+                    if (messages.length > 0 && firstExistingDate) {
+                        const lastNewMessage = messages[messages.length - 1];
+                        if (lastNewMessage.sentAt) {
+                            const lastNewDate = this.getDateString(lastNewMessage.sentAt);
+
+                            if (lastNewDate === firstExistingDate) {
+                                // 날짜가 같으면 기존 첫 번째 날짜 구분선 제거 (중복 방지)
+                                const firstSeparator = container.querySelector('.date-separator');
+                                if (firstSeparator) {
+                                    const separatorText = firstSeparator.querySelector('.date-separator-text');
+                                    if (separatorText && separatorText.textContent === firstExistingDate) {
+                                        firstSeparator.remove();
+                                        log(`${this.id}: 중복 날짜 구분선 제거 - ${firstExistingDate}`);
+                                    }
+                                }
+                            } else {
+                                // 날짜가 다르면 구분선 추가 (기존 것은 유지)
+                                const separator = document.createElement('div');
+                                separator.className = 'date-separator';
+                                separator.innerHTML = `<div class="date-separator-text">${firstExistingDate}</div>`;
+                                fragment.appendChild(separator);
+                                log(`${this.id}: 날짜 구분선 추가 - ${firstExistingDate} (새 메시지 마지막: ${lastNewDate})`);
+                            }
+                        }
+                    }
+
+                    // Fragment를 맨 앞에 추가
+                    container.insertBefore(fragment, container.firstChild);
+
+                    // 스크롤 위치 유지
+                    requestAnimationFrame(() => {
+                        const newScrollHeight = container.scrollHeight;
+                        container.scrollTop = newScrollHeight - oldScrollHeight;
+                        log(`${this.id}: 스크롤 위치 유지 (scrollTop: ${container.scrollTop})`);
+                    });
+                } else {
+                    // 초기 로드: 메시지를 추가하고 스크롤을 최하단으로
+                    messages.forEach(msg => {
+                        this.displayHistoryMessage(msg);
+                    });
+
+                    // DOM 렌더링 완료 후 스크롤을 최하단으로 이동
+                    requestAnimationFrame(() => {
+                        container.scrollTop = container.scrollHeight;
+                        log(`${this.id}: 스크롤을 최하단으로 이동 (scrollTop: ${container.scrollTop}, scrollHeight: ${container.scrollHeight})`);
+                    });
+                }
+
                 if (data.hasNext) {
                     log(`${this.id}: 더 많은 메시지가 있습니다 (nextCursor: ${data.nextCursorMillis})`);
-                    // TODO: 스크롤 상단 도달 시 이전 메시지 로드
                 }
 
             } catch (error) {
@@ -1036,26 +1139,13 @@
             }
         }
 
-        displayHistoryMessage(data) {
-            const container = document.getElementById(`messages${this.id}`);
-
-            // 날짜 구분선 추가
-            if (data.sentAt) {
-                const messageDate = this.getDateString(data.sentAt);
-                if (this.lastMessageDate !== messageDate) {
-                    this.addDateSeparator(container, messageDate);
-                    this.lastMessageDate = messageDate;
-                }
-            }
-
-            // 메시지 표시
+        createMessageElement(data) {
             const div = document.createElement('div');
 
             // 내 메시지인지 확인 (타입 변환하여 비교)
             const senderId = Number(data.senderId);
             const myUserId = Number(this.myUserId);
             const isMine = senderId === myUserId;
-            log(`${this.id}: displayHistory - senderId: ${senderId} (타입: ${typeof senderId}), myUserId: ${myUserId} (타입: ${typeof myUserId}), isMine: ${isMine}`);
 
             div.className = isMine ? 'message mine' : 'message';
 
@@ -1082,15 +1172,35 @@
                 minute: '2-digit'
             }) : '';
 
+            // timestamp를 data 속성으로 저장
+            const timestamp = data.sentAt || '';
+
             div.innerHTML = `
                 <div class="message-avatar">${avatarContent}</div>
                 <div class="message-content">
                     <div class="message-sender">${data.senderName || (data.senderId ? `User ${data.senderId}` : '')}</div>
                     <div class="message-bubble">${this.escapeHtml(data.content || '')}</div>
-                    <div class="message-time">${time}</div>
+                    <div class="message-time" data-timestamp="${timestamp}">${time}</div>
                 </div>
             `;
 
+            return div;
+        }
+
+        displayHistoryMessage(data) {
+            const container = document.getElementById(`messages${this.id}`);
+
+            // 날짜 구분선 추가
+            if (data.sentAt) {
+                const messageDate = this.getDateString(data.sentAt);
+                if (this.lastMessageDate !== messageDate) {
+                    this.addDateSeparator(container, messageDate);
+                    this.lastMessageDate = messageDate;
+                }
+            }
+
+            // 메시지 표시
+            const div = this.createMessageElement(data);
             container.appendChild(div);
         }
 
@@ -1119,64 +1229,23 @@
             log(`${this.id}: 채팅방 ${roomId} 구독 시작`);
         }
 
-        // isLocal: 내가 지금 보낸 메시지(로컬 에코)인지 여부
-    displayMessage(data) {
-        const container = document.getElementById(`messages${this.id}`);
+        displayMessage(data) {
+            const container = document.getElementById(`messages${this.id}`);
 
-        // 날짜 구분선 추가
-        if (data.sentAt) {
-            const messageDate = this.getDateString(data.sentAt);
-            if (this.lastMessageDate !== messageDate) {
-                this.addDateSeparator(container, messageDate);
-                this.lastMessageDate = messageDate;
+            // 날짜 구분선 추가
+            if (data.sentAt) {
+                const messageDate = this.getDateString(data.sentAt);
+                if (this.lastMessageDate !== messageDate) {
+                    this.addDateSeparator(container, messageDate);
+                    this.lastMessageDate = messageDate;
+                }
             }
+
+            // 메시지 표시
+            const div = this.createMessageElement(data);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
         }
-
-        const div = document.createElement('div');
-
-        // 내 메시지인지 확인 (타입 변환하여 비교)
-        const senderId = Number(data.senderId);
-        const myUserId = Number(this.myUserId);
-        const isMine = senderId === myUserId;
-        log(`${this.id}: displayMessage - senderId: ${senderId} (타입: ${typeof senderId}), myUserId: ${myUserId} (타입: ${typeof myUserId}), isMine: ${isMine}`);
-
-        div.className = isMine ? 'message mine' : 'message';
-
-        // 채팅방 멤버 정보에서 프로필 이미지 가져오기
-        let avatarContent = '';
-        let senderProfileImage = null;
-
-        if (this.currentRoom && this.currentRoom.chatMembers) {
-            const member = this.currentRoom.chatMembers.find(m => m.userId === data.senderId);
-            if (member) {
-                senderProfileImage = member.profileImageUrl;
-            }
-        }
-
-        if (senderProfileImage) {
-            avatarContent = `<img src="${senderProfileImage}" alt="${data.senderName || 'User'}" />`;
-        } else {
-            const initial = (data.senderName || data.senderId || 'U').toString().charAt(0).toUpperCase();
-            avatarContent = initial;
-        }
-
-        const time = data.sentAt ? new Date(data.sentAt).toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit'
-        }) : '';
-
-        div.innerHTML = `
-            <div class="message-avatar">${avatarContent}</div>
-            <div class="message-content">
-                <div class="message-sender">${data.senderName || (data.senderId ? `User ${data.senderId}` : '')}</div>
-                <div class="message-bubble">${this.escapeHtml(data.content || '')}</div>
-                <div class="message-time">${time}</div>
-            </div>
-        `;
-
-        container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
-    }
 
         sendMessage() {
             if (!this.stompClient || !this.stompClient.connected) {
@@ -1324,6 +1393,38 @@
             separator.className = 'date-separator';
             separator.innerHTML = `<div class="date-separator-text">${dateText}</div>`;
             container.appendChild(separator);
+        }
+
+        setupScrollListener() {
+            const container = document.getElementById(`messages${this.id}`);
+
+            this.scrollListener = async () => {
+                // 스크롤이 상단 근처에 도달했는지 확인 (200px 이내)
+                if (container.scrollTop < 200) {
+                    await this.loadMoreMessages();
+                }
+            };
+
+            container.addEventListener('scroll', this.scrollListener);
+        }
+
+        async loadMoreMessages() {
+            // 로딩 중이거나 더 이상 메시지가 없으면 중단
+            if (this.isLoadingMessages || !this.hasMoreMessages) {
+                return;
+            }
+
+            this.isLoadingMessages = true;
+            log(`${this.id}: 이전 메시지 로드 시작 (cursor: ${this.nextCursor})`);
+
+            try {
+                await this.loadChatHistory(this.currentRoomId, this.nextCursor, 30, true);
+                log(`${this.id}: 이전 메시지 로드 완료`);
+            } catch (error) {
+                log(`${this.id}: 이전 메시지 로드 실패 - ${error}`);
+            } finally {
+                this.isLoadingMessages = false;
+            }
         }
 
         escapeHtml(text) {
