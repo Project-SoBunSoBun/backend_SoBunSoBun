@@ -5,6 +5,7 @@ import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,8 +48,7 @@ public class ChatMemberService {
         List<User> users = userRepository.findAllById(memberIds);
 
         if (users.size() != memberIds.size()) {
-            // TODO: 테스트 끝나면 다시 작동하도록 처리
-            //throw new EntityNotFoundException("존재하지 않는 유저가 포함되어 있습니다.");
+            throw new EntityNotFoundException("존재하지 않는 유저가 포함되어 있습니다.");
         }
 
         // OWNER 먼저, 그 다음 MEMBER 순서로 정렬
