@@ -28,10 +28,14 @@ import java.util.stream.Collectors;
 public class ChatMessageService {
 
     private final ChatRoomRepository chatRoomRepository;
-    private final ChatMemberService chatMemberService;
     private final ChatMessageRepository chatMessageRepository;
-    private final RedisChatPublisher redisChatPublisher;
     private final UserRepository userRepository;
+
+    private final ChatMemberService chatMemberService;
+    private final ChatEncryptionService chatEncryptionService;
+
+    private final RedisChatPublisher redisChatPublisher;
+
 
     @Transactional
     public void sendMessage(Long roomId, Long senderId, ChatMessageRequest request) {
@@ -45,19 +49,21 @@ public class ChatMessageService {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 사용자입니다."));
 
-        Instant now = Instant.now();
+        Instant time = Instant.now();
+        String encryptedContent = chatEncryptionService.encrypt(request.getContent());
+
         ChatMessage message = ChatMessage.builder()
                 .roomId(room.getId())
                 .senderId(senderId)
                 .type(request.getType() == null ? ChatType.TALK : request.getType())
-                .content(request.getContent())
-                .createdAt(now)
+                .content(encryptedContent)
+                .createdAt(time)
                 .build();
 
         ChatMessage saved = chatMessageRepository.save(message);
 
         // 사용자 정보를 포함한 응답 생성
-        ChatMessageResponse response = ChatMessageResponse.from(saved, sender);
+        ChatMessageResponse response = ChatMessageResponse.from(saved, sender, request.getContent());
         redisChatPublisher.publish(room.getId(), response);
     }
 
@@ -100,7 +106,8 @@ public class ChatMessageService {
         List<ChatMessageResponse> responses = messages.stream()
                 .map(message -> {
                     User sender = userMap.get(message.getSenderId());
-                    return ChatMessageResponse.from(message, sender);
+                    String plainContent = chatEncryptionService.decrypt(message.getContent());
+                    return ChatMessageResponse.from(message, sender, plainContent);
                 })
                 .toList();
 

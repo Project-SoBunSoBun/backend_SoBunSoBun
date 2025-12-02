@@ -24,25 +24,14 @@ public class ChatMessageResponse {
     private String content;
     private String sentAt;
 
-    public static ChatMessageResponse from(ChatMessage message) {
-        return ChatMessageResponse.builder()
-                .id(message.getId())
-                .roomId(message.getRoomId())
-                .senderId(message.getSenderId())
-                .type(message.getType())
-                .content(message.getContent())
-                .sentAt(normalizeToKstIso(message.getCreatedAt()))
-                .build();
-    }
-
-    public static ChatMessageResponse from(ChatMessage message, User sender) {
+    public static ChatMessageResponse from(ChatMessage message, User sender, String plainContent) {
         return ChatMessageResponse.builder()
                 .id(message.getId())
                 .roomId(message.getRoomId())
                 .senderId(message.getSenderId())
                 .senderName(sender != null ? sender.getNickname() : null)
                 .type(message.getType())
-                .content(message.getContent())
+                .content(plainContent)
                 .sentAt(normalizeToKstIso(message.getCreatedAt()))
                 .build();
     }

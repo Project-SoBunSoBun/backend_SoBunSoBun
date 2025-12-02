@@ -23,7 +23,6 @@ spring:
       database: ${MONGO_DATABASE}
       authentication-database: ${MONGO_AUTH_DB}
 
-
   jpa:
     hibernate:
       ddl-auto: validate
@@ -48,8 +47,12 @@ server:
   port: 8080
 
 file:
-  upload-dir: /var/app/sobunsobun/uploads/profiles
+  upload-dir: ${FILE_UPLOAD_DIR}
   url-prefix: /files
+
+app:
+  chat:
+    secret: ${CHAT_SECRET}
 
 # SpringDoc/Swagger 설정
 springdoc:
