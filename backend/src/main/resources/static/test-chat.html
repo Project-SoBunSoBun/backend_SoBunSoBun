@@ -321,6 +321,248 @@
             z-index: 1000;
             font-size: 11px;
         }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .modal-form-group {
+            margin-bottom: 20px;
+        }
+
+        .modal-form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .modal-form-group label .optional {
+            font-weight: 400;
+            color: #999;
+            font-size: 11px;
+        }
+
+        .modal-form-group input[type="text"],
+        .modal-form-group input[type="number"],
+        .modal-form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        .modal-form-group input:focus,
+        .modal-form-group select:focus {
+            outline: none;
+            border-color: #3b5998;
+        }
+
+        .modal-form-group .help-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .image-upload-container {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .image-upload-container:hover {
+            border-color: #3b5998;
+            background: #f8f9ff;
+        }
+
+        .image-upload-container.has-image {
+            border-color: #3b5998;
+            background: #f8f9ff;
+        }
+
+        .image-upload-container input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        .upload-text {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .image-preview-container {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .image-preview-container.show {
+            display: block;
+        }
+
+        .image-preview-container img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+        }
+
+        .image-preview-container .remove-image {
+            margin-top: 6px;
+            padding: 4px 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .image-preview-container .remove-image:hover {
+            background: #d32f2f;
+        }
+
+        .member-ids-container {
+            margin-top: 8px;
+        }
+
+        .member-id-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+
+        .member-id-tag .remove-tag {
+            margin-left: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-primary {
+            background: #3b5998;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #2d4373;
+        }
+
+        .modal-btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .modal-btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .modal-status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .modal-status.show {
+            display: block;
+        }
+
+        .modal-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .modal-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .modal-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
     </style>
 </head>
 <body>
@@ -389,6 +631,98 @@
 
 <button class="toggle-log" onclick="toggleLog()">로그 표시/숨김</button>
 <div class="log-panel" id="logPanel"></div>
+
+<!-- 채팅방 생성 모달 -->
+<div class="modal-overlay" id="createRoomModal">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2>새 채팅방 만들기</h2>
+            <p>채팅방 정보를 입력하세요</p>
+        </div>
+
+        <div id="modalStatus" class="modal-status"></div>
+
+        <form id="createRoomForm">
+            <!-- 채팅방 제목 -->
+            <div class="modal-form-group">
+                <label>채팅방 제목</label>
+                <input
+                    type="text"
+                    id="modalRoomTitle"
+                    placeholder="채팅방 제목을 입력하세요"
+                    required
+                />
+            </div>
+
+            <!-- 채팅방 타입 -->
+            <div class="modal-form-group">
+                <label>채팅방 타입</label>
+                <select id="modalRoomType" required>
+                    <option value="GROUP">그룹 채팅</option>
+                    <option value="PRIVATE">1:1 채팅</option>
+                </select>
+            </div>
+
+            <!-- 초대할 멤버 -->
+            <div class="modal-form-group">
+                <label>초대할 멤버</label>
+                <div style="display: flex; gap: 8px;">
+                    <input
+                        type="number"
+                        id="modalMemberIdInput"
+                        placeholder="멤버 ID를 입력하세요"
+                        style="flex: 1;"
+                    />
+                    <button
+                        type="button"
+                        onclick="addModalMemberId()"
+                        style="padding: 10px 16px; background: #3b5998; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px;"
+                    >
+                        추가
+                    </button>
+                </div>
+                <div class="help-text">멤버 ID를 입력하고 추가 버튼을 클릭하세요</div>
+                <div id="modalMemberIdsContainer" class="member-ids-container"></div>
+            </div>
+
+            <!-- Post ID (선택) -->
+            <div class="modal-form-group">
+                <label>게시글 ID <span class="optional">(선택사항)</span></label>
+                <input
+                    type="number"
+                    id="modalPostId"
+                    placeholder="게시글 ID를 입력하세요"
+                />
+                <div class="help-text">게시글과 연결된 채팅방인 경우 입력하세요</div>
+            </div>
+
+            <!-- 채팅방 이미지 -->
+            <div class="modal-form-group">
+                <label>채팅방 이미지 <span class="optional">(선택사항)</span></label>
+                <div class="image-upload-container" id="modalImageUploadContainer" onclick="document.getElementById('modalRoomImage').click()">
+                    <input
+                        type="file"
+                        id="modalRoomImage"
+                        accept="image/*"
+                        onchange="handleModalImageSelect(event)"
+                    />
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">클릭하여 이미지 선택</div>
+                    <div class="image-preview-container" id="modalImagePreview">
+                        <img id="modalPreviewImage" src="" alt="미리보기" />
+                        <button type="button" class="remove-image" onclick="removeModalImage(event)">이미지 제거</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 버튼 -->
+            <div class="modal-btn-container">
+                <button type="button" class="modal-btn modal-btn-secondary" onclick="closeCreateRoomModal()">취소</button>
+                <button type="submit" class="modal-btn modal-btn-primary" id="modalSubmitBtn">채팅방 생성</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
@@ -875,36 +1209,60 @@
             log(`${this.id}: 메시지 전송 - "${content}"`);
         }
 
-        async createRoom() {
+        createRoom() {
             if (!this.token) {
                 alert('먼저 로그인하세요');
                 return;
             }
+            openCreateRoomModal(this);
+        }
 
-            const title = prompt('채팅방 제목을 입력하세요:');
-            if (!title) return;
-
-            const memberIdsStr = prompt('초대할 멤버 ID를 쉼표로 구분하여 입력하세요 (예: 1,2,3):');
-            if (!memberIdsStr) return;
-
-            const memberIds = memberIdsStr.split(',')
-                .map(id => parseInt(id.trim()))
-                .filter(id => !isNaN(id));
-
+        async submitCreateRoom(title, memberIds, type, postId, imageFile) {
             try {
-                const res = await fetch(`${API_BASE}/api/chat/rooms`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.token}`
-                    },
-                    body: JSON.stringify({
+                let res;
+
+                if (imageFile) {
+                    // 이미지가 있는 경우: multipart/form-data
+                    log(`${this.id}: 이미지 포함 채팅방 생성 (multipart/form-data)`);
+
+                    const formData = new FormData();
+                    const requestData = {
                         title: title,
-                        memberIds: memberIds,
-                        type: 'GROUP',
-                        postId: null
-                    })
-                });
+                        memberIds: Array.from(memberIds),
+                        type: type,
+                        postId: postId || null
+                    };
+
+                    formData.append('request', new Blob([JSON.stringify(requestData)], {
+                        type: 'application/json'
+                    }));
+                    formData.append('roomImage', imageFile);
+
+                    res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: formData
+                    });
+                } else {
+                    // 이미지가 없는 경우: application/json
+                    log(`${this.id}: 이미지 없이 채팅방 생성 (application/json)`);
+
+                    res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            memberIds: Array.from(memberIds),
+                            type: type,
+                            postId: postId || null
+                        })
+                    });
+                }
 
                 if (!res.ok) {
                     const error = await res.text();
@@ -915,10 +1273,10 @@
                 log(`${this.id}: 채팅방 생성됨 - ${newRoom.title} (ID: ${newRoom.roomId})`);
 
                 await this.loadRooms();
-                alert('채팅방이 생성되었습니다!');
+                return newRoom;
             } catch (error) {
                 log(`${this.id}: 채팅방 생성 실패 - ${error}`);
-                alert('채팅방 생성에 실패했습니다: ' + error.message);
+                throw error;
             }
         }
 
@@ -1005,6 +1363,164 @@
 
         await clientA.autoLogin();
         await clientB.autoLogin();
+    });
+
+    // === 채팅방 생성 모달 관련 함수들 ===
+    let currentClient = null;
+    const modalMemberIds = new Set();
+
+    function openCreateRoomModal(client) {
+        currentClient = client;
+        modalMemberIds.clear();
+        document.getElementById('createRoomForm').reset();
+        document.getElementById('modalMemberIdsContainer').innerHTML = '';
+        removeModalImage(new Event('click'));
+        hideModalStatus();
+        document.getElementById('createRoomModal').classList.add('show');
+    }
+
+    function closeCreateRoomModal() {
+        document.getElementById('createRoomModal').classList.remove('show');
+        currentClient = null;
+    }
+
+    function addModalMemberId() {
+        const input = document.getElementById('modalMemberIdInput');
+        const memberId = parseInt(input.value.trim());
+
+        if (!memberId || isNaN(memberId)) {
+            showModalStatus('유효한 멤버 ID를 입력하세요', 'error');
+            return;
+        }
+
+        if (modalMemberIds.has(memberId)) {
+            showModalStatus('이미 추가된 멤버입니다', 'error');
+            return;
+        }
+
+        modalMemberIds.add(memberId);
+        input.value = '';
+        renderModalMemberIds();
+        hideModalStatus();
+    }
+
+    function renderModalMemberIds() {
+        const container = document.getElementById('modalMemberIdsContainer');
+        container.innerHTML = '';
+
+        modalMemberIds.forEach(id => {
+            const tag = document.createElement('div');
+            tag.className = 'member-id-tag';
+            tag.innerHTML = `
+                멤버 ID: ${id}
+                <span class="remove-tag" onclick="removeModalMemberId(${id})">×</span>
+            `;
+            container.appendChild(tag);
+        });
+    }
+
+    function removeModalMemberId(id) {
+        modalMemberIds.delete(id);
+        renderModalMemberIds();
+    }
+
+    function handleModalImageSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('modalPreviewImage').src = e.target.result;
+            document.getElementById('modalImagePreview').classList.add('show');
+            document.getElementById('modalImageUploadContainer').classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeModalImage(event) {
+        event.stopPropagation();
+        document.getElementById('modalRoomImage').value = '';
+        document.getElementById('modalImagePreview').classList.remove('show');
+        document.getElementById('modalImageUploadContainer').classList.remove('has-image');
+    }
+
+    function showModalStatus(message, type) {
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.textContent = message;
+        statusEl.className = `modal-status show ${type}`;
+    }
+
+    function hideModalStatus() {
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.className = 'modal-status';
+    }
+
+    // 폼 제출 이벤트
+    document.getElementById('createRoomForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!currentClient) {
+            showModalStatus('오류: 클라이언트 정보가 없습니다', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById('modalSubmitBtn');
+        submitBtn.disabled = true;
+
+        try {
+            hideModalStatus();
+
+            const title = document.getElementById('modalRoomTitle').value.trim();
+            const type = document.getElementById('modalRoomType').value;
+            const postId = document.getElementById('modalPostId').value.trim();
+            const imageFile = document.getElementById('modalRoomImage').files[0];
+
+            if (!title) {
+                showModalStatus('채팅방 제목을 입력하세요', 'error');
+                return;
+            }
+
+            if (modalMemberIds.size === 0) {
+                showModalStatus('최소 1명의 멤버를 추가하세요', 'error');
+                return;
+            }
+
+            showModalStatus('채팅방 생성 중...', 'info');
+
+            const result = await currentClient.submitCreateRoom(
+                title,
+                modalMemberIds,
+                type,
+                postId,
+                imageFile
+            );
+
+            showModalStatus(`채팅방 "${result.title}"이 생성되었습니다!`, 'success');
+
+            setTimeout(() => {
+                closeCreateRoomModal();
+            }, 1500);
+
+        } catch (error) {
+            showModalStatus('채팅방 생성 실패: ' + error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Enter 키로 멤버 ID 추가
+    document.getElementById('modalMemberIdInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addModalMemberId();
+        }
+    });
+
+    // 모달 오버레이 클릭 시 닫기
+    document.getElementById('createRoomModal').addEventListener('click', (e) => {
+        if (e.target.id === 'createRoomModal') {
+            closeCreateRoomModal();
+        }
     });
 </script>
 
