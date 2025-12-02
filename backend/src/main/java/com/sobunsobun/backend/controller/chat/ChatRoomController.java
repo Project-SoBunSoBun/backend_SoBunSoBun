@@ -47,6 +47,17 @@ public class ChatRoomController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping(value = "/api/chat/rooms", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ChatRoomResponse> createChatRoomWithJson(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @RequestBody CreateChatRoomRequest request) {
+
+        Long userId = principal.id();
+        ChatRoomResponse response = chatRoomService.createChatRoom(userId, request);
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/api/chat/rooms/{roomId}")
     public ResponseEntity<ChatRoomResponse> getChatRoomDetail(@AuthenticationPrincipal JwtUserPrincipal principal,
                                           @PathVariable("roomId") Long roomId) {

@@ -65,6 +65,11 @@ public class ChatRoomService {
                 .build();
     }
 
+    @Transactional
+    public ChatRoomResponse createChatRoom(Long ownerId, CreateChatRoomRequest request) {
+        return createChatRoom(ownerId, request, null);
+    }
+
     public void setChatRoomTitle(Long ownerId, CreateChatRoomRequest request) {
         if (request.getTitle() != null) return;
 

@@ -22,41 +22,6 @@
             flex-direction: column;
         }
 
-        /* 상단 토큰 입력 패널 */
-        .top-input-panel {
-            flex: 0 0 auto;
-            padding: 10px 15px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-        }
-        .top-input-panel h3 {
-            margin: 0 0 6px 0;
-            font-size: 14px;
-            color: #333;
-        }
-        .top-input-panel input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 6px;
-            font-size: 13px;
-        }
-        .top-input-panel button {
-            width: 100%;
-            padding: 8px;
-            background: #3b5998;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-        }
-        .top-input-panel button:hover {
-            background: #2d4373;
-        }
-
         /* 메인 영역: 좌우 2 클라이언트 */
         .container {
             flex: 1 1 auto;
@@ -360,13 +325,6 @@
 </head>
 <body>
 
-<!-- 공통 입력 패널 -->
-<div class="top-input-panel">
-    <h3>🔑 카카오 액세스 토큰 입력 (양쪽 클라이언트 공통)</h3>
-    <input id="sharedToken" type="text" placeholder="카카오 액세스 토큰을 입력하세요" />
-    <button onclick="loginBothClients()">양쪽 클라이언트 로그인</button>
-</div>
-
 <div class="container">
     <!-- Client A -->
     <div class="client-wrapper">
@@ -377,7 +335,8 @@
             </div>
             <div class="status" id="statusA">토큰을 입력하고 로그인하세요</div>
             <div class="room-list-controls">
-                <button onclick="clientA.loadRooms()">채팅방 목록 새로고침</button>
+                <input id="tokenA" type="text" placeholder="카카오 액세스 토큰" style="width: 100%; margin-bottom: 4px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" />
+                <button onclick="clientA.loginWithToken()">로그인</button>
                 <button onclick="clientA.createRoom()">새 채팅방 만들기</button>
             </div>
             <div class="room-items" id="roomListA"></div>
@@ -406,7 +365,8 @@
             </div>
             <div class="status" id="statusB">토큰을 입력하고 로그인하세요</div>
             <div class="room-list-controls">
-                <button onclick="clientB.loadRooms()">채팅방 목록 새로고침</button>
+                <input id="tokenB" type="text" placeholder="카카오 액세스 토큰" style="width: 100%; margin-bottom: 4px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" />
+                <button onclick="clientB.loginWithToken()">로그인</button>
                 <button onclick="clientB.createRoom()">새 채팅방 만들기</button>
             </div>
             <div class="room-items" id="roomListB"></div>
@@ -491,6 +451,18 @@
             status.className = 'status';
             if (type === 'connected') status.classList.add('connected');
             if (type === 'error') status.classList.add('error');
+        }
+
+        async loginWithToken() {
+            const tokenInput = document.getElementById(`token${this.id}`);
+            const kakaoToken = tokenInput.value.trim();
+
+            if (!kakaoToken) {
+                alert('카카오 액세스 토큰을 입력하세요');
+                return;
+            }
+
+            await this.login(kakaoToken);
         }
 
         async login(kakaoToken) {
@@ -1012,28 +984,7 @@
     const clientA = new ChatClient('A', 'A'); // 왼쪽 화면
     const clientB = new ChatClient('B', 'B'); // 오른쪽 화면
 
-    async function loginBothClients() {
-        const token = document.getElementById('sharedToken').value.trim();
-
-        if (!token) {
-            alert('카카오 액세스 토큰을 입력하세요');
-            return;
-        }
-
-        log('양쪽 클라이언트 로그인 시작');
-
-        try {
-            await Promise.all([
-                clientA.login(token),
-                clientB.login(token)
-            ]);
-            log('✅ 양쪽 클라이언트 로그인 완료');
-        } catch (error) {
-            log('❌ 로그인 실패: ' + error.message);
-            alert('로그인 실패: ' + error.message);
-        }
-    }
-
+    // 엔터키 이벤트 리스너
     document.getElementById('inputA').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') clientA.sendMessage();
     });
@@ -1041,8 +992,11 @@
         if (e.key === 'Enter') clientB.sendMessage();
     });
 
-    document.getElementById('sharedToken').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') loginBothClients();
+    document.getElementById('tokenA').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientA.loginWithToken();
+    });
+    document.getElementById('tokenB').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientB.loginWithToken();
     });
 
     window.addEventListener('load', async () => {
