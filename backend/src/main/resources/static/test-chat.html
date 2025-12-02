@@ -516,8 +516,9 @@
 
                 const data = await res.json();
                 this.token = data.accessToken;
-                this.myUserId = data.user?.id ?? this.getSenderIdFromToken();
-                log(`${this.id}: JWT 발급 완료 - 사용자 ID: ${this.myUserId}`);
+                // Number로 타입을 명확히 지정
+                this.myUserId = Number(data.user?.id ?? this.getSenderIdFromToken());
+                log(`${this.id}: JWT 발급 완료 - 사용자 ID: ${this.myUserId} (타입: ${typeof this.myUserId})`);
 
                 this.saveTokenToStorage();
 
@@ -536,8 +537,10 @@
         async autoLogin() {
             if (this.loadTokenFromStorage()) {
                 try {
-                    this.myUserId = this.getSenderIdFromToken();
+                    // Number로 타입을 명확히 지정
+                    this.myUserId = Number(this.getSenderIdFromToken());
                     this.setStatus('자동 로그인 중...');
+                    log(`${this.id}: 자동 로그인 - 사용자 ID: ${this.myUserId} (타입: ${typeof this.myUserId})`);
                     await this.loadRooms();
                     await this.connectWebSocket();
                     this.setStatus('연결됨 (자동)', 'connected');
@@ -742,9 +745,11 @@
             // 메시지 표시
             const div = document.createElement('div');
 
-            // 내 메시지인지 확인
-            const isMine = data.senderId === this.myUserId;
-            log(`${this.id}: displayHistory - senderId: ${data.senderId}, myUserId: ${this.myUserId}, isMine: ${isMine}`);
+            // 내 메시지인지 확인 (타입 변환하여 비교)
+            const senderId = Number(data.senderId);
+            const myUserId = Number(this.myUserId);
+            const isMine = senderId === myUserId;
+            log(`${this.id}: displayHistory - senderId: ${senderId} (타입: ${typeof senderId}), myUserId: ${myUserId} (타입: ${typeof myUserId}), isMine: ${isMine}`);
 
             div.className = isMine ? 'message mine' : 'message';
 
@@ -822,8 +827,13 @@
         }
 
         const div = document.createElement('div');
-        const isMine = data.senderId && this.myUserId && data.senderId === this.myUserId;
-        log(`${this.id}: displayMessage - senderId: ${data.senderId}, myUserId: ${this.myUserId}, isMine: ${isMine}`);
+
+        // 내 메시지인지 확인 (타입 변환하여 비교)
+        const senderId = Number(data.senderId);
+        const myUserId = Number(this.myUserId);
+        const isMine = senderId === myUserId;
+        log(`${this.id}: displayMessage - senderId: ${senderId} (타입: ${typeof senderId}), myUserId: ${myUserId} (타입: ${typeof myUserId}), isMine: ${isMine}`);
+
         div.className = isMine ? 'message mine' : 'message';
 
         // 채팅방 멤버 정보에서 프로필 이미지 가져오기
