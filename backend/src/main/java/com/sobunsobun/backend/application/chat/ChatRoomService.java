@@ -182,5 +182,68 @@ public class ChatRoomService {
         log.info("[채팅방 이미지 업데이트] 완료 - 채팅방 ID: {}, 최종 URL: {}", roomId, newImageUrl);
     }
 
+    /**
+     * 단일 채팅방 나가기
+     */
+    @Transactional
+    public void leaveChatRoom(Long userId, Long roomId) {
+        // 1. 채팅방 존재 확인
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
+                        () -> new EntityNotFoundException("존재하지 않는 채팅방입니다.")
+                );
+
+        // 2. 멤버십 확인
+        if (!chatMemberService.isMember(roomId, userId)) {
+            throw new IllegalArgumentException("채팅방에 속해있지 않습니다.");
+        }
+
+        // 3. 채팅방 멤버에서 제거
+        chatMemberService.removeMember(roomId, userId);
+
+        // 4. 채팅방에 남은 멤버 수 확인
+        long remainingMembers = chatMemberService.countMembersInRoom(roomId);
+
+        // 5. 채팅방에 아무도 없으면 채팅방, 채팅 내역 삭제 대기 처리
+//        if (remainingMembers == 0) {
+//            chatRoomRepository.delete(chatRoom);
+//        }
+    }
+
+    /**
+     * 여러 채팅방 나가기
+     */
+    @Transactional
+    public void leaveChatRooms(Long userId, List<Long> roomIds) {
+        if (roomIds == null || roomIds.isEmpty()) {
+            return;
+        }
+
+        // 1. 모든 채팅방 존재 확인
+        List<ChatRoom> chatRooms = chatRoomRepository.findAllById(roomIds);
+        if (chatRooms.size() != roomIds.size()) {
+            throw new EntityNotFoundException("일부 채팅방이 존재하지 않습니다.");
+        }
+
+        // 2. 각 채팅방에 대한 멤버십 확인
+        for (Long roomId : roomIds) {
+            if (!chatMemberService.isMember(roomId, userId)) {
+                throw new IllegalArgumentException("채팅방 ID " + roomId + "에 속해있지 않습니다.");
+            }
+        }
+
+        // 3. 모든 채팅방에서 멤버 제거
+        chatMemberService.removeMemberFromRooms(roomIds, userId);
+
+        // 4. 각 채팅방의 남은 멤버 수 확인 및 빈 채팅방 삭제
+//        List<Long> emptyRoomIds = chatRooms.stream()
+//                .filter(room -> chatMemberService.countMembersInRoom(room.getId()) == 0)
+//                .map(ChatRoom::getId)
+//                .toList();
+//
+//        if (!emptyRoomIds.isEmpty()) {
+//            chatRoomRepository.deleteAllById(emptyRoomIds);
+//        }
+    }
+
     //void invite(Long roomId, Long targetUserId);
 }

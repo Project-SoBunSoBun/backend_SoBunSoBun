@@ -74,7 +74,7 @@
             flex: 0 0 auto;
         }
 
-        .back-button {
+        .back-button, .leave-button {
             background: none;
             border: none;
             color: white;
@@ -87,9 +87,19 @@
             align-items: center;
             justify-content: center;
         }
-        .back-button:hover {
+        .back-button:hover, .leave-button:hover {
             background: rgba(255,255,255,0.1);
             border-radius: 50%;
+        }
+        .leave-button {
+            font-size: 12px;
+            width: auto;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+        .leave-button:hover {
+            background: rgba(255,0,0,0.2);
         }
 
         .page-title {
@@ -589,6 +599,7 @@
             <div class="page-header">
                 <button class="back-button" onclick="clientA.goBack()">←</button>
                 <div class="page-title" id="roomNameA">채팅방</div>
+                <button class="leave-button" onclick="clientA.leaveChatRoom()">나가기</button>
             </div>
             <div class="messages" id="messagesA"></div>
             <div class="input-area">
@@ -619,6 +630,7 @@
             <div class="page-header">
                 <button class="back-button" onclick="clientB.goBack()">←</button>
                 <div class="page-title" id="roomNameB">채팅방</div>
+                <button class="leave-button" onclick="clientB.leaveChatRoom()">나가기</button>
             </div>
             <div class="messages" id="messagesB"></div>
             <div class="input-area">
@@ -884,7 +896,6 @@
                 log(`${this.id}: 채팅방 ${this.rooms.length}개 로드됨`);
             } catch (error) {
                 log(`${this.id}: 채팅방 목록 로드 실패 - ${error}`);
-                alert('채팅방 목록을 불러오지 못했습니다');
             }
         }
 
@@ -1284,6 +1295,52 @@
                 return;
             }
             openCreateRoomModal(this);
+        }
+
+        async leaveChatRoom() {
+            if (!this.token) {
+                alert('먼저 로그인하세요');
+                return;
+            }
+
+            if (!this.currentRoomId) {
+                alert('채팅방을 먼저 선택하세요');
+                return;
+            }
+
+            const currentRoomTitle = this.currentRoom?.title || '채팅방';
+            if (!confirm(`"${currentRoomTitle}"에서 나가시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                log(`${this.id}: 채팅방 나가기 시도 - 채팅방 ID: ${this.currentRoomId}`);
+
+                const res = await fetch(`${API_BASE}/api/chat/rooms/${this.currentRoomId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                });
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(error);
+                }
+
+                log(`${this.id}: 채팅방 나가기 성공 - "${currentRoomTitle}"`);
+                alert(`"${currentRoomTitle}"에서 나갔습니다.`);
+
+                // 채팅방 목록으로 돌아가기
+                this.goBack();
+
+                // 채팅방 목록 새로고침
+                await this.loadRooms();
+
+            } catch (error) {
+                log(`${this.id}: 채팅방 나가기 실패 - ${error}`);
+                alert(`채팅방 나가기 실패: ${error.message}`);
+            }
         }
 
         async submitCreateRoom(title, memberIds, type, postId, imageFile) {

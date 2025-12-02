@@ -5,6 +5,7 @@ import com.sobunsobun.backend.dto.chat.ChatMessagePage;
 import com.sobunsobun.backend.dto.chat.ChatMessageResponse;
 import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomRequest;
+import com.sobunsobun.backend.dto.chat.LeaveChatRoomsRequest;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import com.sobunsobun.backend.application.chat.ChatRoomService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +31,6 @@ public class ChatRoomController {
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @RequestPart("request") String requestJson,
             @RequestPart(value = "roomImage", required = false) MultipartFile roomImage) {
-
         Long userId = principal.id();
 
         // JSON 문자열을 CreateChatRoomRequest 객체로 변환
@@ -51,7 +51,6 @@ public class ChatRoomController {
     public ResponseEntity<ChatRoomResponse> createChatRoomWithJson(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @RequestBody CreateChatRoomRequest request) {
-
         Long userId = principal.id();
         ChatRoomResponse response = chatRoomService.createChatRoom(userId, request);
 
@@ -59,8 +58,9 @@ public class ChatRoomController {
     }
 
     @GetMapping("/api/chat/rooms/{roomId}")
-    public ResponseEntity<ChatRoomResponse> getChatRoomDetail(@AuthenticationPrincipal JwtUserPrincipal principal,
-                                          @PathVariable("roomId") Long roomId) {
+    public ResponseEntity<ChatRoomResponse> getChatRoomDetail(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @PathVariable("roomId") Long roomId) {
         Long userId = principal.id();
         ChatRoomResponse response = chatRoomService.getChatRoomDetail(userId, roomId);
 
@@ -72,7 +72,6 @@ public class ChatRoomController {
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable("roomId") Long roomId,
             @RequestPart("roomImage") MultipartFile roomImage) {
-
         Long userId = principal.id();
         chatRoomService.updateChatRoomImage(userId, roomId, roomImage);
 
@@ -82,7 +81,6 @@ public class ChatRoomController {
     @GetMapping("/api/chat/rooms")
     public ResponseEntity<List<ChatRoomResponse>> getRooms(
             @AuthenticationPrincipal JwtUserPrincipal principal) {
-
         Long userId = principal.id();
         List<ChatRoomResponse> rooms = chatRoomService.getMyRooms(userId);
 
@@ -94,23 +92,37 @@ public class ChatRoomController {
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable("roomId") Long roomId,
             @RequestParam(value = "cursorMillis", required = false) Long cursorMillis,
-            @RequestParam(value = "size", defaultValue = "30") int size
-    ) {
+            @RequestParam(value = "size", defaultValue = "30") int size) {
         Long userId = principal.id();
         Instant cursor = (cursorMillis == null) ? null : Instant.ofEpochMilli(cursorMillis);
         ChatMessagePage page = chatMessageService.getMessages(roomId, userId, cursor, size);
         return ResponseEntity.ok(page);
     }
 
-    // TODO: 채팅방 나가기
+    @DeleteMapping("/api/chat/rooms/{roomId}")
+    public ResponseEntity<Void> leaveChatRoom(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @PathVariable("roomId") Long roomId) {
+        Long userId = principal.id();
+        chatRoomService.leaveChatRoom(userId, roomId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/api/chat/rooms")
+    public ResponseEntity<Void> leaveChatRooms(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @RequestBody LeaveChatRoomsRequest request) {
+        Long userId = principal.id();
+        chatRoomService.leaveChatRooms(userId, request.getRoomIds());
+
+        return ResponseEntity.noContent().build();
+    }
 
     // TODO: 채팅에서 사진, 정산서 보내기
 
     // TODO: 채팅방 초대 기능, 초대 목록 (entity 추가)
 
     // TODO: 채팅방 멤버 강퇴 기능 (방장 권한)
-
-    // TODO: 채팅 암호화
-
 
 }

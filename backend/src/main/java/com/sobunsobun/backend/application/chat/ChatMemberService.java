@@ -74,4 +74,19 @@ public class ChatMemberService {
 
         return chatMemberRepository.saveAll(members);
     }
+
+    @Transactional
+    public void removeMember(Long roomId, Long userId) {
+        chatMemberRepository.deleteByRoomIdAndMemberId(roomId, userId);
+    }
+
+    @Transactional
+    public void removeMemberFromRooms(List<Long> roomIds, Long userId) {
+        chatMemberRepository.deleteByRoomIdInAndMemberId(roomIds, userId);
+    }
+
+    @Transactional(readOnly = true)
+    public long countMembersInRoom(Long roomId) {
+        return chatMemberRepository.countByRoomId(roomId);
+    }
 }
