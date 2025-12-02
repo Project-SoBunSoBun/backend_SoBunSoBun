@@ -30,20 +30,27 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
 
     /**
      * 카테고리별 게시글 조회 (모집 중인 것만)
+     * categories 컬럼에 해당 카테고리 코드가 포함된 게시글 검색 (LIKE 검색)
      */
-    Page<GroupPost> findByCategoriesAndStatusOrderByCreatedAtDesc(String categories, PostStatus status, Pageable pageable);
+    @Query("SELECT p FROM GroupPost p WHERE p.categories LIKE CONCAT('%', :categories, '%') AND p.status = :status ORDER BY p.createdAt DESC")
+    Page<GroupPost> findByCategoriesAndStatusOrderByCreatedAtDesc(@Param("categories") String categories,
+                                                                   @Param("status") PostStatus status,
+                                                                   Pageable pageable);
 
     /**
      * 여러 카테고리로 게시글 조회 (모집 중인 것만)
+     * categories 컬럼에 요청한 카테고리 중 하나라도 포함된 게시글 검색
      *
-     * @param categories 카테고리 코드 리스트
-     * @param status     게시글 상태
-     * @param pageable   페이징 정보
-     * @return 페이징된 게시글 목록
+     * Native Query 사용: REGEXP를 활용하여 동적으로 여러 카테고리 검색
      */
-    @Query("SELECT p FROM GroupPost p WHERE p.categories IN :categories AND p.status = :status ORDER BY p.createdAt DESC")
-    Page<GroupPost> findByCategoriesInAndStatus(@Param("categories") List<String> categories,
-                                                  @Param("status") PostStatus status,
+    @Query(value = "SELECT * FROM group_post WHERE status = :status " +
+                   "AND categories REGEXP :categoryPattern " +
+                   "ORDER BY created_at DESC",
+           countQuery = "SELECT COUNT(*) FROM group_post WHERE status = :status " +
+                        "AND categories REGEXP :categoryPattern",
+           nativeQuery = true)
+    Page<GroupPost> findByCategoriesInAndStatus(@Param("categoryPattern") String categoryPattern,
+                                                  @Param("status") String status,
                                                   Pageable pageable);
 
     /**
