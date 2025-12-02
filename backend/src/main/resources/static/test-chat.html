@@ -748,9 +748,19 @@
 
             div.className = isMine ? 'message mine' : 'message';
 
+            // 채팅방 멤버 정보에서 프로필 이미지 가져오기
             let avatarContent = '';
-            if (data.senderProfileImage) {
-                avatarContent = `<img src="${data.senderProfileImage}" alt="${data.senderName || 'User'}" />`;
+            let senderProfileImage = null;
+
+            if (this.currentRoom && this.currentRoom.chatMembers) {
+                const member = this.currentRoom.chatMembers.find(m => m.userId === data.senderId);
+                if (member) {
+                    senderProfileImage = member.profileImageUrl;
+                }
+            }
+
+            if (senderProfileImage) {
+                avatarContent = `<img src="${senderProfileImage}" alt="${data.senderName || 'User'}" />`;
             } else {
                 const initial = (data.senderName || data.senderId || 'U').toString().charAt(0).toUpperCase();
                 avatarContent = initial;
@@ -816,11 +826,21 @@
         log(`${this.id}: displayMessage - senderId: ${data.senderId}, myUserId: ${this.myUserId}, isMine: ${isMine}`);
         div.className = isMine ? 'message mine' : 'message';
 
+        // 채팅방 멤버 정보에서 프로필 이미지 가져오기
         let avatarContent = '';
-        if (data.senderProfileImage) {
-            avatarContent = `<img src="${data.senderProfileImage}" alt="${data.senderName || 'User'}" />`;
+        let senderProfileImage = null;
+
+        if (this.currentRoom && this.currentRoom.chatMembers) {
+            const member = this.currentRoom.chatMembers.find(m => m.userId === data.senderId);
+            if (member) {
+                senderProfileImage = member.profileImageUrl;
+            }
+        }
+
+        if (senderProfileImage) {
+            avatarContent = `<img src="${senderProfileImage}" alt="${data.senderName || 'User'}" />`;
         } else {
-            const initial = (data.senderName || data.senderId || 'U').charAt(0).toUpperCase();
+            const initial = (data.senderName || data.senderId || 'U').toString().charAt(0).toUpperCase();
             avatarContent = initial;
         }
 
