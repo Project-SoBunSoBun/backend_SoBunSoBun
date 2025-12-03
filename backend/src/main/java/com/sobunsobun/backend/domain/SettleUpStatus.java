@@ -6,14 +6,14 @@ package com.sobunsobun.backend.domain;
 public class SettleUpStatus {
 
     /**
-     * 활성 상태
+     * 미정산 상태
      */
-    public static final Integer ACTIVE = 1;
+    public static final Integer UNSETTLED = 1;
 
     /**
-     * 비활성 상태
+     * 정산완료 상태
      */
-    public static final Integer INACTIVE = 2;
+    public static final Integer SETTLED = 2;
 
     /**
      * 삭제됨 상태

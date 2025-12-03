@@ -77,7 +77,7 @@ public class SettleUpService {
         SettleUp settleUp = SettleUp.builder()
                 .groupPost(groupPost)
                 .settledBy(user)
-                .status(SettleUpStatus.ACTIVE)
+                .status(SettleUpStatus.UNSETTLED)
                 .title(request.getTitle())
                 .locationName(request.getLocationName())
                 .meetAt(request.getMeetAt())
@@ -120,7 +120,7 @@ public class SettleUpService {
 
         List<SettleUp> settleUps;
         if (activeOnly != null && activeOnly) {
-            settleUps = settleUpRepository.findByGroupPostIdAndStatus(groupPostId, SettleUpStatus.ACTIVE);
+            settleUps = settleUpRepository.findByGroupPostIdAndStatus(groupPostId, SettleUpStatus.UNSETTLED);
         } else {
             settleUps = settleUpRepository.findByGroupPostId(groupPostId);
         }
@@ -134,21 +134,54 @@ public class SettleUpService {
      * 사용자별 정산 목록 조회 (페이징)
      *
      * @param userId 사용자 ID
-     * @param activeOnly 활성 정산만 조회 여부
+     * @param activeOnly 정산 조회 타입 (1: 미정산(기본값), 2: 정산완료, 0: 전체)
      * @param page 페이지 번호 (0부터 시작)
      * @param size 페이지 크기
      * @return 정산 목록 (페이징)
      */
-    public Page<SettleUpResponse> getSettleUpsByUser(Long userId, Boolean activeOnly, int page, int size) {
-        log.info("[사용자별 정산 목록 조회] 사용자 ID: {}, 활성만: {}, 페이지: {}, 크기: {}", userId, activeOnly, page, size);
+    public Page<SettleUpResponse> getSettleUpsByUser(Long userId, Integer activeOnly, int page, int size) {
+        log.info("[사용자별 정산 목록 조회] 사용자 ID: {}, 조회타입: {}, 페이지: {}, 크기: {}", userId, activeOnly, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<SettleUp> settleUps;
-        if (activeOnly != null && activeOnly) {
-            settleUps = settleUpRepository.findBySettledByIdAndStatus(userId, SettleUpStatus.ACTIVE, pageable);
+        if (activeOnly == null || activeOnly == 1) {
+            // 1 또는 null: 미정산(status=1) 정산만
+            settleUps = settleUpRepository.findBySettledByIdAndStatus(userId, SettleUpStatus.UNSETTLED, pageable);
+        } else if (activeOnly == 0) {
+            // 0: 전체 정산 (삭제된 것 제외)
+            settleUps = settleUpRepository.findAllBySettledById(userId, pageable);
         } else {
-            settleUps = settleUpRepository.findBySettledById(userId, pageable);
+            // 2: 정산완료(status=2) 정산만
+            settleUps = settleUpRepository.findBySettledByIdAndStatus(userId, SettleUpStatus.SETTLED, pageable);
+        }
+
+        return settleUps.map(this::convertToResponse);
+    }
+
+    /**
+     * 전체 정산 목록 조회 (페이징)
+     *
+     * @param activeOnly 정산 조회 타입 (1: 미정산(기본값), 2: 정산완료, 0: 전체)
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 정산 목록 (페이징)
+     */
+    public Page<SettleUpResponse> getAllSettleUps(Integer activeOnly, int page, int size) {
+        log.info("[전체 정산 목록 조회] 조회타입: {}, 페이지: {}, 크기: {}", activeOnly, page, size);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<SettleUp> settleUps;
+        if (activeOnly == null || activeOnly == 1) {
+            // 1 또는 null: 미정산(status=1) 정산만
+            settleUps = settleUpRepository.findAllUnsettledWithDetails(pageable);
+        } else if (activeOnly == 0) {
+            // 0: 전체 정산 (삭제된 것 제외)
+            settleUps = settleUpRepository.findAllWithDetails(pageable);
+        } else {
+            // 2: 정산완료(status=2) 정산만
+            settleUps = settleUpRepository.findAllSettledWithDetails(pageable);
         }
 
         return settleUps.map(this::convertToResponse);
