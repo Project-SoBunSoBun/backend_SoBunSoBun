@@ -25,6 +25,7 @@ import java.util.List;
  *
  * 엔드포인트:
  * - POST   /api/settleups                     : 정산 생성 (인증 필요)
+ * - GET    /api/settleups                     : 전체 정산 목록 조회 (공개)
  * - GET    /api/settleups/{id}                : 정산 단건 조회 (공개)
  * - PUT    /api/settleups/{id}                : 정산 수정 (인증 필요, 생성자만)
  * - DELETE /api/settleups/{id}                : 정산 삭제 (인증 필요, 생성자만)
@@ -142,14 +143,14 @@ public class SettleUpController {
     @PatchMapping("/{id}/status")
     @Operation(
         summary = "정산 상태 변경",
-        description = "정산 상태를 변경합니다. (인증 필요, 생성자만 가능)\n상태값: 1=활성, 2=비활성, 3=삭제됨",
+        description = "정산 상태를 변경합니다. (인증 필요, 생성자만 가능)\n상태값: 1=미정산, 2=정산완료, 3=삭제됨",
         security = @SecurityRequirement(name = "bearerAuth")
     )
     public ResponseEntity<SettleUpResponse> updateSettleUpStatus(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "정산 ID", example = "1")
             @PathVariable Long id,
-            @Parameter(description = "정산 상태 (1: 활성, 2: 비활성, 3: 삭제됨)", example = "1")
+            @Parameter(description = "정산 상태 (1: 미정산, 2: 정산완료, 3: 삭제됨)", example = "1")
             @RequestParam Integer status
     ) {
         log.info("[API 호출] PATCH /api/settleups/{}/status - 사용자 ID: {}, 상태: {}", id, principal.id(), status);
@@ -192,21 +193,47 @@ public class SettleUpController {
     @GetMapping("/my")
     @Operation(
         summary = "내 정산 목록 조회 (테스트용)",
-        description = "현재 로그인한 사용자가 생성한 정산 목록을 조회합니다. (인증 필요) / 해당 api는 테스트용으로 자신이 등록한 페이지가 보여지도록 하였습니다.",
+        description = "현재 로그인한 사용자가 생성한 정산 목록을 조회합니다. (인증 필요) / 1=미정산(기본값), 2=정산완료, 0=전체 정산을 조회합니다.",
         security = @SecurityRequirement(name = "bearerAuth")
     )
     public ResponseEntity<Page<SettleUpResponse>> getMySettleUps(
             @AuthenticationPrincipal JwtUserPrincipal principal,
-            @Parameter(description = "활성 정산만 조회 여부 (기본값: false)", example = "true")
-            @RequestParam(required = false, defaultValue = "false") Boolean activeOnly,
+            @Parameter(description = "정산 조회 타입 (1: 미정산(기본값), 2: 정산완료, 0: 전체)", example = "1")
+            @RequestParam(required = false, defaultValue = "1") Integer activeOnly,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        log.info("[API 호출] GET /api/settleups/my - 사용자 ID: {}, 활성만: {}, 페이지: {}, 크기: {}",
+        log.info("[API 호출] GET /api/settleups/my - 사용자 ID: {}, 조회타입: {}, 페이지: {}, 크기: {}",
                  principal.id(), activeOnly, page, size);
         Page<SettleUpResponse> response = settleUpService.getSettleUpsByUser(principal.id(), activeOnly, page, size);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 전체 정산 목록 조회 (페이징)
+     *
+     * @param activeOnly 활성 정산만 조회 여부 (기본값: false)
+     * @param page 페이지 번호 (기본값: 0)
+     * @param size 페이지 크기 (기본값: 20)
+     * @return 200 OK, 전체 정산 목록 (페이징)
+     */
+    @GetMapping
+    @Operation(
+        summary = "전체 정산 목록 조회",
+        description = "모든 정산 목록을 조회합니다. 1=미정산(기본값), 2=정산완료, 0=전체 정산을 조회합니다."
+    )
+    public ResponseEntity<Page<SettleUpResponse>> getAllSettleUps(
+            @Parameter(description = "정산 조회 타입 (1: 미정산(기본값), 2: 정산완료, 0: 전체)", example = "1")
+            @RequestParam(required = false, defaultValue = "1") Integer activeOnly,
+            @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기", example = "20")
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        log.info("[API 호출] GET /api/settleups - 조회타입: {}, 페이지: {}, 크기: {}", activeOnly, page, size);
+        Page<SettleUpResponse> response = settleUpService.getAllSettleUps(activeOnly, page, size);
         return ResponseEntity.ok(response);
     }
 }
