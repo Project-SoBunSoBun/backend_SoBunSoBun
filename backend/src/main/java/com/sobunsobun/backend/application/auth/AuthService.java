@@ -250,12 +250,17 @@ public class AuthService {
                     ACCESS_TOKEN_TTL
             );
 
-            log.info("[사용자 작동] 액세스 토큰 갱신 완료 - 사용자 ID: {}", userId);
+            // 4. 만료 시간 추출 및 KST 변환
+            long accessExpireTime = jwtTokenProvider.parse(newAccessToken).getBody().getExpiration().getTime();
+            String accessExpireKst = formatToKst(accessExpireTime);
+
+            log.info("[사용자 작동] 액세스 토큰 갱신 완료 - 사용자 ID: {}, 만료시간: {}", userId, accessExpireKst);
 
             return AccessOnlyResponse.builder()
                     .tokenType("Bearer")
                     .accessToken(newAccessToken)
                     .expiresIn(ACCESS_TOKEN_TTL / 1000) // 초 단위로 변환
+                    .accessTokenExpiresAtKst(accessExpireKst)
                     .build();
 
         } catch (Exception e) {
