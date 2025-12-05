@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <title>채팅 테스트 - 2 클라이언트</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden; /* 페이지 자체 스크롤 제거 */
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 메인 영역: 좌우 2 클라이언트 */
+        .container {
+            flex: 1 1 auto;
+            display: flex;
+            gap: 2px;
+            height: 100%;
+            overflow: hidden; /* 내부에서만 스크롤 나도록 */
+        }
+
+        .client-wrapper {
+            flex: 1;
+            display: flex;
+            background: white;
+            position: relative;
+        }
+
+        /* 채팅방 목록 페이지 */
+        .room-list-page {
+            position: absolute;
+            inset: 0;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+        .room-list-page.hidden {
+            display: none; /* 방에 들어가면 목록은 안 보이게 */
+        }
+
+        /* 채팅방 페이지 */
+        .chat-page {
+            position: absolute;
+            inset: 0;
+            background: white;
+            display: none;
+            flex-direction: column;
+        }
+        .chat-page.active {
+            display: flex;
+        }
+
+        .page-header {
+            padding: 10px 12px;
+            background: #3b5998;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+
+        .back-button, .leave-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .back-button:hover, .leave-button:hover {
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .leave-button {
+            font-size: 12px;
+            width: auto;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-left: auto;
+        }
+        .leave-button:hover {
+            background: rgba(255,0,0,0.2);
+        }
+
+        .page-title {
+            flex: 1;
+        }
+
+        .status {
+            padding: 5px 8px;
+            font-size: 11px;
+            text-align: center;
+            background: #fff3cd;
+            border-bottom: 1px solid #ffc107;
+            flex: 0 0 auto;
+        }
+        .status.connected {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .room-list-controls {
+            padding: 8px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            flex: 0 0 auto;
+        }
+        .room-list-controls button {
+            width: 100%;
+            padding: 6px;
+            background: #3b5998;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .room-list-controls button:hover {
+            background: #2d4373;
+        }
+
+        .room-items {
+            flex: 1 1 auto;
+            overflow-y: auto;
+        }
+
+        .room-item {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 13px;
+        }
+        .room-item:hover {
+            background: #f5f5f5;
+        }
+        .room-item.active {
+            background: #e3f2fd;
+        }
+        .room-item-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+        .room-item-info {
+            font-size: 11px;
+            color: #666;
+        }
+
+        /* 채팅 메시지 영역 */
+        .messages {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 12px;
+            background: #ffffff;
+        }
+        .message {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .message.mine {
+            flex-direction: row-reverse; /* 내 메시지는 오른쪽 */
+        }
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .message-content {
+            max-width: 70%;
+            margin: 0 8px;
+        }
+        .message.mine .message-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .message-sender {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .message.mine .message-sender {
+            display: none;
+        }
+        .message-bubble {
+            padding: 8px 11px;
+            border-radius: 16px;
+            background: #f0f0f0;
+            display: inline-block;
+            word-wrap: break-word;
+            font-size: 13px;
+        }
+        .message.mine .message-bubble {
+            background: #3b5998;
+            color: white;
+        }
+        .message-time {
+            font-size: 10px;
+            color: #999;
+            margin-top: 3px;
+        }
+
+        /* 날짜 구분선 */
+        .date-separator {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .date-separator::before,
+        .date-separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .date-separator-text {
+            padding: 0 16px;
+            font-size: 12px;
+            color: #666;
+            background: #f5f5f5;
+            border-radius: 12px;
+            padding: 4px 12px;
+        }
+
+        /* 입력 영역 */
+        .input-area {
+            padding: 8px 10px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            display: flex;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+        .input-area button {
+            padding: 8px 16px;
+            background: #3b5998;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .input-area button:hover {
+            background: #2d4373;
+        }
+        .input-area button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 로그 패널 */
+        .log-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 140px;
+            background: #1e1e1e;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 8px;
+            overflow-y: auto;
+            display: none;
+            z-index: 900;
+        }
+        .log-panel.show {
+            display: block;
+        }
+        .toggle-log {
+            position: fixed;
+            bottom: 8px;
+            right: 8px;
+            padding: 6px 12px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 1000;
+            font-size: 11px;
+        }
+
+        /* 모달 스타일 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 32px;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .modal-form-group {
+            margin-bottom: 20px;
+        }
+
+        .modal-form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .modal-form-group label .optional {
+            font-weight: 400;
+            color: #999;
+            font-size: 11px;
+        }
+
+        .modal-form-group input[type="text"],
+        .modal-form-group input[type="number"],
+        .modal-form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        .modal-form-group input:focus,
+        .modal-form-group select:focus {
+            outline: none;
+            border-color: #3b5998;
+        }
+
+        .modal-form-group .help-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .image-upload-container {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .image-upload-container:hover {
+            border-color: #3b5998;
+            background: #f8f9ff;
+        }
+
+        .image-upload-container.has-image {
+            border-color: #3b5998;
+            background: #f8f9ff;
+        }
+
+        .image-upload-container input[type="file"] {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+
+        .upload-text {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .image-preview-container {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .image-preview-container.show {
+            display: block;
+        }
+
+        .image-preview-container img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 6px;
+        }
+
+        .image-preview-container .remove-image {
+            margin-top: 6px;
+            padding: 4px 10px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .image-preview-container .remove-image:hover {
+            background: #d32f2f;
+        }
+
+        .member-ids-container {
+            margin-top: 8px;
+        }
+
+        .member-id-tag {
+            display: inline-flex;
+            align-items: center;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+
+        .member-id-tag .remove-tag {
+            margin-left: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .modal-btn-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-primary {
+            background: #3b5998;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #2d4373;
+        }
+
+        .modal-btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .modal-btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .modal-status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            display: none;
+        }
+
+        .modal-status.show {
+            display: block;
+        }
+
+        .modal-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .modal-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .modal-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Client A -->
+    <div class="client-wrapper">
+        <!-- 채팅방 목록 페이지 -->
+        <div class="room-list-page" id="roomListPageA">
+            <div class="page-header">
+                <div class="page-title">클라이언트 A - 채팅방 목록</div>
+            </div>
+            <div class="status" id="statusA">토큰을 입력하고 로그인하세요</div>
+            <div class="room-list-controls">
+                <input id="tokenA" type="text" placeholder="카카오 액세스 토큰" style="width: 100%; margin-bottom: 4px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" />
+                <button onclick="clientA.loginWithToken()">로그인</button>
+                <button onclick="clientA.createRoom()">새 채팅방 만들기</button>
+            </div>
+            <div class="room-items" id="roomListA"></div>
+        </div>
+
+        <!-- 채팅방 페이지 -->
+        <div class="chat-page" id="chatPageA">
+            <div class="page-header">
+                <button class="back-button" onclick="clientA.goBack()">←</button>
+                <div class="page-title" id="roomNameA">채팅방</div>
+                <button class="leave-button" onclick="clientA.leaveChatRoom()">나가기</button>
+            </div>
+            <div class="messages" id="messagesA"></div>
+            <div class="input-area">
+                <input id="inputA" type="text" placeholder="메시지를 입력하세요" disabled />
+                <button id="sendBtnA" onclick="clientA.sendMessage()" disabled>전송</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client B -->
+    <div class="client-wrapper">
+        <!-- 채팅방 목록 페이지 -->
+        <div class="room-list-page" id="roomListPageB">
+            <div class="page-header">
+                <div class="page-title">클라이언트 B - 채팅방 목록</div>
+            </div>
+            <div class="status" id="statusB">토큰을 입력하고 로그인하세요</div>
+            <div class="room-list-controls">
+                <input id="tokenB" type="text" placeholder="카카오 액세스 토큰" style="width: 100%; margin-bottom: 4px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" />
+                <button onclick="clientB.loginWithToken()">로그인</button>
+                <button onclick="clientB.createRoom()">새 채팅방 만들기</button>
+            </div>
+            <div class="room-items" id="roomListB"></div>
+        </div>
+
+        <!-- 채팅방 페이지 -->
+        <div class="chat-page" id="chatPageB">
+            <div class="page-header">
+                <button class="back-button" onclick="clientB.goBack()">←</button>
+                <div class="page-title" id="roomNameB">채팅방</div>
+                <button class="leave-button" onclick="clientB.leaveChatRoom()">나가기</button>
+            </div>
+            <div class="messages" id="messagesB"></div>
+            <div class="input-area">
+                <input id="inputB" type="text" placeholder="메시지를 입력하세요" disabled />
+                <button id="sendBtnB" onclick="clientB.sendMessage()" disabled>전송</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="toggle-log" onclick="toggleLog()">로그 표시/숨김</button>
+<div class="log-panel" id="logPanel"></div>
+
+<!-- 채팅방 생성 모달 -->
+<div class="modal-overlay" id="createRoomModal">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h2>새 채팅방 만들기</h2>
+            <p>채팅방 정보를 입력하세요</p>
+        </div>
+
+        <div id="modalStatus" class="modal-status"></div>
+
+        <form id="createRoomForm">
+            <!-- 채팅방 제목 -->
+            <div class="modal-form-group">
+                <label>채팅방 제목</label>
+                <input
+                    type="text"
+                    id="modalRoomTitle"
+                    placeholder="채팅방 제목을 입력하세요"
+                    required
+                />
+            </div>
+
+            <!-- 채팅방 타입 -->
+            <div class="modal-form-group">
+                <label>채팅방 타입</label>
+                <select id="modalRoomType" required>
+                    <option value="GROUP">그룹 채팅</option>
+                    <option value="PRIVATE">1:1 채팅</option>
+                </select>
+            </div>
+
+            <!-- 초대할 멤버 -->
+            <div class="modal-form-group">
+                <label>초대할 멤버</label>
+                <div style="display: flex; gap: 8px;">
+                    <input
+                        type="number"
+                        id="modalMemberIdInput"
+                        placeholder="멤버 ID를 입력하세요"
+                        style="flex: 1;"
+                    />
+                    <button
+                        type="button"
+                        onclick="addModalMemberId()"
+                        style="padding: 10px 16px; background: #3b5998; color: white; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px;"
+                    >
+                        추가
+                    </button>
+                </div>
+                <div class="help-text">멤버 ID를 입력하고 추가 버튼을 클릭하세요</div>
+                <div id="modalMemberIdsContainer" class="member-ids-container"></div>
+            </div>
+
+            <!-- Post ID (선택) -->
+            <div class="modal-form-group">
+                <label>게시글 ID <span class="optional">(선택사항)</span></label>
+                <input
+                    type="number"
+                    id="modalPostId"
+                    placeholder="게시글 ID를 입력하세요"
+                />
+                <div class="help-text">게시글과 연결된 채팅방인 경우 입력하세요</div>
+            </div>
+
+            <!-- 채팅방 이미지 -->
+            <div class="modal-form-group">
+                <label>채팅방 이미지 <span class="optional">(선택사항)</span></label>
+                <div class="image-upload-container" id="modalImageUploadContainer" onclick="document.getElementById('modalRoomImage').click()">
+                    <input
+                        type="file"
+                        id="modalRoomImage"
+                        accept="image/*"
+                        onchange="handleModalImageSelect(event)"
+                    />
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">클릭하여 이미지 선택</div>
+                    <div class="image-preview-container" id="modalImagePreview">
+                        <img id="modalPreviewImage" src="" alt="미리보기" />
+                        <button type="button" class="remove-image" onclick="removeModalImage(event)">이미지 제거</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 버튼 -->
+            <div class="modal-btn-container">
+                <button type="button" class="modal-btn modal-btn-secondary" onclick="closeCreateRoomModal()">취소</button>
+                <button type="submit" class="modal-btn modal-btn-primary" id="modalSubmitBtn">채팅방 생성</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+<script>
+    const API_BASE = 'http://localhost:8080';
+
+    // 로그 함수
+    function log(msg) {
+        const panel = document.getElementById('logPanel');
+        const time = new Date().toLocaleTimeString();
+        panel.textContent += `[${time}] ${msg}\n`;
+        panel.scrollTop = panel.scrollHeight;
+    }
+
+    function toggleLog() {
+        document.getElementById('logPanel').classList.toggle('show');
+    }
+
+    class ChatClient {
+        constructor(id, uiClientId) {
+            this.id = id;                    // A / B
+            this.uiClientId = uiClientId;    // 'A' / 'B' (좌우 관점)
+            this.token = null;
+            this.stompClient = null;
+            this.currentRoom = null;
+            this.currentRoomId = null;
+            this.rooms = [];
+            this.userInfo = null;
+            this.subscription = null;
+            this.storageKey = `chat_token_${id}`;
+            this.lastMessageDate = null;     // 마지막 메시지 날짜 추적
+            this.hasMoreMessages = false;    // 더 불러올 메시지가 있는지
+            this.nextCursor = null;          // 다음 페이지 커서
+            this.isLoadingMessages = false;  // 메시지 로딩 중인지
+            this.scrollListener = null;      // 스크롤 이벤트 리스너
+        }
+
+        // localStorage에서 토큰 로드
+        loadTokenFromStorage() {
+            const stored = localStorage.getItem(this.storageKey);
+            if (stored) {
+                this.token = stored;
+                log(`${this.id}: localStorage에서 토큰 로드됨`);
+                return true;
+            }
+            return false;
+        }
+
+        saveTokenToStorage() {
+            if (this.token) {
+                localStorage.setItem(this.storageKey, this.token);
+                log(`${this.id}: localStorage에 토큰 저장됨`);
+            }
+        }
+
+        clearTokenFromStorage() {
+            localStorage.removeItem(this.storageKey);
+            log(`${this.id}: localStorage에서 토큰 삭제됨`);
+        }
+
+        setStatus(message, type = 'normal') {
+            const status = document.getElementById(`status${this.id}`);
+            status.textContent = message;
+            status.className = 'status';
+            if (type === 'connected') status.classList.add('connected');
+            if (type === 'error') status.classList.add('error');
+        }
+
+        async loginWithToken() {
+            const tokenInput = document.getElementById(`token${this.id}`);
+            const kakaoToken = tokenInput.value.trim();
+
+            if (!kakaoToken) {
+                alert('카카오 액세스 토큰을 입력하세요');
+                return;
+            }
+
+            await this.login(kakaoToken);
+        }
+
+        async login(kakaoToken) {
+            try {
+                this.setStatus('로그인 처리 중...');
+                log(`${this.id}: 로그인 시작`);
+
+                const res = await fetch(`${API_BASE}/auth/complete-signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        loginToken: kakaoToken,
+                        serviceTermsAgreed: true,
+                        privacyPolicyAgreed: true,
+                        marketingOptionalAgreed: false
+                    })
+                });
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(`로그인 실패: ${error}`);
+                }
+
+                const data = await res.json();
+                this.token = data.accessToken;
+                // Number로 타입을 명확히 지정
+                this.myUserId = Number(data.user?.id ?? this.getSenderIdFromToken());
+                log(`${this.id}: JWT 발급 완료 - 사용자 ID: ${this.myUserId} (타입: ${typeof this.myUserId})`);
+
+                this.saveTokenToStorage();
+
+                await this.loadRooms();
+                await this.connectWebSocket();
+                this.setStatus('연결됨', 'connected');
+                log(`${this.id}: 로그인 성공`);
+
+            } catch (error) {
+                this.setStatus('로그인 실패', 'error');
+                log(`${this.id}: 로그인 실패 - ${error}`);
+                throw error;
+            }
+        }
+
+        async autoLogin() {
+            if (this.loadTokenFromStorage()) {
+                try {
+                    // Number로 타입을 명확히 지정
+                    this.myUserId = Number(this.getSenderIdFromToken());
+                    this.setStatus('자동 로그인 중...');
+                    log(`${this.id}: 자동 로그인 - 사용자 ID: ${this.myUserId} (타입: ${typeof this.myUserId})`);
+                    await this.loadRooms();
+                    await this.connectWebSocket();
+                    this.setStatus('연결됨 (자동)', 'connected');
+                    log(`${this.id}: 자동 로그인 성공`);
+                    return true;
+                } catch (error) {
+                    this.setStatus('토큰 만료 - 다시 로그인하세요', 'error');
+                    log(`${this.id}: 자동 로그인 실패 - ${error}`);
+                    this.clearTokenFromStorage();
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        async loadRooms() {
+            if (!this.token) {
+                alert('먼저 로그인하세요');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+
+                if (!res.ok) throw new Error('채팅방 목록 조회 실패');
+
+                this.rooms = await res.json();
+                this.renderRoomList();
+                log(`${this.id}: 채팅방 ${this.rooms.length}개 로드됨`);
+            } catch (error) {
+                log(`${this.id}: 채팅방 목록 로드 실패 - ${error}`);
+            }
+        }
+
+        renderRoomList() {
+            const container = document.getElementById(`roomList${this.id}`);
+            container.innerHTML = '';
+
+            if (this.rooms.length === 0) {
+                container.innerHTML =
+                    '<div style="padding: 16px; text-align: center; color: #999; font-size: 12px;">채팅방이 없습니다</div>';
+                return;
+            }
+
+            this.rooms.forEach(room => {
+                const div = document.createElement('div');
+                div.className = 'room-item';
+                if (this.currentRoomId === room.roomId) {
+                    div.classList.add('active');
+                }
+
+                const members = room.chatMembers || [];
+                const memberNames = members.map(m => m.nickname).join(', ');
+
+                div.innerHTML = `
+                    <div class="room-item-title">${room.title || '제목 없음'}</div>
+                    <div class="room-item-info">멤버: ${memberNames}</div>
+                `;
+
+                div.onclick = () => this.selectRoom(room);
+                container.appendChild(div);
+            });
+        }
+
+        async selectRoom(room) {
+            if (this.subscription) {
+                this.subscription.unsubscribe();
+                this.subscription = null;
+            }
+
+            // 이전 스크롤 리스너 제거
+            if (this.scrollListener) {
+                const container = document.getElementById(`messages${this.id}`);
+                container.removeEventListener('scroll', this.scrollListener);
+                this.scrollListener = null;
+            }
+
+            this.currentRoom = room;
+            this.currentRoomId = room.roomId;
+            this.renderRoomList();
+
+            document.getElementById(`roomName${this.id}`).textContent = room.title || '제목 없음';
+            document.getElementById(`messages${this.id}`).innerHTML = '';
+
+            // 페이징 관련 초기화
+            this.lastMessageDate = null;
+            this.hasMoreMessages = false;
+            this.nextCursor = null;
+            this.isLoadingMessages = false;
+
+            document.getElementById(`input${this.id}`).disabled = false;
+            document.getElementById(`sendBtn${this.id}`).disabled = false;
+
+            // 채팅 페이지를 먼저 표시
+            this.showChatPage();
+
+            // 페이지가 표시된 후 채팅 내역 불러오기
+            await this.loadChatHistory(room.roomId);
+
+            // 스크롤 이벤트 리스너 추가
+            this.setupScrollListener();
+
+            if (this.stompClient && this.stompClient.connected) {
+                this.subscribeToRoom(room.roomId);
+            }
+
+            log(`${this.id}: 채팅방 "${room.title}" 선택됨 (ID: ${room.roomId})`);
+        }
+
+        showChatPage() {
+            document.getElementById(`roomListPage${this.id}`).classList.add('hidden');
+            document.getElementById(`chatPage${this.id}`).classList.add('active');
+        }
+
+        goBack() {
+            document.getElementById(`roomListPage${this.id}`).classList.remove('hidden');
+            document.getElementById(`chatPage${this.id}`).classList.remove('active');
+
+            if (this.subscription) {
+                this.subscription.unsubscribe();
+                this.subscription = null;
+            }
+
+            // 스크롤 리스너 제거
+            if (this.scrollListener) {
+                const container = document.getElementById(`messages${this.id}`);
+                container.removeEventListener('scroll', this.scrollListener);
+                this.scrollListener = null;
+            }
+
+            log(`${this.id}: 채팅방 목록으로 돌아감`);
+        }
+
+        async connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                const socket = new SockJS(`${API_BASE}/ws/connect`);
+                this.stompClient = Stomp.over(socket);
+                this.stompClient.debug = (msg) => log(`${this.id} WS: ${msg}`);
+
+                this.stompClient.connect(
+                    { Authorization: `Bearer ${this.token}` },
+                    (frame) => {
+                        log(`${this.id}: WebSocket 연결됨`);
+
+                        if (this.currentRoomId) {
+                            this.subscribeToRoom(this.currentRoomId);
+                        }
+
+                        resolve();
+                    },
+                    (error) => {
+                        log(`${this.id}: WebSocket 연결 실패 - ${error}`);
+                        reject(error);
+                    }
+                );
+            });
+        }
+
+        async loadChatHistory(roomId, cursorMillis = null, size = 30, isPrepend = false) {
+            if (!this.token) {
+                log(`${this.id}: 토큰이 없어 채팅 내역을 불러올 수 없습니다`);
+                return;
+            }
+
+            try {
+                let url = `${API_BASE}/api/chat/rooms/${roomId}/messages?size=${size}`;
+                if (cursorMillis) {
+                    url += `&cursorMillis=${cursorMillis}`;
+                }
+
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${this.token}` }
+                });
+
+                if (!res.ok) {
+                    throw new Error('채팅 내역 조회 실패');
+                }
+
+                const data = await res.json();
+                log(`${this.id}: 채팅 내역 ${data.messages.length}개 로드됨 (hasNext: ${data.hasNext})`);
+
+                // 페이징 정보 저장
+                this.hasMoreMessages = data.hasNext;
+                this.nextCursor = data.nextCursorMillis;
+
+                // API는 최신순(DESC)으로 내려주므로 역순으로 정렬하여 오래된 메시지부터 표시
+                const messages = data.messages.reverse();
+
+                const container = document.getElementById(`messages${this.id}`);
+
+                if (isPrepend) {
+                    // 이전 메시지를 맨 앞에 추가하는 경우 (스크롤 위치 유지)
+                    const oldScrollHeight = container.scrollHeight;
+
+                    // 기존 첫 번째 메시지의 날짜 저장
+                    const firstExistingMessage = container.querySelector('.message');
+                    let firstExistingDate = null;
+                    if (firstExistingMessage) {
+                        // 첫 메시지의 날짜를 찾기 위해 데이터 속성 사용
+                        const timeElement = firstExistingMessage.querySelector('.message-time');
+                        if (timeElement && timeElement.dataset.timestamp) {
+                            firstExistingDate = this.getDateString(timeElement.dataset.timestamp);
+                        }
+                    }
+
+                    // Fragment를 생성하여 새 메시지들을 추가
+                    const fragment = document.createDocumentFragment();
+                    let prevMessageDate = null;
+
+                    messages.forEach((msg, index) => {
+                        // 날짜 구분선 추가
+                        if (msg.sentAt) {
+                            const messageDate = this.getDateString(msg.sentAt);
+                            if (prevMessageDate !== messageDate) {
+                                const separator = document.createElement('div');
+                                separator.className = 'date-separator';
+                                separator.innerHTML = `<div class="date-separator-text">${messageDate}</div>`;
+                                fragment.appendChild(separator);
+                                prevMessageDate = messageDate;
+                            }
+                        }
+
+                        // 메시지 추가
+                        const messageElement = this.createMessageElement(msg);
+                        fragment.appendChild(messageElement);
+                    });
+
+                    // 새 메시지의 마지막 날짜와 기존 첫 메시지 날짜 비교
+                    if (messages.length > 0 && firstExistingDate) {
+                        const lastNewMessage = messages[messages.length - 1];
+                        if (lastNewMessage.sentAt) {
+                            const lastNewDate = this.getDateString(lastNewMessage.sentAt);
+
+                            if (lastNewDate === firstExistingDate) {
+                                // 날짜가 같으면 기존 첫 번째 날짜 구분선 제거 (중복 방지)
+                                const firstSeparator = container.querySelector('.date-separator');
+                                if (firstSeparator) {
+                                    const separatorText = firstSeparator.querySelector('.date-separator-text');
+                                    if (separatorText && separatorText.textContent === firstExistingDate) {
+                                        firstSeparator.remove();
+                                        log(`${this.id}: 중복 날짜 구분선 제거 - ${firstExistingDate}`);
+                                    }
+                                }
+                            } else {
+                                // 날짜가 다르면 구분선 추가 (기존 것은 유지)
+                                const separator = document.createElement('div');
+                                separator.className = 'date-separator';
+                                separator.innerHTML = `<div class="date-separator-text">${firstExistingDate}</div>`;
+                                fragment.appendChild(separator);
+                                log(`${this.id}: 날짜 구분선 추가 - ${firstExistingDate} (새 메시지 마지막: ${lastNewDate})`);
+                            }
+                        }
+                    }
+
+                    // Fragment를 맨 앞에 추가
+                    container.insertBefore(fragment, container.firstChild);
+
+                    // 스크롤 위치 유지
+                    requestAnimationFrame(() => {
+                        const newScrollHeight = container.scrollHeight;
+                        container.scrollTop = newScrollHeight - oldScrollHeight;
+                        log(`${this.id}: 스크롤 위치 유지 (scrollTop: ${container.scrollTop})`);
+                    });
+                } else {
+                    // 초기 로드: 메시지를 추가하고 스크롤을 최하단으로
+                    messages.forEach(msg => {
+                        this.displayHistoryMessage(msg);
+                    });
+
+                    // DOM 렌더링 완료 후 스크롤을 최하단으로 이동
+                    requestAnimationFrame(() => {
+                        container.scrollTop = container.scrollHeight;
+                        log(`${this.id}: 스크롤을 최하단으로 이동 (scrollTop: ${container.scrollTop}, scrollHeight: ${container.scrollHeight})`);
+                    });
+                }
+
+                if (data.hasNext) {
+                    log(`${this.id}: 더 많은 메시지가 있습니다 (nextCursor: ${data.nextCursorMillis})`);
+                }
+
+            } catch (error) {
+                log(`${this.id}: 채팅 내역 로드 실패 - ${error}`);
+            }
+        }
+
+        createMessageElement(data) {
+            const div = document.createElement('div');
+
+            // 내 메시지인지 확인 (타입 변환하여 비교)
+            const senderId = Number(data.senderId);
+            const myUserId = Number(this.myUserId);
+            const isMine = senderId === myUserId;
+
+            div.className = isMine ? 'message mine' : 'message';
+
+            // 채팅방 멤버 정보에서 프로필 이미지 가져오기
+            let avatarContent = '';
+            let senderProfileImage = null;
+
+            if (this.currentRoom && this.currentRoom.chatMembers) {
+                const member = this.currentRoom.chatMembers.find(m => m.userId === data.senderId);
+                if (member) {
+                    senderProfileImage = member.profileImageUrl;
+                }
+            }
+
+            if (senderProfileImage) {
+                avatarContent = `<img src="${senderProfileImage}" alt="${data.senderName || 'User'}" />`;
+            } else {
+                const initial = (data.senderName || data.senderId || 'U').toString().charAt(0).toUpperCase();
+                avatarContent = initial;
+            }
+
+            const time = data.sentAt ? new Date(data.sentAt).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : '';
+
+            // timestamp를 data 속성으로 저장
+            const timestamp = data.sentAt || '';
+
+            div.innerHTML = `
+                <div class="message-avatar">${avatarContent}</div>
+                <div class="message-content">
+                    <div class="message-sender">${data.senderName || (data.senderId ? `User ${data.senderId}` : '')}</div>
+                    <div class="message-bubble">${this.escapeHtml(data.content || '')}</div>
+                    <div class="message-time" data-timestamp="${timestamp}">${time}</div>
+                </div>
+            `;
+
+            return div;
+        }
+
+        displayHistoryMessage(data) {
+            const container = document.getElementById(`messages${this.id}`);
+
+            // 날짜 구분선 추가
+            if (data.sentAt) {
+                const messageDate = this.getDateString(data.sentAt);
+                if (this.lastMessageDate !== messageDate) {
+                    this.addDateSeparator(container, messageDate);
+                    this.lastMessageDate = messageDate;
+                }
+            }
+
+            // 메시지 표시
+            const div = this.createMessageElement(data);
+            container.appendChild(div);
+        }
+
+        subscribeToRoom(roomId) {
+            if (!this.stompClient || !this.stompClient.connected) {
+                log(`${this.id}: WebSocket이 연결되지 않음`);
+                return;
+            }
+
+            this.subscription = this.stompClient.subscribe(
+                `/sub/chat/rooms/${roomId}`,
+                (message) => {
+                    log(`${this.id}: RECV raw: ${message.body}`);
+
+                    let data;
+                    try {
+                        data = JSON.parse(message.body);
+                    } catch (e) {
+                        data = { content: message.body };
+                    }
+
+                    this.displayMessage(data);
+                }
+            );
+
+            log(`${this.id}: 채팅방 ${roomId} 구독 시작`);
+        }
+
+        displayMessage(data) {
+            const container = document.getElementById(`messages${this.id}`);
+
+            // 날짜 구분선 추가
+            if (data.sentAt) {
+                const messageDate = this.getDateString(data.sentAt);
+                if (this.lastMessageDate !== messageDate) {
+                    this.addDateSeparator(container, messageDate);
+                    this.lastMessageDate = messageDate;
+                }
+            }
+
+            // 메시지 표시
+            const div = this.createMessageElement(data);
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        sendMessage() {
+            if (!this.stompClient || !this.stompClient.connected) {
+                alert('WebSocket이 연결되지 않았습니다');
+                return;
+            }
+
+            if (!this.currentRoomId) {
+                alert('채팅방을 먼저 선택하세요');
+                return;
+            }
+
+            const input = document.getElementById(`input${this.id}`);
+            const content = input.value.trim();
+            if (!content) return;
+
+            const payload = {
+                type: 'TALK',
+                content: content
+            };
+
+            // 1) 서버로 전송
+            this.stompClient.send(
+                `/pub/chat/rooms/${this.currentRoomId}/send`,
+                {},
+                JSON.stringify(payload)
+            );
+
+            input.value = '';
+            log(`${this.id}: 메시지 전송 - "${content}"`);
+        }
+
+        createRoom() {
+            if (!this.token) {
+                alert('먼저 로그인하세요');
+                return;
+            }
+            openCreateRoomModal(this);
+        }
+
+        async leaveChatRoom() {
+            if (!this.token) {
+                alert('먼저 로그인하세요');
+                return;
+            }
+
+            if (!this.currentRoomId) {
+                alert('채팅방을 먼저 선택하세요');
+                return;
+            }
+
+            const currentRoomTitle = this.currentRoom?.title || '채팅방';
+            if (!confirm(`"${currentRoomTitle}"에서 나가시겠습니까?`)) {
+                return;
+            }
+
+            try {
+                log(`${this.id}: 채팅방 나가기 시도 - 채팅방 ID: ${this.currentRoomId}`);
+
+                const res = await fetch(`${API_BASE}/api/chat/rooms/${this.currentRoomId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`
+                    }
+                });
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(error);
+                }
+
+                log(`${this.id}: 채팅방 나가기 성공 - "${currentRoomTitle}"`);
+                alert(`"${currentRoomTitle}"에서 나갔습니다.`);
+
+                // 채팅방 목록으로 돌아가기
+                this.goBack();
+
+                // 채팅방 목록 새로고침
+                await this.loadRooms();
+
+            } catch (error) {
+                log(`${this.id}: 채팅방 나가기 실패 - ${error}`);
+                alert(`채팅방 나가기 실패: ${error.message}`);
+            }
+        }
+
+        async submitCreateRoom(title, memberIds, type, postId, imageFile) {
+            try {
+                let res;
+
+                if (imageFile) {
+                    // 이미지가 있는 경우: multipart/form-data
+                    log(`${this.id}: 이미지 포함 채팅방 생성 (multipart/form-data)`);
+
+                    const formData = new FormData();
+                    const requestData = {
+                        title: title,
+                        memberIds: Array.from(memberIds),
+                        type: type,
+                        postId: postId || null
+                    };
+
+                    formData.append('request', new Blob([JSON.stringify(requestData)], {
+                        type: 'application/json'
+                    }));
+                    formData.append('roomImage', imageFile);
+
+                    res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: formData
+                    });
+                } else {
+                    // 이미지가 없는 경우: application/json
+                    log(`${this.id}: 이미지 없이 채팅방 생성 (application/json)`);
+
+                    res = await fetch(`${API_BASE}/api/chat/rooms`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.token}`
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            memberIds: Array.from(memberIds),
+                            type: type,
+                            postId: postId || null
+                        })
+                    });
+                }
+
+                if (!res.ok) {
+                    const error = await res.text();
+                    throw new Error(error);
+                }
+
+                const newRoom = await res.json();
+                log(`${this.id}: 채팅방 생성됨 - ${newRoom.title} (ID: ${newRoom.roomId})`);
+
+                await this.loadRooms();
+                return newRoom;
+            } catch (error) {
+                log(`${this.id}: 채팅방 생성 실패 - ${error}`);
+                throw error;
+            }
+        }
+
+        getSenderIdFromToken() {
+            if (!this.token) return null;
+            try {
+                const base64Url = this.token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const payload = JSON.parse(jsonPayload);
+                return payload.userId || payload.sub || payload.id;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        getDateString(dateString) {
+            const date = new Date(dateString);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            // 날짜를 YYYY-MM-DD 형식으로 비교
+            const dateStr = date.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            if (dateStr === todayStr) {
+                return '오늘';
+            } else if (dateStr === yesterdayStr) {
+                return '어제';
+            } else {
+                // YYYY년 MM월 DD일 형식
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                return `${year}년 ${month}월 ${day}일`;
+            }
+        }
+
+        addDateSeparator(container, dateText) {
+            const separator = document.createElement('div');
+            separator.className = 'date-separator';
+            separator.innerHTML = `<div class="date-separator-text">${dateText}</div>`;
+            container.appendChild(separator);
+        }
+
+        setupScrollListener() {
+            const container = document.getElementById(`messages${this.id}`);
+
+            this.scrollListener = async () => {
+                // 스크롤이 상단 근처에 도달했는지 확인 (200px 이내)
+                if (container.scrollTop < 200) {
+                    await this.loadMoreMessages();
+                }
+            };
+
+            container.addEventListener('scroll', this.scrollListener);
+        }
+
+        async loadMoreMessages() {
+            // 로딩 중이거나 더 이상 메시지가 없으면 중단
+            if (this.isLoadingMessages || !this.hasMoreMessages) {
+                return;
+            }
+
+            this.isLoadingMessages = true;
+            log(`${this.id}: 이전 메시지 로드 시작 (cursor: ${this.nextCursor})`);
+
+            try {
+                await this.loadChatHistory(this.currentRoomId, this.nextCursor, 30, true);
+                log(`${this.id}: 이전 메시지 로드 완료`);
+            } catch (error) {
+                log(`${this.id}: 이전 메시지 로드 실패 - ${error}`);
+            } finally {
+                this.isLoadingMessages = false;
+            }
+        }
+
+        escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+    }
+
+    // 클라이언트 인스턴스 생성
+    const clientA = new ChatClient('A', 'A'); // 왼쪽 화면
+    const clientB = new ChatClient('B', 'B'); // 오른쪽 화면
+
+    // 엔터키 이벤트 리스너
+    document.getElementById('inputA').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientA.sendMessage();
+    });
+    document.getElementById('inputB').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientB.sendMessage();
+    });
+
+    document.getElementById('tokenA').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientA.loginWithToken();
+    });
+    document.getElementById('tokenB').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') clientB.loginWithToken();
+    });
+
+    window.addEventListener('load', async () => {
+        log('채팅 테스트 페이지 로드됨');
+        log('자동 로그인 시도 중...');
+
+        await clientA.autoLogin();
+        await clientB.autoLogin();
+    });
+
+    // === 채팅방 생성 모달 관련 함수들 ===
+    let currentClient = null;
+    const modalMemberIds = new Set();
+
+    function openCreateRoomModal(client) {
+        currentClient = client;
+        modalMemberIds.clear();
+        document.getElementById('createRoomForm').reset();
+        document.getElementById('modalMemberIdsContainer').innerHTML = '';
+        removeModalImage(new Event('click'));
+        hideModalStatus();
+        document.getElementById('createRoomModal').classList.add('show');
+    }
+
+    function closeCreateRoomModal() {
+        document.getElementById('createRoomModal').classList.remove('show');
+        currentClient = null;
+    }
+
+    function addModalMemberId() {
+        const input = document.getElementById('modalMemberIdInput');
+        const memberId = parseInt(input.value.trim());
+
+        if (!memberId || isNaN(memberId)) {
+            showModalStatus('유효한 멤버 ID를 입력하세요', 'error');
+            return;
+        }
+
+        if (modalMemberIds.has(memberId)) {
+            showModalStatus('이미 추가된 멤버입니다', 'error');
+            return;
+        }
+
+        modalMemberIds.add(memberId);
+        input.value = '';
+        renderModalMemberIds();
+        hideModalStatus();
+    }
+
+    function renderModalMemberIds() {
+        const container = document.getElementById('modalMemberIdsContainer');
+        container.innerHTML = '';
+
+        modalMemberIds.forEach(id => {
+            const tag = document.createElement('div');
+            tag.className = 'member-id-tag';
+            tag.innerHTML = `
+                멤버 ID: ${id}
+                <span class="remove-tag" onclick="removeModalMemberId(${id})">×</span>
+            `;
+            container.appendChild(tag);
+        });
+    }
+
+    function removeModalMemberId(id) {
+        modalMemberIds.delete(id);
+        renderModalMemberIds();
+    }
+
+    function handleModalImageSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            document.getElementById('modalPreviewImage').src = e.target.result;
+            document.getElementById('modalImagePreview').classList.add('show');
+            document.getElementById('modalImageUploadContainer').classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeModalImage(event) {
+        event.stopPropagation();
+        document.getElementById('modalRoomImage').value = '';
+        document.getElementById('modalImagePreview').classList.remove('show');
+        document.getElementById('modalImageUploadContainer').classList.remove('has-image');
+    }
+
+    function showModalStatus(message, type) {
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.textContent = message;
+        statusEl.className = `modal-status show ${type}`;
+    }
+
+    function hideModalStatus() {
+        const statusEl = document.getElementById('modalStatus');
+        statusEl.className = 'modal-status';
+    }
+
+    // 폼 제출 이벤트
+    document.getElementById('createRoomForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        if (!currentClient) {
+            showModalStatus('오류: 클라이언트 정보가 없습니다', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById('modalSubmitBtn');
+        submitBtn.disabled = true;
+
+        try {
+            hideModalStatus();
+
+            const title = document.getElementById('modalRoomTitle').value.trim();
+            const type = document.getElementById('modalRoomType').value;
+            const postId = document.getElementById('modalPostId').value.trim();
+            const imageFile = document.getElementById('modalRoomImage').files[0];
+
+            if (!title) {
+                showModalStatus('채팅방 제목을 입력하세요', 'error');
+                return;
+            }
+
+            if (modalMemberIds.size === 0) {
+                showModalStatus('최소 1명의 멤버를 추가하세요', 'error');
+                return;
+            }
+
+            showModalStatus('채팅방 생성 중...', 'info');
+
+            const result = await currentClient.submitCreateRoom(
+                title,
+                modalMemberIds,
+                type,
+                postId,
+                imageFile
+            );
+
+            showModalStatus(`채팅방 "${result.title}"이 생성되었습니다!`, 'success');
+
+            setTimeout(() => {
+                closeCreateRoomModal();
+            }, 1500);
+
+        } catch (error) {
+            showModalStatus('채팅방 생성 실패: ' + error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+    // Enter 키로 멤버 ID 추가
+    document.getElementById('modalMemberIdInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addModalMemberId();
+        }
+    });
+
+    // 모달 오버레이 클릭 시 닫기
+    document.getElementById('createRoomModal').addEventListener('click', (e) => {
+        if (e.target.id === 'createRoomModal') {
+            closeCreateRoomModal();
+        }
+    });
+</script>
+
+</body>
+</html>
