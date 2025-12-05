@@ -3,6 +3,7 @@ package com.sobunsobun.backend.application.chat;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.enumClass.ChatMemberRole;
+import com.sobunsobun.backend.enumClass.ChatMemberStatus;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -22,7 +24,8 @@ public class ChatMemberService {
 
     @Transactional(readOnly = true)
     public void validateMembership(Long roomId, Long userId) {
-        boolean isMember = chatMemberRepository.existsByRoomIdAndMemberId(roomId, userId);
+        boolean isMember = chatMemberRepository.existsByRoomIdAndMemberIdAndStatus(
+                roomId, userId, ChatMemberStatus.ACTIVE);
         if (!isMember) {
             throw new IllegalArgumentException("채팅방 멤버만 접근할 수 있습니다.");
         }
@@ -30,17 +33,18 @@ public class ChatMemberService {
 
     @Transactional(readOnly = true)
     public boolean isMember(Long roomId, Long userId) {
-        return chatMemberRepository.existsByRoomIdAndMemberId(roomId, userId);
+        return chatMemberRepository.existsByRoomIdAndMemberIdAndStatus(
+                roomId, userId, ChatMemberStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<ChatMember> getMembersByRoomId(Long roomId) {
-        return chatMemberRepository.findByRoomId(roomId);
+        return chatMemberRepository.findByRoomIdAndStatus(roomId, ChatMemberStatus.ACTIVE);
     }
 
     @Transactional(readOnly = true)
     public List<ChatMember> getMembersByUserId(Long userId) {
-        return chatMemberRepository.findByMemberId(userId);
+        return chatMemberRepository.findByMemberIdAndStatus(userId, ChatMemberStatus.ACTIVE);
     }
 
     @Transactional
@@ -68,6 +72,7 @@ public class ChatMemberService {
                         .role(user.getId().equals(ownerId)
                                 ? ChatMemberRole.OWNER
                                 : ChatMemberRole.MEMBER)
+                        .status(ChatMemberStatus.ACTIVE)
                         .build()
                 )
                 .toList();
@@ -77,16 +82,34 @@ public class ChatMemberService {
 
     @Transactional
     public void removeMember(Long roomId, Long userId) {
-        chatMemberRepository.deleteByRoomIdAndMemberId(roomId, userId);
+        ChatMember member = chatMemberRepository.findByRoomIdAndMemberIdAndStatus(
+                        roomId, userId, ChatMemberStatus.ACTIVE)
+                .orElseThrow(() -> new IllegalArgumentException("채팅방 멤버가 아닙니다."));
+
+        // Soft delete: status를 LEFT로 변경하고 leftAt 시간 설정
+        member.setStatus(ChatMemberStatus.LEFT);
+        member.setLeftAt(LocalDateTime.now());
+        chatMemberRepository.save(member);
     }
 
     @Transactional
     public void removeMemberFromRooms(List<Long> roomIds, Long userId) {
-        chatMemberRepository.deleteByRoomIdInAndMemberId(roomIds, userId);
+        List<ChatMember> members = chatMemberRepository.findByRoomIdInAndStatus(
+                roomIds, ChatMemberStatus.ACTIVE);
+
+        LocalDateTime now = LocalDateTime.now();
+        members.stream()
+                .filter(member -> member.getMember().getId().equals(userId))
+                .forEach(member -> {
+                    member.setStatus(ChatMemberStatus.LEFT);
+                    member.setLeftAt(now);
+                });
+
+        chatMemberRepository.saveAll(members);
     }
 
     @Transactional(readOnly = true)
     public long countMembersInRoom(Long roomId) {
-        return chatMemberRepository.countByRoomId(roomId);
+        return chatMemberRepository.countByRoomIdAndStatus(roomId, ChatMemberStatus.ACTIVE);
     }
 }

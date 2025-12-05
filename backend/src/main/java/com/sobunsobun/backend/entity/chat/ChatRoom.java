@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.entity.chat;
 
+import com.sobunsobun.backend.enumClass.ChatRoomStatus;
 import com.sobunsobun.backend.enumClass.ChatRoomType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -37,6 +38,19 @@ public class ChatRoom {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Setter
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private ChatRoomStatus status = ChatRoomStatus.OPEN;
+
+    @Setter
+    @Column(name = "closed_at")
+    private LocalDateTime closedAt;
+
+    @Setter
+    @Column(name = "expire_at")
+    private LocalDateTime expireAt;
+
     @CreationTimestamp
     @Column(name = "create_at", nullable = false, updatable = false)
     private LocalDateTime createAt;
@@ -51,5 +65,6 @@ public class ChatRoom {
         this.ownerId = ownerId;
         this.postId = postId;
         this.imageUrl = imageUrl;
+        this.status = ChatRoomStatus.OPEN;
     }
 }

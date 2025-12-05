@@ -18,4 +18,7 @@ public interface ChatMessageRepository extends MongoRepository<ChatMessage, Stri
             Instant cursorCreatedAt,
             Pageable pageable
     );
+
+    // 특정 채팅방의 모든 메시지 삭제 (스케줄러용)
+    void deleteByRoomId(Long roomId);
 }

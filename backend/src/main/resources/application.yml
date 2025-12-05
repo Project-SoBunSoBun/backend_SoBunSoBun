@@ -53,6 +53,7 @@ file:
 app:
   chat:
     secret: ${CHAT_SECRET}
+    retention-days: 365  # 채팅방 보관 기간 (1년)
 
 # SpringDoc/Swagger 설정
 springdoc:
