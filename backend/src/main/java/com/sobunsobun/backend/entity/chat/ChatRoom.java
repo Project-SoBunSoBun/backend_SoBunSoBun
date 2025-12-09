@@ -52,12 +52,12 @@ public class ChatRoom {
     private LocalDateTime expireAt;
 
     @CreationTimestamp
-    @Column(name = "create_at", nullable = false, updatable = false)
-    private LocalDateTime createAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updateAt;
+    private LocalDateTime updatedAt;
 
     public ChatRoom(String title, ChatRoomType type, Long ownerId, Long postId, String imageUrl) {
         this.title = title;
