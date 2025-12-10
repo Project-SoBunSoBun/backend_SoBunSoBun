@@ -14,7 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -88,9 +89,9 @@ class ChatRoomServiceTest {
         assertEquals(ChatRoomStatus.CLOSED, testRoom.getStatus());
         assertNotNull(testRoom.getClosedAt());
         assertNotNull(testRoom.getExpireAt());
-        
+
         // expireAt이 closedAt + 365일인지 확인
-        LocalDateTime expectedExpireAt = testRoom.getClosedAt().plusDays(365);
+        Instant expectedExpireAt = testRoom.getClosedAt().plus(365, ChronoUnit.DAYS);
         assertTrue(testRoom.getExpireAt().isAfter(expectedExpireAt.minusSeconds(1)));
         assertTrue(testRoom.getExpireAt().isBefore(expectedExpireAt.plusSeconds(1)));
     }

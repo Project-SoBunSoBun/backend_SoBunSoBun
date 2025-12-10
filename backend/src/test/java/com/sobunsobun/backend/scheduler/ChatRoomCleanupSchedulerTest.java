@@ -15,7 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -48,15 +49,15 @@ class ChatRoomCleanupSchedulerTest {
         expiredRoom1 = new ChatRoom("만료방1", ChatRoomType.GROUP, 1L, null, null);
         ReflectionTestUtils.setField(expiredRoom1, "id", 100L);
         expiredRoom1.setStatus(ChatRoomStatus.CLOSED);
-        expiredRoom1.setClosedAt(LocalDateTime.now().minusDays(400));
-        expiredRoom1.setExpireAt(LocalDateTime.now().minusDays(35));
+        expiredRoom1.setClosedAt(Instant.now().minus(400, ChronoUnit.DAYS));
+        expiredRoom1.setExpireAt(Instant.now().minus(35, ChronoUnit.DAYS));
 
         // 만료된 채팅방 2
         expiredRoom2 = new ChatRoom("만료방2", ChatRoomType.PRIVATE, 2L, null, null);
         ReflectionTestUtils.setField(expiredRoom2, "id", 200L);
         expiredRoom2.setStatus(ChatRoomStatus.CLOSED);
-        expiredRoom2.setClosedAt(LocalDateTime.now().minusDays(400));
-        expiredRoom2.setExpireAt(LocalDateTime.now().minusDays(35));
+        expiredRoom2.setClosedAt(Instant.now().minus(400, ChronoUnit.DAYS));
+        expiredRoom2.setExpireAt(Instant.now().minus(35, ChronoUnit.DAYS));
     }
 
     @Test
@@ -66,7 +67,7 @@ class ChatRoomCleanupSchedulerTest {
         List<ChatRoom> expiredRooms = Arrays.asList(expiredRoom1, expiredRoom2);
         List<Long> expiredRoomIds = Arrays.asList(100L, 200L);
 
-        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(LocalDateTime.class)))
+        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(Instant.class)))
                 .thenReturn(expiredRooms);
 
         // when
@@ -88,7 +89,7 @@ class ChatRoomCleanupSchedulerTest {
     @DisplayName("만료된 채팅방이 없는 경우")
     void deleteExpiredChatRooms_noExpiredRooms() {
         // given
-        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(LocalDateTime.class)))
+        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(Instant.class)))
                 .thenReturn(Collections.emptyList());
 
         // when
@@ -107,7 +108,7 @@ class ChatRoomCleanupSchedulerTest {
         List<ChatRoom> expiredRooms = Arrays.asList(expiredRoom1, expiredRoom2);
         List<Long> expiredRoomIds = Arrays.asList(100L, 200L);
 
-        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(LocalDateTime.class)))
+        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(Instant.class)))
                 .thenReturn(expiredRooms);
 
         // MongoDB 첫 번째 삭제는 실패, 두 번째는 성공
@@ -135,7 +136,7 @@ class ChatRoomCleanupSchedulerTest {
         List<ChatRoom> expiredRooms = Collections.singletonList(expiredRoom1);
         List<Long> expiredRoomIds = Collections.singletonList(100L);
 
-        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(LocalDateTime.class)))
+        when(chatRoomRepository.findByStatusAndExpireAtBefore(eq(ChatRoomStatus.CLOSED), any(Instant.class)))
                 .thenReturn(expiredRooms);
 
         // when
