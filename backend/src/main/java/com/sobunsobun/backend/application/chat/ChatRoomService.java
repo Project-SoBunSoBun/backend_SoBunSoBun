@@ -20,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -194,10 +195,10 @@ public class ChatRoomService {
 
         // 5. 모든 멤버가 나간 경우 채팅방 CLOSED 처리 및 만료 시간 설정
         if (remainingMembers == 0) {
-            LocalDateTime now = LocalDateTime.now();
+            Instant now = Instant.now();
             chatRoom.setStatus(ChatRoomStatus.CLOSED);
             chatRoom.setClosedAt(now);
-            chatRoom.setExpireAt(now.plusDays(retentionDays));
+            chatRoom.setExpireAt(now.plus(retentionDays, ChronoUnit.DAYS));
             chatRoomRepository.save(chatRoom);
         }
     }
@@ -228,13 +229,13 @@ public class ChatRoomService {
         chatMemberService.removeMemberFromRooms(roomIds, userId);
 
         // 4. 각 채팅방의 남은 멤버 수 확인 및 빈 채팅방 CLOSED 처리
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<Long> closedRoomIds = chatRooms.stream()
                 .filter(room -> chatMemberService.countMembersInRoom(room.getId()) == 0)
                 .peek(room -> {
                     room.setStatus(ChatRoomStatus.CLOSED);
                     room.setClosedAt(now);
-                    room.setExpireAt(now.plusDays(retentionDays));
+                    room.setExpireAt(now.plus(retentionDays, ChronoUnit.DAYS));
                 })
                 .map(ChatRoom::getId)
                 .toList();
@@ -245,6 +246,4 @@ public class ChatRoomService {
                     .toList());
         }
     }
-
-    //void invite(Long roomId, Long targetUserId);
 }

@@ -1,14 +1,11 @@
 package com.sobunsobun.backend.controller.chat;
 
-import com.sobunsobun.backend.application.chat.ChatMessageService;
-import com.sobunsobun.backend.dto.chat.ChatMessagePage;
-import com.sobunsobun.backend.dto.chat.ChatMessageResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sobunsobun.backend.application.chat.ChatRoomService;
 import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomRequest;
 import com.sobunsobun.backend.dto.chat.LeaveChatRoomsRequest;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
-import com.sobunsobun.backend.application.chat.ChatRoomService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +13,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -24,7 +20,6 @@ import java.util.List;
 public class ChatRoomController {
 
     private final ChatRoomService chatRoomService;
-    private final ChatMessageService chatMessageService;
 
     @PostMapping(value = "/api/chat/rooms", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ChatRoomResponse> createChatRoom(
@@ -87,18 +82,6 @@ public class ChatRoomController {
         return ResponseEntity.ok(rooms);
     }
 
-    @GetMapping("/api/chat/rooms/{roomId}/messages")
-    public ResponseEntity<ChatMessagePage> getMessages(
-            @AuthenticationPrincipal JwtUserPrincipal principal,
-            @PathVariable("roomId") Long roomId,
-            @RequestParam(value = "cursorMillis", required = false) Long cursorMillis,
-            @RequestParam(value = "size", defaultValue = "30") int size) {
-        Long userId = principal.id();
-        Instant cursor = (cursorMillis == null) ? null : Instant.ofEpochMilli(cursorMillis);
-        ChatMessagePage page = chatMessageService.getMessages(roomId, userId, cursor, size);
-        return ResponseEntity.ok(page);
-    }
-
     @DeleteMapping("/api/chat/rooms/{roomId}")
     public ResponseEntity<Void> leaveChatRoom(
             @AuthenticationPrincipal JwtUserPrincipal principal,
@@ -118,11 +101,4 @@ public class ChatRoomController {
 
         return ResponseEntity.noContent().build();
     }
-
-    // TODO: 채팅에서 사진, 정산서 보내기
-
-    // TODO: 채팅방 초대 기능, 초대 목록 (entity 추가)
-
-    // TODO: 채팅방 멤버 강퇴 기능 (방장 권한)
-
 }

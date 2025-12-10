@@ -31,7 +31,7 @@ public class ChatMessage {
 
     private ChatType type;
 
-    private String content; //암호화 필요
+    private String content; // TODO: 암호화 필요
 
     @CreatedDate
     @Indexed

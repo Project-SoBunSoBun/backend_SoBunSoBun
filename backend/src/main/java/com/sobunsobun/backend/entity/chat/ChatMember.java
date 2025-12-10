@@ -5,6 +5,7 @@ import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import com.sobunsobun.backend.enumClass.ChatMemberStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
 
@@ -40,5 +41,9 @@ public class ChatMember {
     @Setter
     @Column(name = "left_at")
     private Instant leftAt;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
 }
 

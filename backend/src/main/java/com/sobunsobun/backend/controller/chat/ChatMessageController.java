@@ -1,34 +1,33 @@
 package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatMessageService;
-import com.sobunsobun.backend.dto.chat.ChatMessageRequest;
+import com.sobunsobun.backend.dto.chat.ChatMessagePage;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
-import org.springframework.security.core.Authentication;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.security.Principal;
+import java.time.Instant;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
 public class ChatMessageController {
 
-    private static final Logger log = LoggerFactory.getLogger(ChatMessageController.class);
-    private final ChatMessageService chatMessageService;
+    ChatMessageService chatMessageService;
 
-    @MessageMapping("/chat/rooms/{roomId}/send")
-    public void sendMessage(@DestinationVariable("roomId") Long roomId,
-                            Principal principal,
-                            ChatMessageRequest request) {
-
-        Long userId = JwtUserPrincipal.from(principal).id();
-        chatMessageService.sendMessage(roomId, userId, request);
+    @GetMapping("/api/chat/rooms/{roomId}/messages")
+    public ResponseEntity<ChatMessagePage> getMessages(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @PathVariable("roomId") Long roomId,
+            @RequestParam(value = "cursorMillis", required = false) Long cursorMillis,
+            @RequestParam(value = "size", defaultValue = "30") int size) {
+        Long userId = principal.id();
+        Instant cursor = (cursorMillis == null) ? null : Instant.ofEpochMilli(cursorMillis);
+        ChatMessagePage page = chatMessageService.getMessages(roomId, userId, cursor, size);
+        return ResponseEntity.ok(page);
     }
 }

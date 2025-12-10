@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Slf4j
@@ -32,7 +32,7 @@ public class ChatRoomCleanupScheduler {
     public void deleteExpiredChatRooms() {
         log.info("[스케줄러] 만료된 채팅방 삭제 작업 시작");
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         // 1. 만료된 채팅방 조회 (status = CLOSED, expireAt < 현재 시간)
         List<ChatRoom> expiredRooms = chatRoomRepository.findByStatusAndExpireAtBefore(
