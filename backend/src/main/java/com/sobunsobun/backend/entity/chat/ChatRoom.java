@@ -9,7 +9,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Table(name = "chat_room")
 @Entity
@@ -45,19 +45,19 @@ public class ChatRoom {
 
     @Setter
     @Column(name = "closed_at")
-    private LocalDateTime closedAt;
+    private Instant closedAt;
 
     @Setter
     @Column(name = "expire_at")
-    private LocalDateTime expireAt;
+    private Instant expireAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     public ChatRoom(String title, ChatRoomType type, Long ownerId, Long postId, String imageUrl) {
         this.title = title;
@@ -65,6 +65,5 @@ public class ChatRoom {
         this.ownerId = ownerId;
         this.postId = postId;
         this.imageUrl = imageUrl;
-        this.status = ChatRoomStatus.OPEN;
     }
 }

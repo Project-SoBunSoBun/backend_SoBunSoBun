@@ -4,13 +4,9 @@ import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import com.sobunsobun.backend.enumClass.ChatMemberStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Table(name = "chat_member")
 @Entity
@@ -43,6 +39,6 @@ public class ChatMember {
 
     @Setter
     @Column(name = "left_at")
-    private LocalDateTime leftAt;
+    private Instant leftAt;
 }
 
