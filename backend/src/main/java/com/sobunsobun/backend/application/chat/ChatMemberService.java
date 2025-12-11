@@ -2,6 +2,7 @@ package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.chat.ChatMemberRequest;
+import com.sobunsobun.backend.dto.chat.ChatMemberResponse;
 import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import com.sobunsobun.backend.enumClass.ChatMemberStatus;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -114,14 +116,8 @@ public class ChatMemberService {
         return chatMemberRepository.countByRoomIdAndStatus(roomId, ChatMemberStatus.ACTIVE);
     }
 
-    /**
-     * 멤버 초대 (초대 발송은 message가 처리)
-     * @param roomId 채팅방 ID
-     * @param ownerId 요청자(방장) ID
-     * @param request 초대할 멤버 정보
-     */
     @Transactional
-    public ChatMember inviteMember(Long roomId, Long ownerId, ChatMemberRequest request) {
+    public ChatMemberResponse inviteMember(Long roomId, Long ownerId, ChatMemberRequest request) {
         // 방장 권한 확인
         validateRoomOwner(roomId, ownerId);
 
@@ -150,47 +146,39 @@ public class ChatMemberService {
                 .status(ChatMemberStatus.INVITED)
                 .build();
 
-        return chatMemberRepository.save(invitedMember);
+        ChatMember saved = chatMemberRepository.save(invitedMember);
+        return ChatMemberResponse.from(saved);
     }
 
-    /**
-     * 초대된 멤버 목록 조회 (특정 채팅방)
-     * @param roomId 채팅방 ID
-     * @return 초대된 멤버 목록
-     */
+
     @Transactional(readOnly = true)
-    public List<ChatMember> getInvitedMembers(Long roomId) {
-        return chatMemberRepository.findByRoomIdAndStatus(roomId, ChatMemberStatus.INVITED);
+    public List<ChatMemberResponse> getInvitedMembers(Long roomId) {
+        return chatMemberRepository.findByRoomIdAndStatus(roomId, ChatMemberStatus.INVITED)
+                .stream()
+                .map(ChatMemberResponse::from)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * 사용자가 받은 초대 목록 조회
-     * @param userId 사용자 ID
-     * @return 사용자가 받은 초대 목록
-     */
     @Transactional(readOnly = true)
-    public List<ChatMember> getInvitationsByUserId(Long userId) {
-        return chatMemberRepository.findByMemberIdAndStatus(userId, ChatMemberStatus.INVITED);
+    public List<ChatMemberResponse> getInvitationsByUserId(Long userId) {
+        return chatMemberRepository.findByMemberIdAndStatus(userId, ChatMemberStatus.INVITED)
+                .stream()
+                .map(ChatMemberResponse::from)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * 초대 거절 또는 취소
-     * @param roomId 채팅방 ID
-     * @param userId 요청자 ID (초대받은 사람 또는 방장)
-     * @param targetMemberId 대상 멤버 ID
-     */
     @Transactional
     public void deleteInvitation(Long roomId, Long userId, Long targetMemberId) {
         ChatMember invitation = chatMemberRepository.findByRoomIdAndMemberIdAndStatus(
-                        roomId, targetMemberId, ChatMemberStatus.INVITED)
+                roomId, targetMemberId, ChatMemberStatus.INVITED)
                 .orElseThrow(() -> new IllegalArgumentException("초대 정보를 찾을 수 없습니다."));
 
-        // 요청자가 초대받은 본인이거나 방장인 경우만 삭제 가능
         boolean isOwner = chatMemberRepository.findByRoomIdAndMemberIdAndStatus(
                         roomId, userId, ChatMemberStatus.ACTIVE)
                 .map(member -> member.getRole() == ChatMemberRole.OWNER)
                 .orElse(false);
 
+        // 초대자 본인인지 or 방장인지 확인
         if (!userId.equals(targetMemberId) && !isOwner) {
             throw new IllegalArgumentException("초대를 삭제할 권한이 없습니다.");
         }
@@ -199,27 +187,18 @@ public class ChatMemberService {
         chatMemberRepository.delete(invitation);
     }
 
-    /**
-     * 초대 수락 (채팅방 가입)
-     * @param roomId 채팅방 ID
-     * @param userId 초대받은 사용자 ID
-     */
     @Transactional
-    public ChatMember acceptInvitation(Long roomId, Long userId) {
+    public ChatMemberResponse acceptInvitation(Long roomId, Long inviteeId) {
         ChatMember invitation = chatMemberRepository.findByRoomIdAndMemberIdAndStatus(
-                        roomId, userId, ChatMemberStatus.INVITED)
+                        roomId, inviteeId, ChatMemberStatus.INVITED)
                 .orElseThrow(() -> new IllegalArgumentException("초대 정보를 찾을 수 없습니다."));
 
         // INVITED → ACTIVE로 상태 변경
         invitation.setStatus(ChatMemberStatus.ACTIVE);
-        return chatMemberRepository.save(invitation);
+        ChatMember saved = chatMemberRepository.save(invitation);
+        return ChatMemberResponse.from(saved);
     }
 
-    /**
-     * 방장 권한 확인
-     * @param roomId 채팅방 ID
-     * @param userId 사용자 ID
-     */
     @Transactional(readOnly = true)
     public void validateRoomOwner(Long roomId, Long userId) {
         ChatMember member = chatMemberRepository.findByRoomIdAndMemberIdAndStatus(

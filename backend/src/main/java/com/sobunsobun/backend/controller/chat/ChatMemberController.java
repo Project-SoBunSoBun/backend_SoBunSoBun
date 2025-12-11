@@ -3,7 +3,6 @@ package com.sobunsobun.backend.controller.chat;
 import com.sobunsobun.backend.application.chat.ChatMemberService;
 import com.sobunsobun.backend.dto.chat.ChatMemberRequest;
 import com.sobunsobun.backend.dto.chat.ChatMemberResponse;
-import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +10,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,8 +26,8 @@ public class ChatMemberController {
             @PathVariable("roomId") Long roomId,
             @RequestBody ChatMemberRequest request) {
         Long userId = principal.id();
-        ChatMember invitedMember = chatMemberService.inviteMember(roomId, userId, request);
-        return ResponseEntity.ok(ChatMemberResponse.from(invitedMember));
+        ChatMemberResponse response = chatMemberService.inviteMember(roomId, userId, request);
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -42,10 +40,7 @@ public class ChatMemberController {
         Long userId = principal.id();
         // 멤버십 확인
         chatMemberService.validateMembership(roomId, userId);
-        List<ChatMemberResponse> invitedMembers = chatMemberService.getInvitedMembers(roomId)
-                .stream()
-                .map(ChatMemberResponse::from)
-                .collect(Collectors.toList());
+        List<ChatMemberResponse> invitedMembers = chatMemberService.getInvitedMembers(roomId);
         return ResponseEntity.ok(invitedMembers);
     }
 
@@ -56,10 +51,7 @@ public class ChatMemberController {
     public ResponseEntity<List<ChatMemberResponse>> getMyInvitations(
             @AuthenticationPrincipal JwtUserPrincipal principal) {
         Long userId = principal.id();
-        List<ChatMemberResponse> invitations = chatMemberService.getInvitationsByUserId(userId)
-                .stream()
-                .map(ChatMemberResponse::from)
-                .collect(Collectors.toList());
+        List<ChatMemberResponse> invitations = chatMemberService.getInvitationsByUserId(userId);
         return ResponseEntity.ok(invitations);
     }
 
@@ -71,8 +63,8 @@ public class ChatMemberController {
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable("roomId") Long roomId) {
         Long userId = principal.id();
-        ChatMember member = chatMemberService.acceptInvitation(roomId, userId);
-        return ResponseEntity.ok(ChatMemberResponse.from(member));
+        ChatMemberResponse response = chatMemberService.acceptInvitation(roomId, userId);
+        return ResponseEntity.ok(response);
     }
 
     /**

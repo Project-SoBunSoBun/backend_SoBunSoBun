@@ -2,6 +2,7 @@ package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.chat.ChatMemberRequest;
+import com.sobunsobun.backend.dto.chat.ChatMemberResponse;
 import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.enumClass.ChatMemberRole;
 import com.sobunsobun.backend.enumClass.ChatMemberStatus;
@@ -158,13 +159,14 @@ class ChatMemberServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        ChatMember result = chatMemberService.inviteMember(roomId, ownerId, request);
+        ChatMemberResponse result = chatMemberService.inviteMember(roomId, ownerId, request);
 
         // then
         assertNotNull(result);
         assertEquals(ChatMemberStatus.INVITED, result.getStatus());
-        assertEquals(ChatMemberRole.MEMBER, result.getRole());
-        assertEquals(invitedUser, result.getMember());
+        assertEquals(ChatMemberRole.MEMBER, result.getMemberRole());
+        assertEquals(3L, result.getUserId());
+        assertEquals("invitedUser", result.getNickname());
         verify(chatMemberRepository, times(1)).save(any(ChatMember.class));
     }
 
@@ -267,12 +269,14 @@ class ChatMemberServiceTest {
                 .id(10L)
                 .roomId(roomId)
                 .member(testUser)
+                .role(ChatMemberRole.MEMBER)
                 .status(ChatMemberStatus.INVITED)
                 .build();
         ChatMember invited2 = ChatMember.builder()
                 .id(11L)
                 .roomId(roomId)
                 .member(ownerUser)
+                .role(ChatMemberRole.MEMBER)
                 .status(ChatMemberStatus.INVITED)
                 .build();
 
@@ -280,7 +284,7 @@ class ChatMemberServiceTest {
                 .thenReturn(List.of(invited1, invited2));
 
         // when
-        List<ChatMember> result = chatMemberService.getInvitedMembers(roomId);
+        List<ChatMemberResponse> result = chatMemberService.getInvitedMembers(roomId);
 
         // then
         assertEquals(2, result.size());
@@ -298,12 +302,14 @@ class ChatMemberServiceTest {
                 .id(10L)
                 .roomId(100L)
                 .member(testUser)
+                .role(ChatMemberRole.MEMBER)
                 .status(ChatMemberStatus.INVITED)
                 .build();
         ChatMember invitation2 = ChatMember.builder()
                 .id(11L)
                 .roomId(200L)
                 .member(testUser)
+                .role(ChatMemberRole.MEMBER)
                 .status(ChatMemberStatus.INVITED)
                 .build();
 
@@ -311,7 +317,7 @@ class ChatMemberServiceTest {
                 .thenReturn(List.of(invitation1, invitation2));
 
         // when
-        List<ChatMember> result = chatMemberService.getInvitationsByUserId(userId);
+        List<ChatMemberResponse> result = chatMemberService.getInvitationsByUserId(userId);
 
         // then
         assertEquals(2, result.size());
@@ -330,6 +336,7 @@ class ChatMemberServiceTest {
                 .id(10L)
                 .roomId(roomId)
                 .member(testUser)
+                .role(ChatMemberRole.MEMBER)
                 .status(ChatMemberStatus.INVITED)
                 .build();
 
@@ -339,7 +346,7 @@ class ChatMemberServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        ChatMember result = chatMemberService.acceptInvitation(roomId, userId);
+        ChatMemberResponse result = chatMemberService.acceptInvitation(roomId, userId);
 
         // then
         assertEquals(ChatMemberStatus.ACTIVE, result.getStatus());
