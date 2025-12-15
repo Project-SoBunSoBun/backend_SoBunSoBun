@@ -1,7 +1,7 @@
 package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatMemberService;
-import com.sobunsobun.backend.dto.chat.ChatMemberRequest;
+import com.sobunsobun.backend.dto.chat.InviteMemberRequest;
 import com.sobunsobun.backend.dto.chat.ChatMemberResponse;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -20,11 +20,11 @@ public class ChatMemberController {
     /**
      * 채팅방 멤버 초대
      */
-    @PostMapping("/api/chat/rooms/{roomId}/members")
+    @PostMapping("/api/chat/rooms/{roomId}/invitations")
     public ResponseEntity<ChatMemberResponse> inviteChatMember(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable("roomId") Long roomId,
-            @RequestBody ChatMemberRequest request) {
+            @RequestBody InviteMemberRequest request) {
         Long userId = principal.id();
         ChatMemberResponse response = chatMemberService.inviteMember(roomId, userId, request);
         return ResponseEntity.ok(response);

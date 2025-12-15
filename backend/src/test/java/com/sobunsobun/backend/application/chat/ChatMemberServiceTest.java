@@ -1,7 +1,7 @@
 package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.User;
-import com.sobunsobun.backend.dto.chat.ChatMemberRequest;
+import com.sobunsobun.backend.dto.chat.InviteMemberRequest;
 import com.sobunsobun.backend.dto.chat.ChatMemberResponse;
 import com.sobunsobun.backend.entity.chat.ChatMember;
 import com.sobunsobun.backend.enumClass.ChatMemberRole;
@@ -145,7 +145,7 @@ class ChatMemberServiceTest {
                 .nickname("invitedUser")
                 .build();
 
-        ChatMemberRequest request = new ChatMemberRequest(3L, ChatMemberRole.MEMBER);
+        InviteMemberRequest request = new InviteMemberRequest(3L);
 
         when(chatMemberRepository.findByRoomIdAndMemberIdAndStatus(roomId, ownerId, ChatMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(ownerMember));
@@ -176,7 +176,7 @@ class ChatMemberServiceTest {
         // given
         Long roomId = 100L;
         Long userId = 1L; // 일반 멤버
-        ChatMemberRequest request = new ChatMemberRequest(3L, ChatMemberRole.MEMBER);
+        InviteMemberRequest request = new InviteMemberRequest(3L);
 
         when(chatMemberRepository.findByRoomIdAndMemberIdAndStatus(roomId, userId, ChatMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(testMember));
@@ -195,7 +195,7 @@ class ChatMemberServiceTest {
         // given
         Long roomId = 100L;
         Long ownerId = 2L;
-        ChatMemberRequest request = new ChatMemberRequest(999L, ChatMemberRole.MEMBER);
+        InviteMemberRequest request = new InviteMemberRequest(999L);
 
         when(chatMemberRepository.findByRoomIdAndMemberIdAndStatus(roomId, ownerId, ChatMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(ownerMember));
@@ -217,7 +217,7 @@ class ChatMemberServiceTest {
         Long roomId = 100L;
         Long ownerId = 2L;
         User invitedUser = User.builder().id(3L).build();
-        ChatMemberRequest request = new ChatMemberRequest(3L, ChatMemberRole.MEMBER);
+        InviteMemberRequest request = new InviteMemberRequest(3L);
 
         when(chatMemberRepository.findByRoomIdAndMemberIdAndStatus(roomId, ownerId, ChatMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(ownerMember));
@@ -241,7 +241,7 @@ class ChatMemberServiceTest {
         Long roomId = 100L;
         Long ownerId = 2L;
         User invitedUser = User.builder().id(3L).build();
-        ChatMemberRequest request = new ChatMemberRequest(3L, ChatMemberRole.MEMBER);
+        InviteMemberRequest request = new InviteMemberRequest(3L);
 
         when(chatMemberRepository.findByRoomIdAndMemberIdAndStatus(roomId, ownerId, ChatMemberStatus.ACTIVE))
                 .thenReturn(Optional.of(ownerMember));

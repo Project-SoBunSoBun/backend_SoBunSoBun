@@ -61,7 +61,7 @@ public class ChatRoomService {
 
         return ChatRoomResponse.builder()
                 .roomId(room.getId())
-                .postId(request.getPostId())
+                .postId(room.getPostId())
                 .title(room.getTitle())
                 .imageUrl(room.getImageUrl())
                 .chatMembers(members)

@@ -24,6 +24,9 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
     // 활성 멤버 수 조회
     long countByRoomIdAndStatus(Long roomId, ChatMemberStatus status);
 
+    // 여러 상태의 멤버 수 조회 (INVITED + ACTIVE 등)
+    int countByRoomIdAndStatusIn(Long roomId, Collection<ChatMemberStatus> statuses);
+
     // 특정 채팅방의 모든 멤버 삭제 (하드 삭제 - 스케줄러용)
     void deleteByRoomId(Long roomId);
 
