@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 공동구매 게시글 리포지토리
@@ -57,4 +58,15 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
      * 마감일이 지난 OPEN 상태 게시글 조회
      */
     List<GroupPost> findByStatusAndDeadlineAtBefore(PostStatus status, LocalDateTime dateTime);
+
+    /**
+     * 게시글의 최대 인원 조회
+     * Projection을 사용하여 maxMembers 필드만 반환
+     *
+     * @param id 게시글 ID
+     * @param ownerUserId 게시글 작성자 ID
+     * @return 최대 인원 (maxMembers)
+     */
+    @Query("SELECT p.maxMembers FROM GroupPost p WHERE p.id = :id AND p.owner.id = :ownerUserId")
+    Optional<Integer> findMaxMembersByIdAndOwnerUserId(@Param("id") Long id, @Param("ownerUserId") Long ownerUserId);
 }

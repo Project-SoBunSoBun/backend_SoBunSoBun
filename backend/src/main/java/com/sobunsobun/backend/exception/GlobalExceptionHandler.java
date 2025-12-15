@@ -1,8 +1,10 @@
-package com.sobunsobun.backend.controller;
+package com.sobunsobun.backend.exception;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -20,6 +22,15 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private ResponseEntity<ExceptionResponse> buildExceptionResponse(Exception ex, HttpStatus status) {
+        String message = (ex.getMessage() == null || ex.getMessage().isBlank())
+                ? "Unknown error occurred."
+                : ex.getMessage();
+
+        ExceptionResponse body = new ExceptionResponse(status.value(), message);
+        return new ResponseEntity<>(body, status);
+    }
 
     /**
      * ResponseStatusException 처리
@@ -83,6 +94,21 @@ public class GlobalExceptionHandler {
             case 500 -> "internal_server_error";
             default -> "error";
         };
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
+        return buildExceptionResponse(ex, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ExceptionResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return buildExceptionResponse(ex, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(ChatAuthException.class)
+    public ResponseEntity<ExceptionResponse> handleChatAuthException(ChatAuthException ex) {
+        return buildExceptionResponse(ex, HttpStatus.BAD_REQUEST);
     }
 }
 

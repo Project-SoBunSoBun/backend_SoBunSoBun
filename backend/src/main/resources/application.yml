@@ -14,9 +14,18 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+  data:
+    mongodb:
+      host: ${MONGO_HOST}
+      port: ${MONGO_PORT}
+      username: ${MONGO_USERNAME}
+      password: ${MONGO_PASSWORD}
+      database: ${MONGO_DATABASE}
+      authentication-database: ${MONGO_AUTH_DB}
+
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -30,9 +39,21 @@ spring:
     deserialization:
       adjust-dates-to-context-time-zone: true
 
+  redis:
+    host: localhost
+    port: 6378
+
+server:
+  port: 8080
+
 file:
-  upload-dir: /var/app/sobunsobun/uploads/profiles
+  upload-dir: ${FILE_UPLOAD_DIR}
   url-prefix: /files
+
+app:
+  chat:
+    secret: ${CHAT_SECRET}
+    retention-days: 365  # 채팅방 보관 기간 (1년)
 
 # SpringDoc/Swagger 설정
 springdoc:
@@ -44,9 +65,6 @@ springdoc:
     tags-sorter: alpha
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
-
-server:
-  port: 8081
 
 # 로깅 설정 (Log4j2)
 logging:

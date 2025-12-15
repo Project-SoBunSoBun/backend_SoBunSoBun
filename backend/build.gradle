@@ -18,6 +18,10 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	all {
+		// Logback 제거 (Spring Boot default logging 제거)
+		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+	}
 }
 
 repositories {
@@ -25,48 +29,52 @@ repositories {
 }
 
 dependencies {
-	// Spring Boot Starters (Logback 제외, Log4j2 사용)
-	implementation('org.springframework.boot:spring-boot-starter-web') {
-		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-	}
-	implementation('org.springframework.boot:spring-boot-starter-security') {
-		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-	}
-	implementation('org.springframework.boot:spring-boot-starter-data-jpa') {
-		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-	}
-	implementation('org.springframework.boot:spring-boot-starter-validation') {
-		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-	}
-	implementation('org.springframework.boot:spring-boot-starter-webflux') { // WebClient for OAuth
-		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-	}
 
-	// Log4j2
+	// Web / MVC
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// Security
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// DB
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// Validation
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// Log4j2 (단 하나의 logging provider)
 	implementation 'org.springframework.boot:spring-boot-starter-log4j2'
 
-	// Swagger/OpenAPI (Spring 6.2 완전 지원)
+	// Swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+
+	// JSON
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
-
-	// Database
-	runtimeOnly 'com.mysql:mysql-connector-j'
 
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-	// .env file support
+	// .env
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
+
+	implementation 'commons-codec:commons-codec:1.16.0'
 }
 
 tasks.named('test') {

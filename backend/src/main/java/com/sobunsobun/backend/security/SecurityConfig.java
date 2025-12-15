@@ -54,8 +54,11 @@ public class SecurityConfig {
         "/users/**",
 
         // 정적 파일 접근
-        "/files/**"
+        "/files/**",
 
+        // websocket
+        "/ws/**",
+        "test-chat.html"
 
     };
 
