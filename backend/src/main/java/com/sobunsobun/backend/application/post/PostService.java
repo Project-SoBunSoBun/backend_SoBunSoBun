@@ -59,7 +59,6 @@ public class PostService {
                 .owner(user)
                 .title(request.getTitle())
                 .categories(request.getCategories())
-                .content(request.getContent())
                 .itemsText(request.getItemsText())
                 .notesText(request.getNotesText())
                 .locationName(request.getLocationName())
@@ -67,7 +66,6 @@ public class PostService {
                 .deadlineAt(request.getDeadlineAt())
                 .minMembers(request.getMinMembers())
                 .maxMembers(request.getMaxMembers())
-                .joinedMembers(request.getJoinedMembers())
                 .status(PostStatus.OPEN)
                 .build();
 
@@ -233,9 +231,6 @@ public class PostService {
         if (request.getCategories() != null) {
             post.setCategories(request.getCategories());
         }
-        if (request.getContent() != null) {
-            post.setContent(request.getContent());
-        }
         if (request.getItemsText() != null) {
             post.setItemsText(request.getItemsText());
         }
@@ -256,9 +251,6 @@ public class PostService {
         }
         if (request.getMaxMembers() != null) {
             post.setMaxMembers(request.getMaxMembers());
-        }
-        if (request.getJoinedMembers() != null) {
-            post.setJoinedMembers(request.getJoinedMembers());
         }
         if (request.getStatus() != null) {
             try {
