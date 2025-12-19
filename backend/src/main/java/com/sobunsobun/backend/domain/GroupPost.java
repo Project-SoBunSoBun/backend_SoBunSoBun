@@ -46,11 +46,6 @@ public class GroupPost {
     @Column(name = "categories", nullable = false, length = 4, columnDefinition = "CHAR(4)")
     private String categories;
 
-    /**
-     * 게시글 내용
-     */
-    @Column(columnDefinition = "TEXT")
-    private String content;
 
     /**
      * 구매 예정 품목
@@ -94,11 +89,6 @@ public class GroupPost {
     @Column(name = "max_members")
     private Integer maxMembers;
 
-    /**
-     * 현재 참여 인원
-     */
-    @Column(name = "joined_members")
-    private Integer joinedMembers;
 
     /**
      * 게시글 상태
@@ -130,9 +120,6 @@ public class GroupPost {
     public void prePersist() {
         if (this.minMembers == null) {
             this.minMembers = 2;
-        }
-        if (this.joinedMembers == null) {
-            this.joinedMembers = 1;
         }
         if (this.status == null) {
             this.status = PostStatus.OPEN;
