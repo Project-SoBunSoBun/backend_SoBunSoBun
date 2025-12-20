@@ -66,7 +66,6 @@ public class PostService {
                 .deadlineAt(request.getDeadlineAt())
                 .minMembers(request.getMinMembers())
                 .maxMembers(request.getMaxMembers())
-                .joinedMembers(1)  // 기본값: 1 (생성자 본인)
                 .status(PostStatus.OPEN)
                 .build();
 
@@ -307,7 +306,6 @@ public class PostService {
                         .build())
                 .title(post.getTitle())
                 .categoryCode(post.getCategories())
-                .content(post.getContent())
                 .itemsText(post.getItemsText())
                 .notesText(post.getNotesText())
                 .locationName(post.getLocationName())
@@ -315,7 +313,6 @@ public class PostService {
                 .deadlineAt(post.getDeadlineAt())
                 .minMembers(post.getMinMembers())
                 .maxMembers(post.getMaxMembers())
-                .joinedMembers(post.getJoinedMembers())
                 .status(post.getStatus())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

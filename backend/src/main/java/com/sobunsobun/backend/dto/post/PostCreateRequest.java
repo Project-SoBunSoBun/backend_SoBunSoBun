@@ -33,6 +33,7 @@ public class PostCreateRequest {
     @Size(max = 20, message = "카테고리는 최대 20자입니다")
     private String categories;
 
+
     /**
      * 구매 예정 품목
      */
