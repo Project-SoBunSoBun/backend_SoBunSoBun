@@ -30,10 +30,6 @@ public class PostUpdateRequest {
     @Size(max = 20, message = "카테고리는 최대 20자입니다")
     private String categories;
 
-    /**
-     * 게시글 내용
-     */
-    private String content;
 
     /**
      * 구매 예정 품목
@@ -75,10 +71,6 @@ public class PostUpdateRequest {
      * 현재 참여 인원
      */
     private Integer joinedMembers;
-
-    /**
-     * 게시글 상태 (OPEN, CLOSED, CANCELLED)
-     */
     private String status;
 }
 

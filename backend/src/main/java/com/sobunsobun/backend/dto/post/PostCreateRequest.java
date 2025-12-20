@@ -34,11 +34,6 @@ public class PostCreateRequest {
     private String categories;
 
     /**
-     * 게시글 내용
-     */
-    private String content;
-
-    /**
      * 구매 예정 품목
      */
     private String itemsText;
@@ -74,10 +69,6 @@ public class PostCreateRequest {
      * 최대 인원
      */
     private Integer maxMembers;
-
-    /**
-     * 현재 참여 인원 (기본값: 1)
-     */
-    private Integer joinedMembers;
 }
+
 
