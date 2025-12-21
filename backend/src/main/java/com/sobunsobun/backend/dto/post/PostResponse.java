@@ -37,6 +37,10 @@ public class PostResponse {
      */
     private String categoryCode;
 
+    /**
+     * 게시글 내용
+     */
+    private String content;
 
     /**
      * 구매 예정 품목
@@ -73,6 +77,10 @@ public class PostResponse {
      */
     private Integer maxMembers;
 
+    /**
+     * 현재 참여 인원
+     */
+    private Integer joinedMembers;
 
     /**
      * 게시글 상태
