@@ -54,6 +54,7 @@ dependencies {
 
 	// Database
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	testRuntimeOnly 'com.h2database:h2'
 
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -64,9 +65,19 @@ dependencies {
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
 	// Test
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-core'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+	}
+	testImplementation('org.springframework.security:spring-security-test') {
+		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-api'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-core'
+	}
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.springframework.boot:spring-boot-starter-logging'
 }
 
 tasks.named('test') {

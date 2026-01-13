@@ -72,7 +72,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwtToken = extractTokenFromRequest(request);
 
             if (jwtToken != null) {
-                log.debug("JWT 토큰 발견 - URI: {}", request.getRequestURI());
+                log.info("🔑 JWT 토큰 발견 - URI: {}, 토큰 길이: {}", request.getRequestURI(), jwtToken.length());
 
                 // 2. JWT 토큰 파싱 및 검증
                 Claims claims = jwtTokenProvider.parse(jwtToken).getBody();
@@ -80,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 3. 토큰 타입 확인 (액세스 토큰만 허용)
                 String tokenType = claims.get("type", String.class);
                 if (!"access".equals(tokenType)) {
-                    log.warn("잘못된 토큰 타입: {} - URI: {}", tokenType, request.getRequestURI());
+                    log.warn("❌ 잘못된 토큰 타입: {} - URI: {}", tokenType, request.getRequestURI());
                     return; // 인증 실패로 처리
                 }
 
@@ -88,24 +88,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = Long.valueOf(claims.getSubject());
                 String role = claims.get("role", String.class);
 
-                log.debug("JWT 토큰 검증 성공 - 사용자 ID: {}, 역할: {}", userId, role);
+                log.info("✅ JWT 토큰 검증 성공 - 사용자 ID: {}, 역할: {}", userId, role);
 
                 // 5. 사용자 존재 확인 (선택적, 보안 강화)
                 if (!userRepository.existsById(userId)) {
-                    log.warn("토큰의 사용자 ID가 DB에 존재하지 않음: {}", userId);
+                    log.warn("❌ 토큰의 사용자 ID가 DB에 존재하지 않음: {}", userId);
                     return; // 인증 실패로 처리
                 }
 
                 // 6. SecurityContext에 Authentication 설정
                 setAuthenticationInSecurityContext(userId, role);
 
-                log.debug("인증 성공 - 사용자 ID: {}, URI: {}", userId, request.getRequestURI());
+                log.info("✅ 인증 성공 - 사용자 ID: {}, URI: {}", userId, request.getRequestURI());
+            } else {
+                log.info("⚠️ JWT 토큰 없음 - URI: {}", request.getRequestURI());
             }
-            // 토큰이 없어도 정상 (공개 API는 인증 불필요)
 
         } catch (Exception e) {
             // JWT 관련 모든 예외를 캐치하여 인증 실패로 처리
-            log.debug("JWT 인증 실패 {}: URI: {}", e.getClass().getSimpleName(), request.getRequestURI());
+            log.warn("❌ JWT 인증 실패 - {}: {} - URI: {}",
+                    e.getClass().getSimpleName(), e.getMessage(), request.getRequestURI());
         }
 
         // 다음 필터로 진행 (인증 성공/실패 무관하게 진행)
@@ -126,13 +128,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(authorizationHeader)) {
             if (authorizationHeader.startsWith(BEARER_PREFIX)) {
                 String token = authorizationHeader.substring(BEARER_PREFIX_LENGTH);
-                log.debug("Authorization 헤더에서 토큰 추출 성공 (길이: {})", token.length());
+                log.info("📥 Authorization 헤더에서 토큰 추출 성공 (길이: {})", token.length());
                 return token;
             } else {
-                log.warn("Authorization 헤더가 Bearer로 시작하지 않음: {}", authorizationHeader.substring(0, Math.min(20, authorizationHeader.length())));
+                log.warn("⚠️ Authorization 헤더가 Bearer로 시작하지 않음: {}",
+                        authorizationHeader.substring(0, Math.min(20, authorizationHeader.length())));
             }
+        } else {
+            log.info("ℹ️ Authorization 헤더 없음");
         }
-        // Authorization 헤더가 없어도 정상 (공개 API는 인증 불필요)
 
         return null;
     }

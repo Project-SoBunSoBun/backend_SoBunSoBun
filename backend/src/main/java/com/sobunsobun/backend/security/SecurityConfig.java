@@ -4,6 +4,7 @@ import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -160,6 +161,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                     // 공개 엔드포인트: 인증 없이 접근 가능
                     .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+
+                    // 댓글 조회: 공개 (GET)
+                    .requestMatchers(HttpMethod.GET, "/api/posts/*/comments").permitAll()
+
+                    // 댓글 작성/수정/삭제: 인증 필수 (POST, PATCH, DELETE)
+                    .requestMatchers(HttpMethod.POST, "/api/posts/*/comments").authenticated()
+                    .requestMatchers(HttpMethod.PATCH, "/api/comments/*").authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
 
                     // 관리자 전용 API: ADMIN 권한 필요
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
