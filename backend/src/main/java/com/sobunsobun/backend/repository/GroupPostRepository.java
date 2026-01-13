@@ -57,4 +57,11 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
      * 마감일이 지난 OPEN 상태 게시글 조회
      */
     List<GroupPost> findByStatusAndDeadlineAtBefore(PostStatus status, LocalDateTime dateTime);
+
+    /**
+     * 특정 날짜 이후의 OPEN 상태 게시글 조회 (추천 검색어 수집용)
+     * 생성일 기준 최신순 정렬
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.status = 'OPEN' AND p.createdAt >= :startDate ORDER BY p.createdAt DESC")
+    List<GroupPost> findRecentOpenPosts(@Param("startDate") LocalDateTime startDate, Pageable pageable);
 }

@@ -1,13 +1,17 @@
 package com.sobunsobun.backend.controller.search;
 
 import com.sobunsobun.backend.application.search.SearchService;
+import com.sobunsobun.backend.application.search.SearchSuggestionsService;
 import com.sobunsobun.backend.dto.post.PostListResponse;
 import com.sobunsobun.backend.dto.post.PostSearchRequest;
+import com.sobunsobun.backend.dto.search.SearchSuggestionsRequest;
+import com.sobunsobun.backend.dto.search.SearchSuggestionsResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +19,9 @@ import org.springframework.web.bind.annotation.*;
  * 검색 API 컨트롤러
  *
  * 엔드포인트:
- * - GET /api/search                    : 게시글 검색 (공개)
- * - GET /api/search/status/{status}    : 상태별 게시글 검색 (공개)
+ * - GET /api/search                           : 게시글 검색 (공개)
+ * - GET /api/search/status/{status}           : 상태별 게시글 검색 (공개)
+ * - GET /api/search/suggestions/default       : 기본 추천 검색어 (공개)
  */
 @Slf4j
 @RestController
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class SearchController {
 
     private final SearchService searchService;
+    private final SearchSuggestionsService searchSuggestionsService;
 
     /**
      * 게시글 검색 (OPEN 상태만)
@@ -112,6 +118,46 @@ public class SearchController {
                 response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements(),
                 response.getPageInfo() == null ? 0 : response.getPageInfo().getCurrentPage() + 1,
                 response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalPages());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 추천 검색어 조회 (검색 전 기본 추천어)
+     *
+     * 동작:
+     * OPEN 상태 게시글에서 추출한 모든 단어를 빈도 순으로 반환
+     * (중복된 단어는 한 번만 반환, 빈도가 높은 것부터 정렬)
+     *
+     * @param limit 반환할 추천어 개수 (기본값: 10)
+     * @return 200 OK, 추천 검색어 응답
+     */
+    @GetMapping("/suggestions/default")
+    @Operation(
+            summary = "기본 추천 검색어 조회",
+            description = "최근 7일 OPEN 게시글의 title, items_text, location_name에서 빈도 높은 단어를 추천합니다."
+    )
+    public ResponseEntity<SearchSuggestionsResponse> getDefaultSuggestions(
+            @Parameter(
+                    description = "반환할 추천어 개수 (기본값: 10)",
+                    example = "10",
+                    required = false
+            )
+            @RequestParam(required = false) Integer limit
+    ) {
+        log.info("[API 호출] GET /api/search/suggestions/default - limit: {}", limit);
+
+        int limitValue = limit != null ? limit : 10;
+
+        // 기본 추천어 조회
+        java.util.List<String> suggestions = searchSuggestionsService.getDefaultSuggestions(
+                7,  // 최근 7일
+                limitValue
+        );
+
+        SearchSuggestionsResponse response = SearchSuggestionsResponse.of(suggestions);
+
+        log.info("[API 응답] 기본 추천어 - 결과: {} 개", suggestions.size());
 
         return ResponseEntity.ok(response);
     }
