@@ -162,13 +162,17 @@ public class SecurityConfig {
                     // 공개 엔드포인트: 인증 없이 접근 가능
                     .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
 
-                    // 댓글 조회: 공개 (GET)
-                    .requestMatchers(HttpMethod.GET, "/api/posts/*/comments").permitAll()
+                    // 댓글 조회: 공개 (GET /api/posts/{postId}/comments)
+                    .requestMatchers(HttpMethod.GET, "/api/posts/{postId}/comments").permitAll()
 
-                    // 댓글 작성/수정/삭제: 인증 필수 (POST, PATCH, DELETE)
-                    .requestMatchers(HttpMethod.POST, "/api/posts/*/comments").authenticated()
-                    .requestMatchers(HttpMethod.PATCH, "/api/comments/*").authenticated()
-                    .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
+                    // 댓글 작성: 인증 필수 (POST /api/posts/{postId}/comments)
+                    .requestMatchers(HttpMethod.POST, "/api/posts/{postId}/comments").authenticated()
+
+                    // 댓글 수정: 인증 필수 (PATCH /api/comments/{commentId})
+                    .requestMatchers(HttpMethod.PATCH, "/api/comments/{commentId}").authenticated()
+
+                    // 댓글 삭제: 인증 필수 (DELETE /api/comments/{commentId})
+                    .requestMatchers(HttpMethod.DELETE, "/api/comments/{commentId}").authenticated()
 
                     // 관리자 전용 API: ADMIN 권한 필요
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")

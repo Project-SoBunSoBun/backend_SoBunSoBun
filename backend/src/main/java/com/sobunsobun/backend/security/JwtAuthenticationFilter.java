@@ -123,6 +123,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * @return JWT 토큰 문자열 (없으면 null)
      */
     private String extractTokenFromRequest(HttpServletRequest request) {
+        // 디버그: 모든 헤더 출력
+        java.util.Enumeration<String> headerNames = request.getHeaderNames();
+        log.debug("📋 요청 헤더 목록:");
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            String headerValue = request.getHeader(headerName);
+            log.debug("  - {}: {}", headerName, headerValue);
+        }
+
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (StringUtils.hasText(authorizationHeader)) {
