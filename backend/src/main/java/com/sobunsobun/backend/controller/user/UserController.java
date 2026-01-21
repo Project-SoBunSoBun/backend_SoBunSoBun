@@ -28,16 +28,23 @@ import java.util.Map;
  * 담당 기능:
  * - 닉네임 중복 확인 (공개 API)
  * - 사용자 프로필 관리 (인증 필요)
+ *
+ * 특징:
+ * - 모든 API는 검증 된 입력값으로 처리
+ * - 닉네임 정규화를 통한 데이터 일관성 보장
+ * - 명확한 로깅으로 감시 가능성 향상
  */
 @Slf4j
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "User", description = "사용자 관리 API")
+@Tag(name = "User - 기본", description = "사용자 기본 관리 API")
 public class UserController {
 
     private final UserService userService;
+
+    private static final String NICKNAME_PATTERN = "^[가-힣a-zA-Z0-9]+$";
 
     /**
      * 닉네임 중복 확인 API (공개)
@@ -52,30 +59,38 @@ public class UserController {
      * @param nickname 확인할 닉네임 (쿼리 파라미터)
      * @return 닉네임과 사용 가능 여부
      */
-    @Operation(summary = "닉네임 중복 확인",
-            description = "닉네임이 사용 가능한지 확인합니다. 회원가입 없이 호출 가능합니다.")
+    @Operation(
+        summary = "닉네임 중복 확인",
+        description = "닉네임이 사용 가능한지 확인합니다. 회원가입 없이 호출 가능합니다."
+    )
     @GetMapping("/check-nickname")
     public ResponseEntity<Map<String, Object>> checkNicknameAvailability(
-            @Parameter(description = "확인할 닉네임 (1-8자, 한글/영문/숫자만)", example = "몽규명보 둘다 나가")
+            @Parameter(description = "확인할 닉네임 (1-8자, 한글/영문/숫자만)", example = "행복한고래")
             @RequestParam
             @NotBlank(message = "닉네임은 비어 있을 수 없습니다.")
             @Size(max = 8, message = "닉네임은 최대 8자입니다.")
-            @Pattern(regexp = "^[가-힣a-zA-Z0-9]+$", message = "닉네임은 한글/영문/숫자만 가능합니다.")
+            @Pattern(regexp = NICKNAME_PATTERN, message = "닉네임은 한글/영문/숫자만 가능합니다.")
             String nickname) {
 
-        log.info("닉네임 중복 확인 요청: {}", nickname);
+        try {
+            log.info("🔍 닉네임 중복 확인 요청: {}", nickname);
 
-        // 닉네임 정규화 (공백 제거, 소문자 변환 등)
-        String normalizedNickname = userService.normalizeNickname(nickname);
-        boolean isAvailable = userService.isNicknameAvailable(normalizedNickname);
+            // 닉네임 정규화 (공백 제거, 소문자 변환 등)
+            String normalizedNickname = userService.normalizeNickname(nickname);
+            boolean isAvailable = userService.isNicknameAvailable(normalizedNickname);
 
-        log.info("닉네임 중복 확인 결과: {} -> 사용가능: {}", nickname, isAvailable);
+            log.info("✅ 닉네임 중복 확인 완료: {} -> 정규화: {}, 사용가능: {}",
+                    nickname, normalizedNickname, isAvailable);
 
-        return ResponseEntity.ok(Map.of(
-                "nickname", nickname,
-                "normalizedNickname", normalizedNickname,
-                "available", isAvailable
-        ));
+            return ResponseEntity.ok(Map.of(
+                    "nickname", nickname,
+                    "normalizedNickname", normalizedNickname,
+                    "available", isAvailable
+            ));
+        } catch (Exception e) {
+            log.error("❌ 닉네임 확인 중 오류 발생: {}", nickname, e);
+            throw e;
+        }
     }
 
     /**
@@ -91,8 +106,10 @@ public class UserController {
      * @param request 새로운 닉네임 정보
      * @return 변경된 닉네임 정보
      */
-    @Operation(summary = "내 닉네임 변경",
-            description = "인증된 사용자의 닉네임을 변경함. JWT 토큰 필요합니데이")
+    @Operation(
+        summary = "내 닉네임 변경",
+        description = "인증된 사용자의 닉네임을 변경합니다. JWT 토큰 필수입니다."
+    )
     @PatchMapping("/me/nickname")
     public ResponseEntity<Map<String, Object>> updateMyNickname(
             @Parameter(hidden = true) // Swagger에서 숨김 (JWT에서 자동 추출)
@@ -100,21 +117,26 @@ public class UserController {
             @Parameter(description = "새로운 닉네임 정보")
             @RequestBody @Valid NicknameRequest request) {
 
-        Long userId = principal.id();
-        String newNickname = request.nickname();
+        try {
+            Long userId = principal.id();
+            String newNickname = request.nickname();
 
-        log.info("닉네임 변경 요청 - 사용자 ID: {}, 새 닉네임: {}", userId, newNickname);
+            log.info("📝 닉네임 변경 요청 - 사용자 ID: {}, 새 닉네임: {}", userId, newNickname);
 
-        // 닉네임 정규화 및 변경
-        String normalizedNickname = userService.normalizeNickname(newNickname);
-        userService.updateUserNickname(userId, normalizedNickname);
+            // 닉네임 정규화 및 변경
+            String normalizedNickname = userService.normalizeNickname(newNickname);
+            userService.updateUserNickname(userId, normalizedNickname);
 
-        log.info("닉네임 변경 완료 - 사용자 ID: {}, 변경된 닉네임: {}", userId, normalizedNickname);
+            log.info("✅ 닉네임 변경 완료 - 사용자 ID: {}, 변경된 닉네임: {}", userId, normalizedNickname);
 
-        return ResponseEntity.ok(Map.of(
-                "nickname", normalizedNickname,
-                "message", "닉네임이 성공적으로 변경되었습니다."
-        ));
+            return ResponseEntity.ok(Map.of(
+                    "nickname", normalizedNickname,
+                    "message", "닉네임이 성공적으로 변경되었습니다."
+            ));
+        } catch (Exception e) {
+            log.error("❌ 닉네임 변경 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            throw e;
+        }
     }
 
     /**
@@ -132,8 +154,10 @@ public class UserController {
      * @param profileImage 프로필 이미지 파일 (선택적)
      * @return 업데이트 결과
      */
-    @Operation(summary = "프로필 업데이트 (닉네임 + 이미지)",
-            description = "닉네임과 프로필 이미지를 업데이트합니다. 이미지를 보내지 않거나 빈 값을 보내면 null로 저장됩니다.")
+    @Operation(
+        summary = "프로필 업데이트 (닉네임 + 이미지)",
+        description = "닉네임과 프로필 이미지를 업데이트합니다. 이미지를 보내지 않으면 기존 이미지가 유지됩니다."
+    )
     @PatchMapping(value = "/me/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateMyProfile(
             @Parameter(hidden = true)
@@ -143,34 +167,38 @@ public class UserController {
             @RequestParam
             @NotBlank(message = "닉네임은 비어 있을 수 없습니다.")
             @Size(max = 8, message = "닉네임은 최대 8자입니다.")
-            @Pattern(regexp = "^[가-힣a-zA-Z0-9]+$", message = "닉네임은 한글/영문/숫자만 가능합니다.")
+            @Pattern(regexp = NICKNAME_PATTERN, message = "닉네임은 한글/영문/숫자만 가능합니다.")
             String nickname,
 
-            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하, 선택사항 - 없으면 null 저장)")
+            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하, 선택사항)")
             @RequestParam(required = false)
             MultipartFile profileImage) {
 
-        Long userId = principal.id();
+        try {
+            Long userId = principal.id();
+            String normalizedNickname = userService.normalizeNickname(nickname);
 
-        String imageInfo;
-        if (profileImage != null && !profileImage.isEmpty()) {
-            imageInfo = profileImage.getOriginalFilename();
-        } else {
-            imageInfo = "null 저장 (이미지 삭제)";
+            String imageInfo = (profileImage != null && !profileImage.isEmpty())
+                    ? profileImage.getOriginalFilename()
+                    : "이미지 없음";
+
+            log.info("🖼️ 프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
+                    userId, normalizedNickname, imageInfo);
+
+            // 프로필 업데이트 (닉네임 + 이미지)
+            userService.updateUserProfile(userId, normalizedNickname, profileImage);
+
+            log.info("✅ 프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "프로필이 성공적으로 업데이트되었습니다.",
+                    "nickname", normalizedNickname,
+                    "updated", true
+            ));
+        } catch (Exception e) {
+            log.error("❌ 프로필 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            throw e;
         }
-
-        log.info("프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
-                userId, nickname, imageInfo);
-
-        // 프로필 업데이트 (닉네임 + 이미지) - 이미지가 없으면 null 저장
-        userService.updateUserProfile(userId, nickname, profileImage);
-
-        log.info("프로필 업데이트 완료 - 사용자 ID: {}", userId);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "프로필이 성공적으로 업데이트되었습니다.",
-                "nickname", userService.normalizeNickname(nickname)
-        ));
     }
 
     /**
@@ -185,30 +213,39 @@ public class UserController {
      * @param profileImage 프로필 이미지 파일
      * @return 업데이트 결과
      */
-    @Operation(summary = "프로필 이미지만 업데이트",
-            description = "프로필 이미지만 변경합니다. 빈 값을 보내면 null로 저장됩니다.")
+    @Operation(
+        summary = "프로필 이미지만 업데이트",
+        description = "프로필 이미지만 변경합니다."
+    )
     @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> updateMyProfileImage(
             @Parameter(hidden = true)
             @AuthenticationPrincipal JwtUserPrincipal principal,
 
-            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하, 비어있으면 null 저장)")
+            @Parameter(description = "프로필 이미지 (jpg/png/webp, 5MB 이하)")
             @RequestParam(required = false)
             MultipartFile profileImage) {
 
-        Long userId = principal.id();
-        String fileName = (profileImage != null && !profileImage.isEmpty())
-                ? profileImage.getOriginalFilename()
-                : "빈 파일 (null 저장)";
-        log.info("프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}", userId, fileName);
+        try {
+            Long userId = principal.id();
+            String fileName = (profileImage != null && !profileImage.isEmpty())
+                    ? profileImage.getOriginalFilename()
+                    : "없음";
 
-        // 이미지만 업데이트 (빈 파일이면 null 저장)
-        userService.updateProfileImage(userId, profileImage);
+            log.info("🖼️ 프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}", userId, fileName);
 
-        log.info("프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);
+            // 이미지만 업데이트
+            userService.updateProfileImage(userId, profileImage);
 
-        return ResponseEntity.ok(Map.of(
-                "message", "프로필 이미지가 성공적으로 업데이트되었습니다."
-        ));
+            log.info("✅ 프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "프로필 이미지가 성공적으로 업데이트되었습니다.",
+                    "updated", true
+            ));
+        } catch (Exception e) {
+            log.error("❌ 프로필 이미지 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            throw e;
+        }
     }
 }
