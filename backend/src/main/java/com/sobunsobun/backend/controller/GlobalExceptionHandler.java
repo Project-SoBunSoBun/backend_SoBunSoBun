@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.controller;
 
+import com.sobunsobun.backend.support.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,21 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 비즈니스 예외 처리 (BusinessException 및 하위 클래스)
+     * 댓글, 게시글, 인증 등 비즈니스 로직 예외 처리
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessException(BusinessException e) {
+        log.error("비즈니스 예외 발생 [{}]: {}", e.getCode(), e.getMessage());
+
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", e.getCode());
+        errorResponse.put("message", e.getMessage());
+
+        return ResponseEntity.status(e.getStatus()).body(errorResponse);
+    }
 
     /**
      * ResponseStatusException 처리
