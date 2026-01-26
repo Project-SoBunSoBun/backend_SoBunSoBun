@@ -76,11 +76,11 @@ public class Comment {
     private String content;
 
     /**
-     * 사용자의 위치 정보 (주소)
+     * 사용자의 위치 인증 정보 (주소)
      * 선택사항, 예: "서울시 강남구"
      */
     @Column(length = 500)
-    private String location;
+    private String verifyLocation;
 
     /**
      * Soft Delete 여부

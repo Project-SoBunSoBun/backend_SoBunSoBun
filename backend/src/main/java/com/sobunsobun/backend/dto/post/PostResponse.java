@@ -58,6 +58,12 @@ public class PostResponse {
     private String locationName;
 
     /**
+     * 위치 인증 정보 (주소)
+     * 예: "서울시 강남구"
+     */
+    private String verifyLocation;
+
+    /**
      * 만남 일시
      */
     private LocalDateTime meetAt;

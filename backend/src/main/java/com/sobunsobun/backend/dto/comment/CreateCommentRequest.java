@@ -31,12 +31,12 @@ public class CreateCommentRequest {
     private Long parentCommentId;
 
     /**
-     * 사용자의 위치 정보 (주소)
+     * 사용자의 위치 인증 정보 (주소)
      * 선택사항, 예: "서울시 강남구", "부산시 해운대구" 등
      * 최대 500자
      */
     @Size(max = 500, message = "위치는 500자 이하여야 합니다.")
-    private String location;
+    private String verifyLocation;
 
     /**
      * Post-processing: parentCommentId가 0이면 null로 변환

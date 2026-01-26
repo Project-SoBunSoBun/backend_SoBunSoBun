@@ -62,6 +62,7 @@ public class PostService {
                 .itemsText(request.getItemsText())
                 .notesText(request.getNotesText())
                 .locationName(request.getLocationName())
+                .verifyLocation(request.getVerifyLocation())
                 .meetAt(request.getMeetAt())
                 .deadlineAt(request.getDeadlineAt())
                 .minMembers(request.getMinMembers())
@@ -240,6 +241,9 @@ public class PostService {
         if (request.getLocationName() != null) {
             post.setLocationName(request.getLocationName());
         }
+        if (request.getVerifyLocation() != null) {
+            post.setVerifyLocation(request.getVerifyLocation());
+        }
         if (request.getMeetAt() != null) {
             post.setMeetAt(request.getMeetAt());
         }
@@ -310,6 +314,7 @@ public class PostService {
                 .itemsText(post.getItemsText())
                 .notesText(post.getNotesText())
                 .locationName(post.getLocationName())
+                .verifyLocation(post.getVerifyLocation())
                 .meetAt(post.getMeetAt())
                 .deadlineAt(post.getDeadlineAt())
                 .minMembers(post.getMinMembers())
