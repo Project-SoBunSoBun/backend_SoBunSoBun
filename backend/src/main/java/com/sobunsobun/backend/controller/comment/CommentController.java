@@ -2,9 +2,11 @@ package com.sobunsobun.backend.controller.comment;
 
 import com.sobunsobun.backend.application.comment.CommentService;
 import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.dto.comment.CommentCountResponse;
 import com.sobunsobun.backend.dto.comment.CommentResponse;
 import com.sobunsobun.backend.dto.comment.CreateCommentRequest;
 import com.sobunsobun.backend.dto.comment.UpdateCommentRequest;
+import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +45,7 @@ import java.util.List;
 public class CommentController {
     private final CommentService commentService;
     private final UserRepository userRepository;
+    private final GroupPostRepository postRepository;
 
     /**
      * 1. 댓글 작성
@@ -114,7 +117,45 @@ public class CommentController {
     }
 
     /**
-     * 3. 댓글 수정
+     * 3. 댓글 개수 조회
+     * GET /api/posts/{postId}/comments/count
+     *
+     * 특정 게시글의 활성 댓글 개수를 조회합니다
+     * (삭제되지 않은 댓글만 포함, 부모 댓글과 대댓글 모두 포함)
+     *
+     * @param postId 게시글 ID
+     * @return 댓글 개수
+     */
+    @GetMapping("/posts/{postId}/comments/count")
+    @Operation(summary = "댓글 개수 조회", description = "게시글의 활성 댓글 개수를 조회합니다 (부모 댓글과 대댓글 모두 포함).")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = CommentCountResponse.class))),
+        @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
+    })
+    public ResponseEntity<CommentCountResponse> getCommentCount(
+        @PathVariable @Parameter(description = "게시글 ID") Long postId) {
+
+        log.info("댓글 개수 조회 - postId: {}", postId);
+
+        // 게시글 존재 여부 확인
+        if (!postRepository.existsById(postId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "게시글을 찾을 수 없습니다");
+        }
+
+        long commentCount = commentService.getCommentCountByPostId(postId);
+        CommentCountResponse response = CommentCountResponse.builder()
+                .postId(postId)
+                .commentCount(commentCount)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 4. 댓글 수정
      * PATCH /api/comments/{commentId}
      *
      * 작성자 본인만 수정 가능
@@ -154,7 +195,7 @@ public class CommentController {
     }
 
     /**
-     * 4. 댓글 삭제 (Soft Delete)
+     * 5. 댓글 삭제 (Soft Delete)
      * DELETE /api/comments/{commentId}
      *
      * 작성자 본인만 삭제 가능

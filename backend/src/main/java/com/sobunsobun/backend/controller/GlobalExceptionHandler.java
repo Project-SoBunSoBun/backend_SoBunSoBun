@@ -1,7 +1,10 @@
 package com.sobunsobun.backend.controller;
 
 import com.sobunsobun.backend.support.exception.BusinessException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -16,88 +19,121 @@ import java.util.Map;
  * 전역 예외 핸들러
  *
  * 애플리케이션 전체에서 발생하는 예외를 처리하고
- * 일관된 형식의 에러 응답을 반환합니다.
+ * 통일된 ApiResponse 형식으로 에러 응답을 반환합니다.
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
-     * 비즈니스 예외 처리 (BusinessException 및 하위 클래스)
-     * 댓글, 게시글, 인증 등 비즈니스 로직 예외 처리
+     * 비즈니스 예외 처리
+     * ErrorCode enum 기반 예외 처리
      */
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Map<String, Object>> handleBusinessException(BusinessException e) {
-        log.error("비즈니스 예외 발생 [{}]: {}", e.getCode(), e.getMessage());
+    public ResponseEntity<ApiResponse<?>> handleBusinessException(BusinessException e) {
+        log.error("[BusinessException] Code: {}, Message: {}", e.getCode(), e.getMessage(), e);
 
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", e.getCode());
-        errorResponse.put("message", e.getMessage());
+        ApiResponse<?> response = ApiResponse.error(
+                e.getStatus(),
+                e.getCode(),
+                e.getErrorMessage()
+        );
 
-        return ResponseEntity.status(e.getStatus()).body(errorResponse);
+        return ResponseEntity.status(e.getStatus()).body(response);
     }
 
     /**
      * ResponseStatusException 처리
-     * Service 계층에서 던진 비즈니스 예외 처리
+     * Spring Framework 표준 예외 처리
      */
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handleResponseStatusException(ResponseStatusException e) {
-        log.error("비즈니스 예외 발생 {}: {}", e.getClass().getSimpleName(), e.getReason());
+    public ResponseEntity<ApiResponse<?>> handleResponseStatusException(ResponseStatusException e) {
+        log.error("[ResponseStatusException] Status: {}, Reason: {}", e.getStatusCode(), e.getReason(), e);
 
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", getErrorCode(e.getStatusCode().value()));
-        errorResponse.put("message", e.getReason());
+        HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
+        ApiResponse<?> response = ApiResponse.error(
+                status.value(),
+                mapStatusToErrorCode(status),
+                e.getReason() != null ? e.getReason() : "Unknown error"
+        );
 
-        return ResponseEntity.status(e.getStatusCode()).body(errorResponse);
+        return ResponseEntity.status(status).body(response);
     }
 
     /**
      * 유효성 검사 실패 처리 (Validation)
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException e) {
-        // 첫 번째 필드 에러 메시지 사용
+    public ResponseEntity<ApiResponse<?>> handleValidationException(MethodArgumentNotValidException e) {
+        Map<String, Object> validationErrors = new HashMap<>();
+
+        // 모든 필드 에러 정보 수집
+        e.getBindingResult().getFieldErrors().forEach(error ->
+                validationErrors.put(error.getField(), error.getDefaultMessage())
+        );
+
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .orElse("유효성 검사에 실패했습니다");
 
-        log.error("유효성 검사 실패 {}: {}", e.getClass().getSimpleName(), message);
+        log.warn("[MethodArgumentNotValidException] Validation failed: {}", message);
 
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", "validation_failed");
-        errorResponse.put("message", message);
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.BAD_REQUEST.value(),
+                ErrorCode.INVALID_REQUEST.getCode(),
+                message,
+                validationErrors
+        );
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
+     * 데이터 무결성 위반 처리
+     * 중복 키, 제약 조건 위반 등
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("[DataIntegrityViolationException] {}", e.getMessage(), e);
+
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.CONFLICT.value(),
+                ErrorCode.DATA_INTEGRITY_VIOLATION.getCode(),
+                ErrorCode.DATA_INTEGRITY_VIOLATION.getMessage()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     /**
      * 기타 모든 예외 처리
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception e) {
-        log.error("예상하지 못한 예외 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
+    public ResponseEntity<ApiResponse<?>> handleException(Exception e) {
+        log.error("[Exception] Unexpected error: {}", e.getMessage(), e);
 
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", "internal_server_error");
-        errorResponse.put("message", "서버 오류가 발생했습니다");
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
+                ErrorCode.INTERNAL_SERVER_ERROR.getMessage()
+        );
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
     /**
-     * HTTP 상태 코드를 에러 코드로 변환
+     * HTTP 상태를 에러 코드로 매핑
      */
-    private String getErrorCode(int statusCode) {
-        return switch (statusCode) {
-            case 400 -> "bad_request";
-            case 401 -> "unauthorized";
-            case 403 -> "forbidden";
-            case 404 -> "not_found";
-            case 409 -> "conflict";
-            case 500 -> "internal_server_error";
-            default -> "error";
+    private String mapStatusToErrorCode(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> ErrorCode.INVALID_REQUEST.getCode();
+            case UNAUTHORIZED -> ErrorCode.UNAUTHORIZED.getCode();
+            case FORBIDDEN -> ErrorCode.ACCESS_DENIED.getCode();
+            case NOT_FOUND -> ErrorCode.RESOURCE_NOT_FOUND.getCode();
+            case CONFLICT -> ErrorCode.DATA_INTEGRITY_VIOLATION.getCode();
+            case INTERNAL_SERVER_ERROR -> ErrorCode.INTERNAL_SERVER_ERROR.getCode();
+            default -> "UNKNOWN_ERROR";
         };
     }
 }

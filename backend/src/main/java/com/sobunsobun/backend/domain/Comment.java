@@ -76,6 +76,13 @@ public class Comment {
     private String content;
 
     /**
+     * 사용자의 위치 정보 (주소)
+     * 선택사항, 예: "서울시 강남구"
+     */
+    @Column(length = 500)
+    private String location;
+
+    /**
      * Soft Delete 여부
      * true: 삭제됨, false: 활성
      */

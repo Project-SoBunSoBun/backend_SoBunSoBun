@@ -26,9 +26,16 @@ public class CommentResponse {
     private String userNickname;
     private String userProfileImageUrl;
     private String content;
+
+    /**
+     * 사용자의 위치 정보 (주소)
+     */
+    private String location;
+
     private Long parentCommentId;
     @Builder.Default
     private List<CommentResponse> childComments = new ArrayList<>();
+
     private Boolean deleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -44,6 +51,7 @@ public class CommentResponse {
             .userNickname(comment.getUser().getNickname())
             .userProfileImageUrl(comment.getUser().getProfileImageUrl())
             .content(comment.getContent())
+            .location(comment.getLocation())
             .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
             .childComments(comment.getChildComments().stream()
                 .filter(Comment::isActive)
@@ -67,6 +75,7 @@ public class CommentResponse {
                 .userNickname(comment.getUser().getNickname())
                 .userProfileImageUrl(comment.getUser().getProfileImageUrl())
                 .content(comment.getContent())
+                .location(comment.getLocation())
                 .parentCommentId(comment.getParentComment().getId())
                 .childComments(new ArrayList<>())
                 .deleted(comment.getDeleted())
@@ -81,6 +90,7 @@ public class CommentResponse {
                 .userNickname(comment.getUser().getNickname())
                 .userProfileImageUrl(comment.getUser().getProfileImageUrl())
                 .content(comment.getContent())
+                .location(comment.getLocation())
                 .parentCommentId(null)
                 .childComments(comment.getChildComments().stream()
                     .filter(Comment::isActive)
@@ -91,6 +101,7 @@ public class CommentResponse {
                         .userNickname(child.getUser().getNickname())
                         .userProfileImageUrl(child.getUser().getProfileImageUrl())
                         .content(child.getContent())
+                        .location(child.getLocation())
                         .parentCommentId(comment.getId())
                         .childComments(new ArrayList<>())
                         .deleted(child.getDeleted())

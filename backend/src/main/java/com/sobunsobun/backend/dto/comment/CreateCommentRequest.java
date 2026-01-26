@@ -1,7 +1,5 @@
 package com.sobunsobun.backend.dto.comment;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.deser.std.NumberDeserializers;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,6 +10,7 @@ import jakarta.validation.constraints.Size;
 
 /**
  * 댓글 생성 요청 DTO
+ * 위치 정보(주소)는 선택사항
  */
 @Data
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -30,6 +29,14 @@ public class CreateCommentRequest {
      * - 양수이면 대댓글 (부모 댓글 ID)
      */
     private Long parentCommentId;
+
+    /**
+     * 사용자의 위치 정보 (주소)
+     * 선택사항, 예: "서울시 강남구", "부산시 해운대구" 등
+     * 최대 500자
+     */
+    @Size(max = 500, message = "위치는 500자 이하여야 합니다.")
+    private String location;
 
     /**
      * Post-processing: parentCommentId가 0이면 null로 변환
