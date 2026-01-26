@@ -76,6 +76,7 @@ public class CommentService {
             .user(user)
             .parentComment(parentComment)
             .content(request.getContent())
+            .location(request.getLocation())
             .deleted(false)
             .build();
 
