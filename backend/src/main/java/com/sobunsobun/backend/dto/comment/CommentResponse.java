@@ -25,12 +25,13 @@ public class CommentResponse {
     private Long userId;
     private String userNickname;
     private String userProfileImageUrl;
-    private String content;
 
     /**
-     * 사용자의 위치 인증 정보 (주소)
+     * 사용자의 주소 (User.address에서 가져옴)
      */
-    private String verifyLocation;
+    private String userAddress;
+
+    private String content;
 
     private Long parentCommentId;
     @Builder.Default
@@ -50,8 +51,8 @@ public class CommentResponse {
             .userId(comment.getUser().getId())
             .userNickname(comment.getUser().getNickname())
             .userProfileImageUrl(comment.getUser().getProfileImageUrl())
+            .userAddress(comment.getUser().getAddress())
             .content(comment.getContent())
-            .verifyLocation(comment.getVerifyLocation())
             .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
             .childComments(comment.getChildComments().stream()
                 .filter(Comment::isActive)
@@ -74,8 +75,8 @@ public class CommentResponse {
                 .userId(comment.getUser().getId())
                 .userNickname(comment.getUser().getNickname())
                 .userProfileImageUrl(comment.getUser().getProfileImageUrl())
+                .userAddress(comment.getUser().getAddress())
                 .content(comment.getContent())
-                .verifyLocation(comment.getVerifyLocation())
                 .parentCommentId(comment.getParentComment().getId())
                 .childComments(new ArrayList<>())
                 .deleted(comment.getDeleted())
@@ -89,8 +90,8 @@ public class CommentResponse {
                 .userId(comment.getUser().getId())
                 .userNickname(comment.getUser().getNickname())
                 .userProfileImageUrl(comment.getUser().getProfileImageUrl())
+                .userAddress(comment.getUser().getAddress())
                 .content(comment.getContent())
-                .verifyLocation(comment.getVerifyLocation())
                 .parentCommentId(null)
                 .childComments(comment.getChildComments().stream()
                     .filter(Comment::isActive)
@@ -100,8 +101,8 @@ public class CommentResponse {
                         .userId(child.getUser().getId())
                         .userNickname(child.getUser().getNickname())
                         .userProfileImageUrl(child.getUser().getProfileImageUrl())
+                        .userAddress(child.getUser().getAddress())
                         .content(child.getContent())
-                        .verifyLocation(child.getVerifyLocation())
                         .parentCommentId(comment.getId())
                         .childComments(new ArrayList<>())
                         .deleted(child.getDeleted())

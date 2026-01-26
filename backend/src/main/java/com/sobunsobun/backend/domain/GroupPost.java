@@ -71,12 +71,6 @@ public class GroupPost {
     @Column(name = "location_name", length = 120)
     private String locationName;
 
-    /**
-     * 위치 인증 정보 (주소)
-     * 예: "서울시 강남구"
-     */
-    @Column(name = "verify_location", length = 500)
-    private String verifyLocation;
 
     /**
      * 만남 일시
