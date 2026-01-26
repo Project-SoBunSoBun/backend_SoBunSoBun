@@ -57,11 +57,6 @@ public class PostResponse {
      */
     private String locationName;
 
-    /**
-     * 위치 인증 정보 (주소)
-     * 예: "서울시 강남구"
-     */
-    private String verifyLocation;
 
     /**
      * 만남 일시
@@ -114,6 +109,11 @@ public class PostResponse {
         private Long id;
         private String nickname;
         private String profileImageUrl;
+
+        /**
+         * 작성자의 주소 (User.address에서 가져옴)
+         */
+        private String address;
     }
 }
 

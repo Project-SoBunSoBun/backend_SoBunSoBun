@@ -50,13 +50,6 @@ public class PostCreateRequest {
     @Size(max = 120, message = "장소명은 120자 이내여야 합니다")
     private String locationName;
 
-    /**
-     * 위치 인증 정보 (주소)
-     * 선택사항, 예: "서울시 강남구"
-     * 최대 500자
-     */
-    @Size(max = 500, message = "위치는 500자 이하여야 합니다.")
-    private String verifyLocation;
 
     /**
      * 만남 일시
