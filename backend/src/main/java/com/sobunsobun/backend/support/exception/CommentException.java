@@ -2,30 +2,55 @@ package com.sobunsobun.backend.support.exception;
 
 /**
  * 댓글 관련 예외
+ *
+ * ErrorCode enum을 기반으로 생성됩니다.
  */
 public class CommentException extends BusinessException {
-    public CommentException(String code, String message, int status) {
-        super(code, message, status);
+
+    /**
+     * ErrorCode를 사용한 생성
+     */
+    public CommentException(ErrorCode errorCode) {
+        super(errorCode);
     }
 
-    // 댓글을 찾을 수 없음
+    /**
+     * ErrorCode와 커스텀 메시지를 사용한 생성
+     */
+    public CommentException(ErrorCode errorCode, String customMessage) {
+        super(errorCode, customMessage);
+    }
+
+    // =================================================
+    // 정적 팩토리 메서드
+    // =================================================
+
+    /**
+     * 댓글을 찾을 수 없음
+     */
     public static CommentException notFound() {
-        return new CommentException("COMMENT_NOT_FOUND", "댓글을 찾을 수 없습니다.", 404);
+        return new CommentException(ErrorCode.COMMENT_NOT_FOUND);
     }
 
-    // 권한 없음 (본인만 수정/삭제 가능)
+    /**
+     * 댓글 접근 권한 없음 (본인만 수정/삭제 가능)
+     */
     public static CommentException forbidden() {
-        return new CommentException("COMMENT_FORBIDDEN", "댓글을 수정/삭제할 권한이 없습니다.", 403);
+        return new CommentException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
     }
 
-    // 이미 삭제된 댓글
+    /**
+     * 이미 삭제된 댓글
+     */
     public static CommentException alreadyDeleted() {
-        return new CommentException("COMMENT_ALREADY_DELETED", "이미 삭제된 댓글입니다.", 410);
+        return new CommentException(ErrorCode.COMMENT_ALREADY_DELETED);
     }
 
-    // 잘못된 요청
+    /**
+     * 유효하지 않은 댓글 데이터
+     */
     public static CommentException badRequest(String message) {
-        return new CommentException("COMMENT_BAD_REQUEST", message, 400);
+        return new CommentException(ErrorCode.INVALID_COMMENT_DATA, message);
     }
 }
 
