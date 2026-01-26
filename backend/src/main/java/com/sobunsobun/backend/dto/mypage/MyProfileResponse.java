@@ -67,15 +67,6 @@ public class MyProfileResponse {
          */
         private Integer tagId;
 
-        /**
-         * 태그 이름
-         */
-        private String tagName;
-
-        /**
-         * 태그 이모지
-         */
-        private String tagEmoji;
 
         /**
          * 받은 횟수
