@@ -65,7 +65,7 @@ public class MyProfileResponse {
         /**
          * 태그 ID
          */
-        private Long tagId;
+        private Integer tagId;
 
         /**
          * 태그 이름

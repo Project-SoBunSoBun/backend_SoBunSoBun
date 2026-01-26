@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 사용자 프로필 비즈니스 로직 서비스
  *
@@ -44,6 +47,21 @@ public class MyProfileService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
                 });
 
+        // 더미 매너 태그 데이터
+        List<MyProfileResponse.MannerTagDto> mannerTags = new ArrayList<>();
+        mannerTags.add(MyProfileResponse.MannerTagDto.builder()
+                .tagId(1)
+                .count(4)
+                .build());
+        mannerTags.add(MyProfileResponse.MannerTagDto.builder()
+                .tagId(3)
+                .count(2)
+                .build());
+        mannerTags.add(MyProfileResponse.MannerTagDto.builder()
+                .tagId(5)
+                .count(1)
+                .build());
+
         MyProfileResponse profile = MyProfileResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
@@ -51,6 +69,7 @@ public class MyProfileService {
                 .mannerScore(user.getMannerScore() != null ? user.getMannerScore().doubleValue() : 0.0)
                 .participationCount(0)  // TODO: 참여 엔티티 구현 후 조회
                 .hostCount((int) groupPostRepository.countByOwnerId(user.getId()))
+                .mannerTags(mannerTags)
                 .build();
 
         log.info("프로필 조회 완료 - userId: {}, nickname: {}", userId, user.getNickname());
@@ -58,53 +77,53 @@ public class MyProfileService {
         return profile;
     }
 
-    /**
-     * 사용자 프로필 수정
-     *
-     * @param userId 사용자 ID
-     * @param request 프로필 수정 요청
-     * @return 수정된 프로필 정보
-     */
-    @Transactional
-    public ProfileUpdateResponse updateProfile(Long userId, ProfileUpdateRequestDto request) {
-        log.info("프로필 수정 시작 - userId: {}, nickname: {}", userId, request.getNickname());
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("사용자를 찾을 수 없음 - userId: {}", userId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
-                });
-
-        // 닉네임 수정
-        if (request.getNickname() != null && !request.getNickname().isEmpty()) {
-            // 중복 검사
-            if (!user.getNickname().equals(request.getNickname())) {
-                boolean nicknameDuplicate = userRepository.existsByNickname(request.getNickname());
-                if (nicknameDuplicate) {
-                    log.warn("닉네임 중복 - nickname: {}", request.getNickname());
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다");
-                }
-            }
-            user.setNickname(request.getNickname());
-        }
-
-        // 프로필 이미지 수정
-        if (request.getProfileImageUrl() != null) {
-            user.setProfileImageUrl(request.getProfileImageUrl());
-        }
-
-        User savedUser = userRepository.save(user);
-
-        ProfileUpdateResponse response = ProfileUpdateResponse.builder()
-                .userId(savedUser.getId())
-                .nickname(savedUser.getNickname())
-                .profileImageUrl(savedUser.getProfileImageUrl())
-                .message("프로필이 수정되었습니다.")
-                .build();
-
-        log.info("프로필 수정 완료 - userId: {}, nickname: {}", userId, savedUser.getNickname());
-
-        return response;
-    }
+//    /**
+//     * 사용자 프로필 수정
+//     *
+//     * @param userId 사용자 ID
+//     * @param request 프로필 수정 요청
+//     * @return 수정된 프로필 정보
+//     */
+//    @Transactional
+//    public ProfileUpdateResponse updateProfile(Long userId, ProfileUpdateRequestDto request) {
+//        log.info("프로필 수정 시작 - userId: {}, nickname: {}", userId, request.getNickname());
+//
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> {
+//                    log.error("사용자를 찾을 수 없음 - userId: {}", userId);
+//                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
+//                });
+//
+//        // 닉네임 수정
+//        if (request.getNickname() != null && !request.getNickname().isEmpty()) {
+//            // 중복 검사
+//            if (!user.getNickname().equals(request.getNickname())) {
+//                boolean nicknameDuplicate = userRepository.existsByNickname(request.getNickname());
+//                if (nicknameDuplicate) {
+//                    log.warn("닉네임 중복 - nickname: {}", request.getNickname());
+//                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 사용 중인 닉네임입니다");
+//                }
+//            }
+//            user.setNickname(request.getNickname());
+//        }
+//
+//        // 프로필 이미지 수정
+//        if (request.getProfileImageUrl() != null) {
+//            user.setProfileImageUrl(request.getProfileImageUrl());
+//        }
+//
+//        User savedUser = userRepository.save(user);
+//
+//        ProfileUpdateResponse response = ProfileUpdateResponse.builder()
+//                .userId(savedUser.getId())
+//                .nickname(savedUser.getNickname())
+//                .profileImageUrl(savedUser.getProfileImageUrl())
+//                .message("프로필이 수정되었습니다.")
+//                .build();
+//
+//        log.info("프로필 수정 완료 - userId: {}, nickname: {}", userId, savedUser.getNickname());
+//
+//        return response;
+//    }
 }
 

@@ -66,38 +66,38 @@ public class MyProfileController {
         }
     }
 
-    /**
-     * 프로필 수정
-     *
-     * 수정 가능 항목:
-     * - nickname: 2~20자, 한글/영문/숫자, 중복 불가
-     * - profileImageUrl: 이미지 URL (최대 500자)
-     *
-     * @param authentication 현재 로그인한 사용자 인증 정보
-     * @param request 프로필 수정 요청
-     * @return 수정된 프로필 정보
-     */
-    @Operation(
-        summary = "프로필 수정",
-        description = "닉네임 또는 프로필 이미지를 수정합니다."
-    )
-    @PatchMapping("/profile")
-    public ResponseEntity<ApiResponse<ProfileUpdateResponse>> updateProfile(
-            Authentication authentication,
-            @Valid @RequestBody ProfileUpdateRequestDto request) {
-        try {
-            JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("✏️ 프로필 수정 요청 - 사용자 ID: {}, 닉네임: {}", principal.id(), request.getNickname());
-
-            ProfileUpdateResponse response = myProfileService.updateProfile(principal.id(), request);
-
-            log.info("✅ 프로필 수정 완료 - 사용자 ID: {}", principal.id());
-
-            return ResponseEntity.ok(ApiResponse.success(response));
-        } catch (Exception e) {
-            log.error("❌ 프로필 수정 중 오류 발생", e);
-            throw e;
-        }
-    }
+//    /**
+//     * 프로필 수정
+//     *
+//     * 수정 가능 항목:
+//     * - nickname: 2~20자, 한글/영문/숫자, 중복 불가
+//     * - profileImageUrl: 이미지 URL (최대 500자)
+//     *
+//     * @param authentication 현재 로그인한 사용자 인증 정보
+//     * @param request 프로필 수정 요청
+//     * @return 수정된 프로필 정보
+//     */
+//    @Operation(
+//        summary = "프로필 수정",
+//        description = "닉네임 또는 프로필 이미지를 수정합니다."
+//    )
+//    @PatchMapping("/profile")
+//    public ResponseEntity<ApiResponse<ProfileUpdateResponse>> updateProfile(
+//            Authentication authentication,
+//            @Valid @RequestBody ProfileUpdateRequestDto request) {
+//        try {
+//            JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
+//            log.info("✏️ 프로필 수정 요청 - 사용자 ID: {}, 닉네임: {}", principal.id(), request.getNickname());
+//
+//            ProfileUpdateResponse response = myProfileService.updateProfile(principal.id(), request);
+//
+//            log.info("✅ 프로필 수정 완료 - 사용자 ID: {}", principal.id());
+//
+//            return ResponseEntity.ok(ApiResponse.success(response));
+//        } catch (Exception e) {
+//            log.error("❌ 프로필 수정 중 오류 발생", e);
+//            throw e;
+//        }
+//    }
 }
 
