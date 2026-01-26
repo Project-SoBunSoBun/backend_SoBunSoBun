@@ -64,4 +64,15 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
      */
     @Query("SELECT p FROM GroupPost p WHERE p.status = 'OPEN' AND p.createdAt >= :startDate ORDER BY p.createdAt DESC")
     List<GroupPost> findRecentOpenPosts(@Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    /**
+     * 사용자가 작성한 게시글 수 조회 (호스트 수)
+     */
+    long countByOwnerId(Long userId);
+
+    /**
+     * 사용자가 참여한 게시글 수 조회
+     * TODO: 참여 정보를 저장하는 엔티티/테이블 필요
+     */
+    // long countByParticipantsId(Long userId);
 }

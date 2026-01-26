@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.controller.user;
 
+import com.sobunsobun.backend.application.user.MyProfileService;
 import com.sobunsobun.backend.dto.common.ApiResponse;
 import com.sobunsobun.backend.dto.mypage.MyProfileResponse;
 import com.sobunsobun.backend.dto.mypage.ProfileUpdateRequestDto;
@@ -31,8 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MyProfileController {
 
-    // TODO: MyProfileService 주입 및 구현
-    // private final MyProfileService myProfileService;
+    private final MyProfileService myProfileService;
 
     /**
      * 마이페이지 프로필 조회
@@ -55,17 +55,7 @@ public class MyProfileController {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
             log.info("📋 프로필 조회 요청 - 사용자 ID: {}", principal.id());
 
-            // TODO: Service 호출로 교체
-            // MyProfileResponse profile = myProfileService.getProfile(principal.id());
-
-            // 임시 응답 (주석 처리된 서비스 호출로 교체 필요)
-            MyProfileResponse profile = MyProfileResponse.builder()
-                    .userId(principal.id())
-                    .nickname("임시닉네임")
-                    .mannerScore(4.5)
-                    .participationCount(0)
-                    .hostCount(0)
-                    .build();
+            MyProfileResponse profile = myProfileService.getProfile(principal.id());
 
             log.info("✅ 프로필 조회 완료 - 사용자 ID: {}", principal.id());
 
@@ -99,16 +89,7 @@ public class MyProfileController {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
             log.info("✏️ 프로필 수정 요청 - 사용자 ID: {}, 닉네임: {}", principal.id(), request.getNickname());
 
-            // TODO: Service 호출로 교체
-            // ProfileUpdateResponse response = myProfileService.updateProfile(principal.id(), request);
-
-            // 임시 응답 (주석 처리된 서비스 호출로 교체 필요)
-            ProfileUpdateResponse response = ProfileUpdateResponse.builder()
-                    .userId(principal.id())
-                    .nickname(request.getNickname())
-                    .profileImageUrl(request.getProfileImageUrl())
-                    .message("프로필이 수정되었습니다.")
-                    .build();
+            ProfileUpdateResponse response = myProfileService.updateProfile(principal.id(), request);
 
             log.info("✅ 프로필 수정 완료 - 사용자 ID: {}", principal.id());
 
