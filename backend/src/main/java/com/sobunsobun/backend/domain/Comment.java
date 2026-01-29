@@ -79,10 +79,29 @@ public class Comment {
     /**
      * Soft Delete 여부
      * true: 삭제됨, false: 활성
+     *
+     * 정책:
+     * - 댓글 생성 시: deleted = false
+     * - 댓글 삭제 시: deleted = true
+     * - edited는 false로 강제 (deleted와 동시에 true가 되지 않음)
      */
     @Column(nullable = false)
     @Builder.Default
     private Boolean deleted = false;
+
+    /**
+     * 수정 여부
+     * true: 수정됨, false: 원본
+     *
+     * 정책:
+     * - 댓글 생성 시: edited = false
+     * - 댓글 수정 시: edited = true로 변경 (deleted = false인 경우만)
+     * - 댓글 삭제 시: edited = false로 강제 (deleted와 동시에 true가 되지 않음)
+     * - 결과: deleted = true 상태에서는 edited = false 유지
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean edited = false;
 
     /**
      * 생성 일시

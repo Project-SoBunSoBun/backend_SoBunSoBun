@@ -37,7 +37,27 @@ public class CommentResponse {
     @Builder.Default
     private List<CommentResponse> childComments = new ArrayList<>();
 
+    /**
+     * 삭제 여부
+     * true: 삭제됨, false: 활성
+     *
+     * 프론트에서 표시 규칙: 삭제 상태 우선 표시
+     * - deleted = true: "삭제된 댓글입니다" 표시
+     * - deleted = false && edited = true: "수정됨" 표시
+     * - deleted = false && edited = false: 원본 표시 (수정 표시 없음)
+     */
     private Boolean deleted;
+
+    /**
+     * 수정 여부
+     * true: 수정됨, false: 원본
+     *
+     * 정책:
+     * - deleted = true인 경우, edited는 항상 false (동시에 true가 될 수 없음)
+     * - deleted = false && edited = true: "수정됨" 표시 가능
+     */
+    private Boolean edited;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -59,6 +79,7 @@ public class CommentResponse {
                 .map(CommentResponse::from)
                 .collect(Collectors.toList()))
             .deleted(comment.getDeleted())
+            .edited(comment.getEdited())
             .createdAt(comment.getCreatedAt())
             .updatedAt(comment.getUpdatedAt())
             .build();
@@ -69,6 +90,7 @@ public class CommentResponse {
      */
     public static CommentResponse fromWithChildren(Comment comment) {
         if (comment.getParentComment() != null) {
+            // 대댓글인 경우
             return CommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
@@ -80,10 +102,12 @@ public class CommentResponse {
                 .parentCommentId(comment.getParentComment().getId())
                 .childComments(new ArrayList<>())
                 .deleted(comment.getDeleted())
+                .edited(comment.getEdited())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();
         } else {
+            // 부모 댓글인 경우
             return CommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
@@ -106,11 +130,13 @@ public class CommentResponse {
                         .parentCommentId(comment.getId())
                         .childComments(new ArrayList<>())
                         .deleted(child.getDeleted())
+                        .edited(child.getEdited())
                         .createdAt(child.getCreatedAt())
                         .updatedAt(child.getUpdatedAt())
                         .build())
                     .collect(Collectors.toList()))
                 .deleted(comment.getDeleted())
+                .edited(comment.getEdited())
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();
