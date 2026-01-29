@@ -77,6 +77,7 @@ public class CommentService {
             .parentComment(parentComment)
             .content(request.getContent())
             .deleted(false)
+            .edited(false)
             .build();
 
         Comment savedComment = commentRepository.save(comment);
@@ -131,11 +132,17 @@ public class CommentService {
      * 댓글 수정
      * 작성자 본인만 수정 가능
      *
+     * 정책:
+     * - deleted = false인 경우에만 수정 가능
+     * - content 변경
+     * - edited = true로 변경
+     * - updatedAt은 자동 갱신 (@UpdateTimestamp)
+     *
      * @param commentId 댓글 ID
      * @param request 수정 요청
      * @param user 현재 로그인 사용자
      * @return 수정된 댓글 정보
-     * @throws CommentException 댓글을 찾을 수 없거나 권한이 없는 경우
+     * @throws CommentException 댓글을 찾을 수 없거나 권한이 없거나 삭제된 댓글인 경우
      */
     @Transactional
     public CommentResponse updateComment(Long commentId, UpdateCommentRequest request, User user) {
@@ -146,19 +153,24 @@ public class CommentService {
 
         // 삭제된 댓글은 수정 불가
         if (comment.getDeleted()) {
+            log.warn("삭제된 댓글 수정 시도 - commentId: {}", commentId);
             throw CommentException.alreadyDeleted();
         }
 
         // 권한 체크 (작성자만 수정 가능)
         if (!comment.isAuthor(user)) {
+            log.warn("권한 없는 댓글 수정 시도 - commentId: {}, userId: {}", commentId, user.getId());
             throw CommentException.forbidden();
         }
 
         // 내용 수정
         comment.setContent(request.getContent());
+        // edited = true로 설정 (수정되었음을 표시)
+        comment.setEdited(true);
+
         Comment updatedComment = commentRepository.save(comment);
 
-        log.info("댓글 수정 완료 - commentId: {}", updatedComment.getId());
+        log.info("댓글 수정 완료 - commentId: {}, edited: true", updatedComment.getId());
 
         return CommentResponse.from(updatedComment);
     }
@@ -166,6 +178,11 @@ public class CommentService {
     /**
      * 댓글 삭제 (Soft Delete)
      * 작성자 본인만 삭제 가능
+     *
+     * 정책:
+     * - deleted = true로 설정 (soft delete)
+     * - content는 "삭제된 댓글입니다"로 변경 (선택: null 처리도 가능)
+     * - edited = false로 강제 (deleted와 edited가 동시에 true가 되지 않도록)
      *
      * 부모 댓글 삭제:
      * - deleted = true로 표시
@@ -177,7 +194,7 @@ public class CommentService {
      *
      * @param commentId 댓글 ID
      * @param user 현재 로그인 사용자
-     * @throws CommentException 댓글을 찾을 수 없거나 권한이 없는 경우
+     * @throws CommentException 댓글을 찾을 수 없거나 권한이 없거나 이미 삭제된 댓글인 경우
      */
     @Transactional
     public void deleteComment(Long commentId, User user) {
@@ -188,19 +205,27 @@ public class CommentService {
 
         // 이미 삭제된 댓글
         if (comment.getDeleted()) {
+            log.warn("이미 삭제된 댓글 삭제 시도 - commentId: {}", commentId);
             throw CommentException.alreadyDeleted();
         }
 
         // 권한 체크 (작성자만 삭제 가능)
         if (!comment.isAuthor(user)) {
+            log.warn("권한 없는 댓글 삭제 시도 - commentId: {}, userId: {}", commentId, user.getId());
             throw CommentException.forbidden();
         }
 
         // Soft Delete 처리
         comment.setDeleted(true);
+        // deleted = true인 경우 edited는 false로 강제
+        // (deleted와 edited가 동시에 true가 되지 않도록)
+        comment.setEdited(false);
+        // content를 "삭제된 댓글입니다"로 변경
+        comment.setContent("삭제된 댓글입니다");
+
         commentRepository.save(comment);
 
-        log.info("댓글 삭제 완료 - commentId: {}", commentId);
+        log.info("댓글 삭제 완료 - commentId: {}, deleted: true, edited: false", commentId);
     }
 
     /**
