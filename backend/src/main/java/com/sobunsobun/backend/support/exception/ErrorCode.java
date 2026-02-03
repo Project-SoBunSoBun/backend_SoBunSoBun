@@ -56,11 +56,20 @@ public enum ErrorCode {
     SETTLEUP_NOT_FOUND("SETTLEUP_001", "정산 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INVALID_SETTLEUP_STATUS("SETTLEUP_002", "유효하지 않은 정산 상태입니다.", HttpStatus.BAD_REQUEST),
 
-    // 비즈니스 로직 (8000~8099)
+    // 채팅 관련 (8000~8099)
+    CHAT_ROOM_NOT_FOUND("CHAT_001", "채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    CHAT_ROOM_ACCESS_DENIED("CHAT_002", "채팅방 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    CHAT_MEMBER_NOT_FOUND("CHAT_003", "채팅방 멤버가 아닙니다.", HttpStatus.NOT_FOUND),
+    CHAT_MESSAGE_NOT_FOUND("CHAT_004", "메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    CHAT_INVITE_NOT_FOUND("CHAT_005", "초대장을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    CHAT_INVITE_EXPIRED("CHAT_006", "초대장이 만료되었습니다.", HttpStatus.GONE),
+    SETTLEMENT_NOT_COMPLETED("CHAT_007", "정산이 완료되지 않았습니다.", HttpStatus.CONFLICT),
+
+    // 비즈니스 로직 (9000~9099)
     BUSINESS_RULE_VIOLATION("BIZ_001", "비즈니스 규칙 위반", HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION("BIZ_002", "데이터 무결성 위반", HttpStatus.CONFLICT),
 
-    // 서버 에러 (9000~9099)
+    // 서버 에러 (9100~9199)
     INTERNAL_SERVER_ERROR("SERVER_001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     SERVICE_UNAVAILABLE("SERVER_002", "서비스를 이용할 수 없습니다.", HttpStatus.SERVICE_UNAVAILABLE),
     DATABASE_ERROR("SERVER_003", "데이터베이스 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),

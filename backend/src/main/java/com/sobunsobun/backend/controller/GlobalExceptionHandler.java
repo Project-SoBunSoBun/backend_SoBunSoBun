@@ -107,6 +107,55 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * IllegalArgumentException 처리
+     * 비즈니스 로직 위반 (자신의 항목 신고, 중복 신고 등)
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<?>> handleIllegalArgumentException(IllegalArgumentException e) {
+        String message = e.getMessage();
+        log.warn("[IllegalArgumentException] {}", message);
+
+        // 자신의 항목 신고 확인
+        if (message != null && (message.contains("자신의 게시글") || message.contains("자신의 댓글"))) {
+            ApiResponse<?> response = ApiResponse.error(
+                    HttpStatus.CONFLICT.value(),
+                    ErrorCode.DATA_INTEGRITY_VIOLATION.getCode(),
+                    message
+            );
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        }
+
+        // 중복 신고 확인
+        if (message != null && message.contains("이미")) {
+            ApiResponse<?> response = ApiResponse.error(
+                    HttpStatus.BAD_REQUEST.value(),
+                    ErrorCode.INVALID_REQUEST.getCode(),
+                    message
+            );
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        // 리소스 없음 확인
+        if (message != null && message.contains("찾을 수 없습니다")) {
+            ApiResponse<?> response = ApiResponse.error(
+                    HttpStatus.NOT_FOUND.value(),
+                    ErrorCode.RESOURCE_NOT_FOUND.getCode(),
+                    message
+            );
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        // 기타 IllegalArgumentException
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.BAD_REQUEST.value(),
+                ErrorCode.INVALID_REQUEST.getCode(),
+                message != null ? message : "잘못된 요청입니다"
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    /**
      * 기타 모든 예외 처리
      */
     @ExceptionHandler(Exception.class)
