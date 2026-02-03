@@ -55,9 +55,10 @@ public class SecurityConfig {
         "/users/**",
 
         // 정적 파일 접근
-        "/files/**"
+        "/files/**",
 
-
+        // WebSocket (STOMP 레벨에서 JWT 검증)
+        "/ws/**"
     };
 
     /**

@@ -45,6 +45,11 @@ dependencies {
 	// Log4j2
 	implementation 'org.springframework.boot:spring-boot-starter-log4j2'
 
+	// WebSocket & STOMP
+	implementation('org.springframework.boot:spring-boot-starter-websocket') {
+		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+	}
+
 	// Swagger/OpenAPI (Spring 6.2 완전 지원)
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 
