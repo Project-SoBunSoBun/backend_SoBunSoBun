@@ -22,6 +22,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByEmail(String email);
 
+    /**
+     * 닉네임으로 사용자 조회
+     * @param nickname 사용자 닉네임
+     * @return 사용자 정보 (Optional)
+     */
+    Optional<User> findByNickname(String nickname);
+
 
     /**
      * 이메일 존재 여부 확인

@@ -1,8 +1,10 @@
 package com.sobunsobun.backend.controller.user;
 
 import com.sobunsobun.backend.application.user.UserService;
+import com.sobunsobun.backend.application.user.MyProfileService;
 import com.sobunsobun.backend.dto.user.NicknameRequest;
 import com.sobunsobun.backend.dto.user.ProfileUpdateRequest;
+import com.sobunsobun.backend.dto.user.UserProfileResponse;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,8 +45,104 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final MyProfileService myProfileService;
 
     private static final String NICKNAME_PATTERN = "^[가-힣a-zA-Z0-9]+$";
+
+    /**
+     * 다른 사용자 프로필 조회 API (공개)
+     *
+     * 이미지나 닉네임 클릭 시 해당 유저 프로필을 확인하는 기능
+     * 인증 없이 호출 가능합니다.
+     *
+     * 응답 정보:
+     * - userId: 사용자 ID
+     * - nickname: 닉네임
+     * - profileImageUrl: 프로필 이미지 URL
+     * - mannerScore: 매너 점수 (0.00 ~ 5.00)
+     * - participationCount: 공동구매 참여 횟수
+     * - hostCount: 방장(개설) 횟수
+     * - postCount: 작성한 글 수
+     * - mannerTags: 받은 매너 평가 태그 목록 (상위 5개)
+     * - posts: 작성한 게시글 목록 (게시글 제목, 상태, 금액, 지역, 마감일 등)
+     *
+     * @param userId 조회할 사용자 ID (경로 변수)
+     * @return 사용자 프로필 정보
+     */
+    @Operation(
+        summary = "다른 사용자 프로필 조회",
+        description = "이미지나 닉네임 클릭 시 해당 유저의 프로필 정보를 조회합니다. 인증 없이 호출 가능합니다."
+    )
+    @GetMapping("/{userId}/profile")
+    public ResponseEntity<Map<String, Object>> getUserProfile(
+            @Parameter(description = "조회할 사용자 ID", example = "1")
+            @PathVariable
+            Long userId) {
+
+        try {
+            log.info("🔍 다른 사용자 프로필 조회 요청 - userId: {}", userId);
+
+            UserProfileResponse profile = myProfileService.getUserProfile(userId);
+
+            log.info("✅ 다른 사용자 프로필 조회 완료 - userId: {}, nickname: {}", userId, profile.getNickname());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", profile
+            ));
+        } catch (Exception e) {
+            log.error("❌ 다른 사용자 프로필 조회 중 오류 발생 - userId: {}", userId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 닉네임으로 다른 사용자 프로필 조회 API (공개)
+     *
+     * 닉네임을 클릭했을 때 해당 유저 프로필을 확인하는 기능
+     * 인증 없이 호출 가능합니다.
+     *
+     * 응답 정보:
+     * - userId: 사용자 ID
+     * - nickname: 닉네임
+     * - profileImageUrl: 프로필 이미지 URL
+     * - mannerScore: 매너 점수 (0.00 ~ 5.00)
+     * - participationCount: 공동구매 참여 횟수
+     * - hostCount: 방장(개설) 횟수
+     * - postCount: 작성한 글 수
+     * - mannerTags: 받은 매너 평가 태그 목록 (상위 5개)
+     * - posts: 작성한 게시글 목록 (게시글 제목, 상태, 금액, 지역, 마감일 등)
+     *
+     * @param nickname 조회할 사용자 닉네임 (쿼리 파라미터)
+     * @return 사용자 프로필 정보
+     */
+    @Operation(
+        summary = "다른 사용자 프로필 조회 (닉네임으로)",
+        description = "닉네임으로 해당 유저의 프로필 정보를 조회합니다. 인증 없이 호출 가능합니다."
+    )
+    @GetMapping("/profile/by-nickname")
+    public ResponseEntity<Map<String, Object>> getUserProfileByNickname(
+            @Parameter(description = "조회할 사용자 닉네임", example = "행복한고래")
+            @RequestParam
+            @NotBlank(message = "닉네임은 비어 있을 수 없습니다.")
+            String nickname) {
+
+        try {
+            log.info("🔍 닉네임으로 다른 사용자 프로필 조회 요청 - nickname: {}", nickname);
+
+            UserProfileResponse profile = myProfileService.getUserProfileByNickname(nickname);
+
+            log.info("✅ 닉네임으로 다른 사용자 프로필 조회 완료 - nickname: {}, userId: {}", nickname, profile.getUserId());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", profile
+            ));
+        } catch (Exception e) {
+            log.error("❌ 닉네임으로 다른 사용자 프로필 조회 중 오류 발생 - nickname: {}", nickname, e);
+            throw e;
+        }
+    }
 
     /**
      * 닉네임 중복 확인 API (공개)
