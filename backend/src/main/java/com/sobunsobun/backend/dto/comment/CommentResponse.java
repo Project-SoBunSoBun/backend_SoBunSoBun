@@ -70,7 +70,11 @@ public class CommentResponse {
             .postId(comment.getPost().getId())
             .userId(comment.getUser().getId())
             .userNickname(comment.getUser().getNickname())
-            .userProfileImageUrl(comment.getUser().getProfileImageUrl())
+            .userProfileImageUrl(
+                comment.getUser().getProfileImageUrl() != null && !comment.getUser().getProfileImageUrl().isEmpty()
+                    ? comment.getUser().getProfileImageUrl()
+                    : null
+            )
             .userAddress(comment.getUser().getAddress())
             .content(comment.getContent())
             .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
@@ -96,7 +100,11 @@ public class CommentResponse {
                 .postId(comment.getPost().getId())
                 .userId(comment.getUser().getId())
                 .userNickname(comment.getUser().getNickname())
-                .userProfileImageUrl(comment.getUser().getProfileImageUrl())
+                .userProfileImageUrl(
+                    comment.getUser().getProfileImageUrl() != null && !comment.getUser().getProfileImageUrl().isEmpty()
+                        ? comment.getUser().getProfileImageUrl()
+                        : null
+                )
                 .userAddress(comment.getUser().getAddress())
                 .content(comment.getContent())
                 .parentCommentId(comment.getParentComment().getId())
@@ -113,7 +121,11 @@ public class CommentResponse {
                 .postId(comment.getPost().getId())
                 .userId(comment.getUser().getId())
                 .userNickname(comment.getUser().getNickname())
-                .userProfileImageUrl(comment.getUser().getProfileImageUrl())
+                .userProfileImageUrl(
+                    comment.getUser().getProfileImageUrl() != null && !comment.getUser().getProfileImageUrl().isEmpty()
+                        ? comment.getUser().getProfileImageUrl()
+                        : null
+                )
                 .userAddress(comment.getUser().getAddress())
                 .content(comment.getContent())
                 .parentCommentId(null)
@@ -124,7 +136,11 @@ public class CommentResponse {
                         .postId(child.getPost().getId())
                         .userId(child.getUser().getId())
                         .userNickname(child.getUser().getNickname())
-                        .userProfileImageUrl(child.getUser().getProfileImageUrl())
+                        .userProfileImageUrl(
+                            child.getUser().getProfileImageUrl() != null && !child.getUser().getProfileImageUrl().isEmpty()
+                                ? child.getUser().getProfileImageUrl()
+                                : null
+                        )
                         .userAddress(child.getUser().getAddress())
                         .content(child.getContent())
                         .parentCommentId(comment.getId())
