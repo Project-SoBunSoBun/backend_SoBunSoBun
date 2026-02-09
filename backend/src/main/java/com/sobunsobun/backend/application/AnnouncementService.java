@@ -40,20 +40,31 @@ public class AnnouncementService {
         log.info("📢 공지사항 목록 조회 시작 - 페이지: {}, 사이즈: {}", pageable.getPageNumber(), pageable.getPageSize());
 
         try {
-            Page<Announcement> announcementPage = announcementRepository.findAllWithPinnedFirst(pageable);
+            log.debug("🔍 Repository findAll 호출 전");
+            Page<Announcement> announcementPage = announcementRepository.findAll(pageable);
+            log.debug("✅ Repository findAll 호출 완료 - 총 요소: {}", announcementPage.getTotalElements());
 
             // Announcement 엔티티를 AnnouncementListItemResponse DTO로 변환
+            log.debug("🔄 DTO 변환 시작");
             var content = announcementPage.getContent().stream()
-                    .map(announcement -> AnnouncementListItemResponse.builder()
-                            .id(announcement.getId())
-                            .title(announcement.getTitle())
-                            .category(announcement.getCategory())
-                            .isPinned(announcement.getIsPinned())
-                            .createdAt(announcement.getCreatedAt())
-                            .build())
+                    .map(announcement -> {
+                        log.debug("  - ID: {}, Title: {}, IsPinned: {}",
+                            announcement.getId(),
+                            announcement.getTitle(),
+                            announcement.getIsPinned());
+                        return AnnouncementListItemResponse.builder()
+                                .id(announcement.getId())
+                                .title(announcement.getTitle())
+                                .category(announcement.getCategory())
+                                .isPinned(announcement.getIsPinned())
+                                .createdAt(announcement.getCreatedAt())
+                                .build();
+                    })
                     .toList();
+            log.debug("✅ DTO 변환 완료 - {} 개", content.size());
 
             // PageInfo 생성
+            log.debug("🔧 PageInfo 생성 중");
             PageResponse.PageInfo pageInfo = PageResponse.PageInfo.builder()
                     .number(announcementPage.getNumber())
                     .size(announcementPage.getSize())
@@ -64,6 +75,7 @@ public class AnnouncementService {
                     .hasNext(announcementPage.hasNext())
                     .hasPrevious(announcementPage.hasPrevious())
                     .build();
+            log.debug("✅ PageInfo 생성 완료");
 
             log.info("✅ 공지사항 목록 조회 완료 - 총 개수: {}, 현재 페이지: {}",
                     announcementPage.getTotalElements(), announcementPage.getNumber());
@@ -74,6 +86,7 @@ public class AnnouncementService {
                     .build();
         } catch (Exception e) {
             log.error("❌ 공지사항 목록 조회 중 오류 발생", e);
+            e.printStackTrace();
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "공지사항 목록 조회에 실패했습니다.");
         }
     }
@@ -118,5 +131,24 @@ public class AnnouncementService {
             log.error("❌ 공지사항 상세 조회 중 오류 발생 - ID: {}", id, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "공지사항 상세 조회에 실패했습니다.");
         }
+    }
+
+    /**
+     * 공지사항 총 개수 조회 (디버그용)
+     *
+     * @return 공지사항 총 개수
+     */
+    public long getAnnouncementCount() {
+        return announcementRepository.count();
+    }
+
+    /**
+     * 공지사항 원본 페이지 조회 (디버그용)
+     *
+     * @param pageable 페이지네이션 정보
+     * @return 원본 페이지
+     */
+    public Page<Announcement> getAnnouncementsRaw(Pageable pageable) {
+        return announcementRepository.findAll(pageable);
     }
 }
