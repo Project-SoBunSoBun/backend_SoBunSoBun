@@ -90,5 +90,55 @@ public class AnnouncementController {
             throw e;
         }
     }
-}
 
+    /**
+     * 디버그용: 데이터베이스 상태 확인
+     */
+    @GetMapping("/debug/count")
+    public ResponseEntity<String> debugCount() {
+        try {
+            long count = announcementService.getAnnouncementCount();
+            log.info("📊 공지사항 총 개수: {}", count);
+            return ResponseEntity.ok("공지사항 총 개수: " + count);
+        } catch (Exception e) {
+            log.error("❌ 디버그 조회 실패", e);
+            e.printStackTrace();
+            return ResponseEntity.ok("오류: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 디버그용: 원본 페이지 객체 확인
+     */
+    @GetMapping("/debug/page")
+    public ResponseEntity<String> debugPage() {
+        try {
+            log.info("📊 디버그 페이지 조회 시작");
+            org.springframework.data.domain.PageRequest pageable =
+                org.springframework.data.domain.PageRequest.of(0, 20,
+                    org.springframework.data.domain.Sort.Direction.DESC, "createdAt");
+
+            org.springframework.data.domain.Page<com.sobunsobun.backend.domain.Announcement> page =
+                announcementService.getAnnouncementsRaw(pageable);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("총 개수: ").append(page.getTotalElements()).append("\n");
+            sb.append("현재 페이지: ").append(page.getNumber()).append("\n");
+            sb.append("페이지당 크기: ").append(page.getSize()).append("\n");
+            sb.append("콘텐츠 크기: ").append(page.getContent().size()).append("\n");
+
+            page.getContent().forEach(ann ->
+                sb.append("- ID: ").append(ann.getId())
+                  .append(", Title: ").append(ann.getTitle())
+                  .append(", IsPinned: ").append(ann.getIsPinned())
+                  .append("\n")
+            );
+
+            return ResponseEntity.ok(sb.toString());
+        } catch (Exception e) {
+            log.error("❌ 디버그 페이지 조회 실패", e);
+            e.printStackTrace();
+            return ResponseEntity.ok("오류: " + e.getMessage());
+        }
+    }
+}

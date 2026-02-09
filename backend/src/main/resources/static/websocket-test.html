@@ -136,6 +136,8 @@
 
         // 페이지 로드 시 URL 초기화
         window.addEventListener('load', initializeUrls);
+
+        function log(message, type = 'info') {
             const logDiv = document.getElementById('log');
             const entry = document.createElement('div');
             entry.className = `log-entry log-${type}`;
