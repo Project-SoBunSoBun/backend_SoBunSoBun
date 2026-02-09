@@ -10,9 +10,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -48,10 +46,27 @@ public class AnnouncementController {
     )
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<AnnouncementListItemResponse>>> getAnnouncements(
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            @Parameter(description = "페이지네이션 정보") Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String[] sort) {
+
         try {
-            log.info("📢 공지사항 목록 조회 요청 - 페이지: {}", pageable.getPageNumber());
+            // 페이지 사이즈 제한 (최대 100)
+            if (size > 100) {
+                size = 100;
+            }
+            if (size < 1) {
+                size = 1;
+            }
+
+            // Pageable 생성 - sort 파라미터 무시하고 항상 기본값 사용
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+            );
+
+            log.info("📢 공지사항 목록 조회 요청 - 페이지: {}, 사이즈: {}", page, size);
 
             PageResponse<AnnouncementListItemResponse> announcements = announcementService.getAnnouncements(pageable);
 
@@ -60,6 +75,9 @@ public class AnnouncementController {
             return ResponseEntity.ok(ApiResponse.success(announcements));
         } catch (Exception e) {
             log.error("❌ 공지사항 목록 조회 중 오류 발생", e);
+            log.error("오류 메시지: {}", e.getMessage());
+            log.error("오류 클래스: {}", e.getClass().getName());
+            e.printStackTrace();
             throw e;
         }
     }
