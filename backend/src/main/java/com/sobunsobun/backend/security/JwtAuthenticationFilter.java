@@ -68,6 +68,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         try {
+            // 🔴 WebSocket 요청은 HTTP 레벨 인증을 건너뜀
+            // WebSocket은 STOMP 레벨에서 Authorization을 처리
+            String requestURI = request.getRequestURI();
+            if (requestURI.startsWith("/ws/")) {
+                log.debug("📡 WebSocket 요청 - HTTP 레벨 인증 건너뜀: {}", requestURI);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             // 1. Authorization 헤더에서 JWT 토큰 추출
             String jwtToken = extractTokenFromRequest(request);
 
