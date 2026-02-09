@@ -130,7 +130,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         String token = extractToken(authHeader);
 
         if (token == null) {
-            log.warn("❌ WebSocket CONNECT: Bearer 토큰 형식 불일치 - authHeader: {}", authHeader);
+            log.warn("❌ WebSocket CONNECT: 토큰 추출 또는 검증 실패 - authHeader 형식 오류");
             return null;
         }
 
@@ -186,9 +186,11 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     }
 
     /**
-     * Authorization 헤더에서 Bearer 토큰 추출
+     * Authorization 헤더에서 토큰 추출
      *
-     * 예: "Bearer eyJhbGciOiJIUzI1NiIsInR5..." → "eyJhbGciOiJIUzI1NiIsInR5..."
+     * 두 가지 형식을 지원:
+     * 1. Bearer 형식: "Bearer eyJhbGciOiJIUzI1NiIsInR5..." → "eyJhbGciOiJIUzI1NiIsInR5..."
+     * 2. Raw 토큰: "eyJhbGciOiJIUzI1NiIsInR5..." → "eyJhbGciOiJIUzI1NiIsInR5..."
      *
      * @param authHeader Authorization 헤더 값
      * @return 토큰 (또는 null)
@@ -199,16 +201,20 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             return null;
         }
 
-        if (!authHeader.startsWith("Bearer ")) {
-            log.warn("⚠️ Authorization 헤더가 'Bearer '로 시작하지 않음: {}",
-                    authHeader.substring(0, Math.min(30, authHeader.length())));
-            return null;
+        authHeader = authHeader.trim();
+        String token;
+
+        // Bearer 형식이면 "Bearer " 제거, 아니면 raw 토큰으로 처리
+        if (authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7).trim();
+            log.debug("✅ Bearer 형식의 Authorization 헤더 감지");
+        } else {
+            token = authHeader;
+            log.debug("✅ Raw 토큰 형식의 Authorization 헤더 감지 (Bearer 접두사 없음)");
         }
 
-        String token = authHeader.substring(7).trim(); // "Bearer " 제거 및 공백 제거
-
         if (token.isEmpty()) {
-            log.warn("⚠️ Bearer 토큰이 비어있음");
+            log.warn("⚠️ 토큰이 비어있음");
             return null;
         }
 
