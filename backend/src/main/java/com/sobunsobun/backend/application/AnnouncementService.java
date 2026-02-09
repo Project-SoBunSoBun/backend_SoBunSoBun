@@ -44,21 +44,30 @@ public class AnnouncementService {
             Page<Announcement> announcementPage = announcementRepository.findAll(pageable);
             log.debug("✅ Repository findAll 호출 완료 - 총 요소: {}", announcementPage.getTotalElements());
 
+            if (announcementPage.getTotalElements() == 0) {
+                log.warn("⚠️ 공지사항이 없습니다");
+            }
+
             // Announcement 엔티티를 AnnouncementListItemResponse DTO로 변환
-            log.debug("🔄 DTO 변환 시작");
+            log.debug("🔄 DTO 변환 시작 - 컨텐츠 개수: {}", announcementPage.getContent().size());
             var content = announcementPage.getContent().stream()
                     .map(announcement -> {
-                        log.debug("  - ID: {}, Title: {}, IsPinned: {}",
-                            announcement.getId(),
-                            announcement.getTitle(),
-                            announcement.getIsPinned());
-                        return AnnouncementListItemResponse.builder()
-                                .id(announcement.getId())
-                                .title(announcement.getTitle())
-                                .category(announcement.getCategory())
-                                .isPinned(announcement.getIsPinned())
-                                .createdAt(announcement.getCreatedAt())
-                                .build();
+                        try {
+                            log.debug("  - ID: {}, Title: {}, IsPinned: {}",
+                                announcement.getId(),
+                                announcement.getTitle(),
+                                announcement.getIsPinned());
+                            return AnnouncementListItemResponse.builder()
+                                    .id(announcement.getId())
+                                    .title(announcement.getTitle())
+                                    .category(announcement.getCategory())
+                                    .isPinned(announcement.getIsPinned())
+                                    .createdAt(announcement.getCreatedAt())
+                                    .build();
+                        } catch (Exception e) {
+                            log.error("❌ DTO 변환 중 오류 - ID: {}", announcement.getId(), e);
+                            throw new RuntimeException("DTO 변환 실패: " + e.getMessage(), e);
+                        }
                     })
                     .toList();
             log.debug("✅ DTO 변환 완료 - {} 개", content.size());
@@ -77,17 +86,24 @@ public class AnnouncementService {
                     .build();
             log.debug("✅ PageInfo 생성 완료");
 
-            log.info("✅ 공지사항 목록 조회 완료 - 총 개수: {}, 현재 페이지: {}",
-                    announcementPage.getTotalElements(), announcementPage.getNumber());
-
-            return PageResponse.<AnnouncementListItemResponse>builder()
+            log.debug("📦 PageResponse 생성 중");
+            PageResponse<AnnouncementListItemResponse> response = PageResponse.<AnnouncementListItemResponse>builder()
                     .content(content)
                     .page(pageInfo)
                     .build();
+            log.debug("✅ PageResponse 생성 완료");
+
+            log.info("✅ 공지사항 목록 조회 완료 - 총 개수: {}, 현재 페이지: {}",
+                    announcementPage.getTotalElements(), announcementPage.getNumber());
+
+            return response;
         } catch (Exception e) {
             log.error("❌ 공지사항 목록 조회 중 오류 발생", e);
+            log.error("오류 메시지: {}", e.getMessage());
+            log.error("오류 클래스: {}", e.getClass().getName());
             e.printStackTrace();
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "공지사항 목록 조회에 실패했습니다.");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                "공지사항 목록 조회에 실패했습니다: " + e.getMessage());
         }
     }
 
