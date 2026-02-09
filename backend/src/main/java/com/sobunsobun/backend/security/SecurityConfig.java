@@ -57,6 +57,9 @@ public class SecurityConfig {
         // 정적 파일 접근
         "/files/**",
 
+        // 테스트용 HTML 파일
+        "/websocket-test.html",
+
         // WebSocket (STOMP 레벨에서 JWT 검증)
         "/ws/**"
     };
