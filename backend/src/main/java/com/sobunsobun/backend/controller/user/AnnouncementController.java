@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.controller.user;
 
+import com.sobunsobun.backend.application.AnnouncementService;
 import com.sobunsobun.backend.dto.announcement.AnnouncementDetailResponse;
 import com.sobunsobun.backend.dto.announcement.AnnouncementListItemResponse;
 import com.sobunsobun.backend.dto.common.ApiResponse;
@@ -25,8 +26,6 @@ import org.springframework.web.bind.annotation.*;
  * 특징:
  * - 인증 불필요 (공개 API)
  * - 모든 사용자가 접근 가능
- *
- * TODO: AnnouncementService 주입 및 구현
  */
 @Slf4j
 @Tag(name = "User - 공지사항", description = "공지사항 조회 API")
@@ -35,8 +34,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AnnouncementController {
 
-    // TODO: AnnouncementService 주입 및 구현
-    // private final AnnouncementService announcementService;
+    private final AnnouncementService announcementService;
 
     /**
      * 공지사항 목록 조회
@@ -55,11 +53,7 @@ public class AnnouncementController {
         try {
             log.info("📢 공지사항 목록 조회 요청 - 페이지: {}", pageable.getPageNumber());
 
-            // TODO: Service 호출로 교체
-            // PageResponse<AnnouncementListItemResponse> announcements = announcementService.getAnnouncements(pageable);
-
-            // 임시 응답
-            PageResponse<AnnouncementListItemResponse> announcements = new PageResponse<>();
+            PageResponse<AnnouncementListItemResponse> announcements = announcementService.getAnnouncements(pageable);
 
             log.info("✅ 공지사항 목록 조회 완료");
 
@@ -86,12 +80,7 @@ public class AnnouncementController {
         try {
             log.info("📢 공지사항 상세 조회 요청 - ID: {}", id);
 
-            // TODO: Service 호출로 교체
-            // AnnouncementDetailResponse announcement = announcementService.getAnnouncementDetail(id);
-
-            // 임시 응답
-            AnnouncementDetailResponse announcement = AnnouncementDetailResponse.builder()
-                    .build();
+            AnnouncementDetailResponse announcement = announcementService.getAnnouncementDetail(id);
 
             log.info("✅ 공지사항 상세 조회 완료 - ID: {}", id);
 
