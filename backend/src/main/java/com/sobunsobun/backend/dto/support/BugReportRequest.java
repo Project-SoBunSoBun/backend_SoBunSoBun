@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 /**
  * 버그 신고 요청 DTO
@@ -36,6 +39,11 @@ public class BugReportRequest {
     @NotBlank(message = "답변 받을 이메일은 필수입니다.")
     @Email(message = "올바른 이메일 형식이 아닙니다.")
     private String replyEmail;
+
+    /**
+     * 첨부 스크린샷 이미지 (선택, 최대 5개)
+     */
+    private List<MultipartFile> screenshots;
 
     /**
      * 디바이스 정보 (선택)
