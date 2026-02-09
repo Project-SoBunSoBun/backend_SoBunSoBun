@@ -81,7 +81,7 @@
         <div class="section">
             <h2>⚙️ Connection Settings</h2>
             <label>WebSocket URL:</label>
-            <input type="text" id="wsUrl" value="ws://localhost:8081/ws/chat">
+            <input type="text" id="wsUrl" placeholder="ws://...">
             <label>JWT Token:</label>
             <input type="text" id="token" placeholder="Bearer eyJ...">
             <button class="btn-primary" onclick="doConnect()">🔌 Connect</button>
@@ -112,8 +112,30 @@
     <script>
         let stompClient = null;
         let connected = false;
+        let apiBaseUrl = '';
 
-        function log(message, type = 'info') {
+        // 현재 서버의 호스트명과 포트를 기반으로 URL 설정
+        function initializeUrls() {
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+
+            // WebSocket URL 설정 (http -> ws, https -> wss)
+            const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = port ? `${wsProtocol}//${hostname}:${port}/ws/chat` : `${wsProtocol}//${hostname}/ws/chat`;
+
+            // API Base URL 설정
+            apiBaseUrl = port ? `${protocol}//${hostname}:${port}` : `${protocol}//${hostname}`;
+
+            // Input 필드에 설정
+            document.getElementById('wsUrl').value = wsUrl;
+
+            log(`🔧 서버 설정: ${wsUrl}`, 'info');
+            log(`📡 API Base URL: ${apiBaseUrl}`, 'info');
+        }
+
+        // 페이지 로드 시 URL 초기화
+        window.addEventListener('load', initializeUrls);
             const logDiv = document.getElementById('log');
             const entry = document.createElement('div');
             entry.className = `log-entry log-${type}`;
@@ -208,7 +230,7 @@
                 return;
             }
 
-            fetch(`http://localhost:8081/api/chat/messages/${roomId}`, {
+            fetch(`${apiBaseUrl}/api/chat/messages/${roomId}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': token,
