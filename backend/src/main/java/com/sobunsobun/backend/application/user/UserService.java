@@ -2,6 +2,11 @@ package com.sobunsobun.backend.application.user;
 
 import com.sobunsobun.backend.application.file.FileStorageService;
 import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.domain.UserStatus;
+import com.sobunsobun.backend.domain.WithdrawalReason;
+import com.sobunsobun.backend.dto.account.WithdrawRequest;
+import com.sobunsobun.backend.dto.account.WithdrawResponse;
+import com.sobunsobun.backend.repository.WithdrawalReasonRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.support.util.NicknameNormalizer;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +37,7 @@ import java.time.LocalDateTime;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final WithdrawalReasonRepository withdrawalReasonRepository;
     private final NicknameNormalizer nicknameNormalizer;
     private final FileStorageService fileStorageService;
 
@@ -347,32 +355,92 @@ public class UserService {
     /**
      * 회원 탈퇴 처리
      *
-     * 사용자 상태를 DELETED로 변경하고 탈퇴 일시를 기록합니다.
+     * 1. 사용자 상태를 DELETED로 변경
+     * 2. withdrawn_at에 탈퇴 일시 저장
+     * 3. 탈퇴 사유 기록
      *
      * @param userId 탈퇴할 사용자 ID
-     * @throws ResponseStatusException 사용자 없음
+     * @param request 탈퇴 사유 정보
+     * @return 탈퇴 응답 정보
+     * @throws ResponseStatusException 사용자 없음 또는 이미 탈퇴한 사용자
      */
     @Transactional
-    public void withdrawUser(Long userId) {
-        log.info("[사용자 작동] 회원 탈퇴 시작 - 사용자 ID: {}", userId);
+    public WithdrawResponse withdrawUser(Long userId, WithdrawRequest request) {
+        log.info("[사용자 작동] 회원 탈퇴 시작 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
 
+        // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
                     log.error("사용자 없음 - 사용자 ID: {}", userId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
                 });
 
-        // 이미 탈퇴한 사용자인 경우
-        if (user.getStatus() == com.sobunsobun.backend.domain.UserStatus.DELETED) {
+        // 2. 이미 탈퇴한 사용자 확인
+        if (user.getStatus() == UserStatus.DELETED) {
             log.warn("이미 탈퇴한 사용자 - 사용자 ID: {}", userId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 탈퇴한 사용자입니다.");
         }
 
-        // 사용자 상태를 DELETED로 변경하고 탈퇴 일시 기록
-        user.setStatus(com.sobunsobun.backend.domain.UserStatus.DELETED);
-        user.setWithdrawnAt(LocalDateTime.now());
-
+        // 3. 사용자 상태 변경 및 탈퇴 일시 저장
+        LocalDateTime withdrawnAt = LocalDateTime.now();
+        user.setStatus(UserStatus.DELETED);
+        user.setWithdrawnAt(withdrawnAt);
         userRepository.saveAndFlush(user);
-        log.info("[사용자 작동] 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, user.getWithdrawnAt());
+
+        log.info("✅ 사용자 상태 변경 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, withdrawnAt);
+
+        // 4. 탈퇴 사유 저장
+        WithdrawalReason withdrawalReason = WithdrawalReason.builder()
+                .user(user)
+                .reasonCode(request.getReasonCode())
+                .reasonDetail(request.getReasonDetail())
+                .build();
+
+        withdrawalReasonRepository.save(withdrawalReason);
+        log.info("✅ 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
+
+        // 5. 응답 반환
+        return WithdrawResponse.builder()
+                .message("회원탈퇴가 완료되었습니다.")
+                .withdrawnAt(withdrawnAt)
+                .dataRetentionDays(30)  // 개인정보 보관 기간
+                .build();
+    }
+
+    /**
+     * 회원 탈퇴 사유 조회
+     *
+     * 탈퇴한 사용자의 탈퇴 사유를 조회합니다.
+     *
+     * @param userId 조회할 사용자 ID
+     * @return 탈퇴 사유 정보
+     * @throws ResponseStatusException 사용자 없음 또는 탈퇴 사유 없음
+     */
+    public com.sobunsobun.backend.dto.account.WithdrawalReasonResponse getWithdrawalReason(Long userId) {
+        log.info("[사용자 작동] 회원 탈퇴 사유 조회 - 사용자 ID: {}", userId);
+
+        // 1. 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
+
+        // 2. 탈퇴 사유 조회
+        WithdrawalReason reason = withdrawalReasonRepository.findByUserId(userId)
+                .orElseThrow(() -> {
+                    log.error("탈퇴 사유 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "탈퇴 사유 정보를 찾을 수 없습니다.");
+                });
+
+        log.info("✅ 탈퇴 사유 조회 완료 - 사용자 ID: {}, 사유: {}", userId, reason.getReasonCode());
+
+        return com.sobunsobun.backend.dto.account.WithdrawalReasonResponse.builder()
+                .id(reason.getId())
+                .reasonCode(reason.getReasonCode())
+                .reasonDetail(reason.getReasonDetail())
+                .withdrawnAt(user.getWithdrawnAt())
+                .createdAt(reason.getCreatedAt())
+                .build();
     }
 }
