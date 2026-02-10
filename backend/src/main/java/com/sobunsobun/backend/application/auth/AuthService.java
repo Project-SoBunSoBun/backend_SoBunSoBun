@@ -318,33 +318,12 @@ public class AuthService {
     /**
      * 사용자 검색 또는 생성 (신규 회원가입용)
      * AuthProvider로 카카오 OAuth ID 관리
-     *
-     * 탈퇴한 사용자 재가입: withdrawn_at을 null로 초기화하여 재활성화
      */
     private User findOrCreateUser(String email, String oauthId) {
         // 1. AuthProvider로 기존 사용자 확인
-        var authProvider = authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId);
-
-        if (authProvider.isPresent()) {
-            User existingUser = authProvider.get().getUser();
-
-            // 2. 탈퇴한 사용자인 경우 재활성화
-            if (existingUser.getStatus() == UserStatus.DELETED) {
-                log.info("♻️ 탈퇴한 사용자 재가입 처리 - 사용자 ID: {}, 기존 탈퇴일: {}",
-                        existingUser.getId(), existingUser.getWithdrawnAt());
-
-                existingUser.setStatus(UserStatus.ACTIVE);
-                existingUser.setWithdrawnAt(null);  // withdrawn_at을 null로 초기화
-                userRepository.saveAndFlush(existingUser);
-
-                log.info("✅ 사용자 상태 재활성화 완료 - 사용자 ID: {}", existingUser.getId());
-            }
-
-            return existingUser;
-        }
-
-        // 3. 신규 사용자 생성
-        return createNewUserWithAuthProvider(email, oauthId);
+        return authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId)
+                .map(AuthProvider::getUser)
+                .orElseGet(() -> createNewUserWithAuthProvider(email, oauthId));
     }
 
     /**

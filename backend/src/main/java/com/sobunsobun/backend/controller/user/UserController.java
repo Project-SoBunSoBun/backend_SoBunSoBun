@@ -5,6 +5,9 @@ import com.sobunsobun.backend.application.user.MyProfileService;
 import com.sobunsobun.backend.dto.user.NicknameRequest;
 import com.sobunsobun.backend.dto.user.ProfileUpdateRequest;
 import com.sobunsobun.backend.dto.user.UserProfileResponse;
+import com.sobunsobun.backend.dto.account.WithdrawRequest;
+import com.sobunsobun.backend.dto.account.WithdrawResponse;
+import com.sobunsobun.backend.dto.account.WithdrawalReasonResponse;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -350,35 +353,74 @@ public class UserController {
     /**
      * 회원 탈퇴 API - 인증 필요
      *
-     * 사용자 계정을 탈퇴 처리합니다.
-     * withdrawn_at에 탈퇴 일시를 기록합니다.
+     * 사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다.
+     * 동시에 탈퇴 사유를 withdrawal_reason 테이블에 저장합니다.
+     *
+     * 요청 본문:
+     * {
+     *   "reasonCode": "RARELY_USED|NO_NEARBY_POSTS|INCONVENIENT|PRIVACY_CONCERN|BAD_EXPERIENCE|OTHER",
+     *   "reasonDetail": "선택적 상세 사유 (최대 100자)",
+     *   "agreedToTerms": true
+     * }
      *
      * @param principal JWT에서 추출된 사용자 정보
-     * @return 탈퇴 결과
+     * @param request 탈퇴 요청 정보 (사유 코드 및 상세)
+     * @return 탈퇴 응답 정보
      */
     @Operation(
         summary = "회원 탈퇴",
-        description = "사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다."
+        description = "사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다. 탈퇴 사유는 withdrawal_reason 테이블에 저장됩니다."
     )
     @PostMapping("/me/withdraw")
-    public ResponseEntity<Map<String, Object>> withdrawUser(
+    public ResponseEntity<WithdrawResponse> withdrawUser(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @RequestBody @Valid WithdrawRequest request) {
+
+        try {
+            Long userId = principal.id();
+            log.info("🚪 회원 탈퇴 요청 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
+
+            WithdrawResponse response = userService.withdrawUser(userId, request);
+
+            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, response.getWithdrawnAt());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ 회원 탈퇴 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * 회원 탈퇴 사유 조회 API - 인증 필요
+     *
+     * 탈퇴한 사용자의 탈퇴 사유 및 상세 정보를 조회합니다.
+     * 관리자 또는 해당 사용자만 조회 가능합니다.
+     *
+     * @param principal JWT에서 추출된 사용자 정보
+     * @return 탈퇴 사유 정보
+     */
+    @Operation(
+        summary = "회원 탈퇴 사유 조회",
+        description = "탈퇴한 사용자의 탈퇴 사유 세부 내용을 조회합니다."
+    )
+    @GetMapping("/me/withdraw/reasons")
+    public ResponseEntity<WithdrawalReasonResponse> getWithdrawalReason(
             @Parameter(hidden = true)
             @AuthenticationPrincipal JwtUserPrincipal principal) {
 
         try {
             Long userId = principal.id();
-            log.info("🚪 회원 탈퇴 요청 - 사용자 ID: {}", userId);
+            log.info("📋 회원 탈퇴 사유 조회 요청 - 사용자 ID: {}", userId);
 
-            userService.withdrawUser(userId);
+            WithdrawalReasonResponse response = userService.getWithdrawalReason(userId);
 
-            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}", userId);
+            log.info("✅ 회원 탈퇴 사유 조회 완료 - 사용자 ID: {}, 사유: {}", userId, response.getReasonCode());
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "회원탈퇴가 완료되었습니다.",
-                    "withdrawn", true
-            ));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("❌ 회원 탈퇴 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            log.error("❌ 회원 탈퇴 사유 조회 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
             throw e;
         }
     }
