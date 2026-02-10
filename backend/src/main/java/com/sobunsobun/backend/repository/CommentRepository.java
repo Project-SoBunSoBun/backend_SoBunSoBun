@@ -19,7 +19,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     /**
      * 게시글의 모든 활성 부모 댓글 조회 (대댓글 제외)
      * 삭제되지 않은 부모 댓글만 반환
-     * 최신순으로 정렬
+     * 오래된순으로 정렬
      *
      * @param postId 게시글 ID
      * @return 부모 댓글 목록 (대댓글 제외)
@@ -28,7 +28,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
            "WHERE c.post.id = :postId " +
            "AND c.parentComment IS NULL " +
            "AND c.deleted = false " +
-           "ORDER BY c.createdAt DESC")
+           "ORDER BY c.createdAt ASC")
     List<Comment> findActiveParentCommentsByPostId(@Param("postId") Long postId);
 
     /**
