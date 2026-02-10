@@ -95,6 +95,12 @@ public class User {
     private LocalDateTime updatedAt;
 
     /**
+     * 탈퇴 일시 (회원 탈퇴 시에만 입력)
+     */
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
+
+    /**
      * OAuth 제공자 추가 헬퍼 메서드
      */
     public void addAuthProvider(AuthProvider authProvider) {

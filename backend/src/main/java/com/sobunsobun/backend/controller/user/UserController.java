@@ -346,4 +346,40 @@ public class UserController {
             throw e;
         }
     }
+
+    /**
+     * 회원 탈퇴 API - 인증 필요
+     *
+     * 사용자 계정을 탈퇴 처리합니다.
+     * withdrawn_at에 탈퇴 일시를 기록합니다.
+     *
+     * @param principal JWT에서 추출된 사용자 정보
+     * @return 탈퇴 결과
+     */
+    @Operation(
+        summary = "회원 탈퇴",
+        description = "사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다."
+    )
+    @PostMapping("/me/withdraw")
+    public ResponseEntity<Map<String, Object>> withdrawUser(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal JwtUserPrincipal principal) {
+
+        try {
+            Long userId = principal.id();
+            log.info("🚪 회원 탈퇴 요청 - 사용자 ID: {}", userId);
+
+            userService.withdrawUser(userId);
+
+            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}", userId);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "회원탈퇴가 완료되었습니다.",
+                    "withdrawn", true
+            ));
+        } catch (Exception e) {
+            log.error("❌ 회원 탈퇴 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            throw e;
+        }
+    }
 }

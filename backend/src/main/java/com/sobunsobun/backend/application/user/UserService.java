@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+
 /**
  * 사용자 비즈니스 로직 서비스
  *
@@ -340,5 +342,37 @@ public class UserService {
         userRepository.saveAndFlush(user);
 
         log.info("[사용자 작동] 위치 인증 업데이트 완료 - 사용자 ID: {}, 인증 시간: {}", userId, user.getLocationVerifiedAt());
+    }
+
+    /**
+     * 회원 탈퇴 처리
+     *
+     * 사용자 상태를 DELETED로 변경하고 탈퇴 일시를 기록합니다.
+     *
+     * @param userId 탈퇴할 사용자 ID
+     * @throws ResponseStatusException 사용자 없음
+     */
+    @Transactional
+    public void withdrawUser(Long userId) {
+        log.info("[사용자 작동] 회원 탈퇴 시작 - 사용자 ID: {}", userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("사용자 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다.");
+                });
+
+        // 이미 탈퇴한 사용자인 경우
+        if (user.getStatus() == com.sobunsobun.backend.domain.UserStatus.DELETED) {
+            log.warn("이미 탈퇴한 사용자 - 사용자 ID: {}", userId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 탈퇴한 사용자입니다.");
+        }
+
+        // 사용자 상태를 DELETED로 변경하고 탈퇴 일시 기록
+        user.setStatus(com.sobunsobun.backend.domain.UserStatus.DELETED);
+        user.setWithdrawnAt(LocalDateTime.now());
+
+        userRepository.saveAndFlush(user);
+        log.info("[사용자 작동] 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, user.getWithdrawnAt());
     }
 }
