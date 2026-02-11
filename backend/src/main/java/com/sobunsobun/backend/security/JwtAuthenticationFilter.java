@@ -146,6 +146,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(authorizationHeader)) {
             if (authorizationHeader.startsWith(BEARER_PREFIX)) {
                 String token = authorizationHeader.substring(BEARER_PREFIX_LENGTH);
+
+                // 토큰 내에 "Bearer "가 또 있으면 제거 (Bearer 중복 방지)
+                if (token.startsWith(BEARER_PREFIX)) {
+                    log.warn("⚠️ Bearer 중복 발견 - 정리 중...");
+                    token = token.substring(BEARER_PREFIX_LENGTH);
+                }
+
                 log.info("📥 Authorization 헤더에서 토큰 추출 성공 (길이: {})", token.length());
                 return token;
             } else {
