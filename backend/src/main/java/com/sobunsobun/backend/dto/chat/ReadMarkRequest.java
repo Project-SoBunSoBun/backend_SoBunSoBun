@@ -9,10 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class SettlementCardPayload {
-    private Long settlementId;
-    private String status;
-    private String title;
-    private Integer totalAmount;
-    private String completedAt;
+public class ReadMarkRequest {
+    private Long roomId;
+    private Long lastReadMessageId;
 }

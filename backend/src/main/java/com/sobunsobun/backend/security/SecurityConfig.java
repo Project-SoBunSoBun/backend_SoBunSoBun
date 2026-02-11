@@ -58,9 +58,12 @@ public class SecurityConfig {
         "/files/**",
 
         // 테스트용 HTML 파일
-        "/websocket-test.html",
+        "/chat-test.html",
 
-        // WebSocket (STOMP 레벨에서 JWT 검증)
+        // WebSocket (SockJS + STOMP) - HTTP 레벨에서 인증 건너뜀
+        // STOMP 레벨에서 JWT 검증
+        "/ws/chat",
+        "/ws/chat/**",
         "/ws/**"
     };
 

@@ -11,13 +11,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ChatRoomResponse {
-    private Long id;
-    private String name;
-    private String roomType;
-    private Long ownerId;
-    private Integer memberCount;
+public class ReadEvent {
+    private Long roomId;
+    private Long userId;
+    private Long lastReadMessageId;
     private Long unreadCount;
-    private String lastMessagePreview;
-    private LocalDateTime lastMessageAt;
+    private LocalDateTime timestamp;
 }

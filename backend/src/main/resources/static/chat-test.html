@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채팅 테스트 - WebSocket STOMP</title>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 { color: #333; margin-top: 0; }
+        .section {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px 0;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        textarea { resize: vertical; height: 60px; }
+        button {
+            padding: 12px 20px;
+            margin: 5px 5px 5px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            background: #667eea;
+            color: white;
+            font-size: 14px;
+        }
+        button:hover { background: #5568d3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status.connected { background: #d4edda; color: #155724; border: 2px solid #28a745; }
+        .status.disconnected { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; }
+        .log {
+            background: #1e1e1e;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .log-entry { margin: 3px 0; border-bottom: 1px solid #333; }
+        .log-success { color: #0f0; }
+        .log-error { color: #f44; }
+        .log-info { color: #0ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 채팅 WebSocket 테스트</h1>
+        <div id="status" class="status disconnected">❌ 연결 안됨</div>
+
+        <div class="section">
+            <h2>⚙️ 연결 설정</h2>
+            <label>SockJS 엔드포인트:</label>
+            <input type="text" id="wsUrl" value="http://localhost:8081/ws/chat">
+            <label>인증 토큰:</label>
+            <input type="text" id="token" placeholder="Bearer token 입력 (선택사항)">
+            <button onclick="connect()">🔌 연결</button>
+            <button onclick="disconnect()">❌ 연결 해제</button>
+        </div>
+
+        <div class="section">
+            <h2>📡 채팅방 구독</h2>
+            <label>채팅방 ID:</label>
+            <input type="text" id="roomId" value="1">
+            <button onclick="subscribe()">📡 구독</button>
+            <button onclick="unsubscribe()">❌ 구독 취소</button>
+        </div>
+
+        <div class="section">
+            <h2>📋 안 읽은 메시지 목록</h2>
+            <button onclick="loadChatRoomList()">🔄 채팅방 목록 새로고침</button>
+            <div id="chatRoomList" style="margin-top: 20px; background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd;"></div>
+        </div>
+
+        <div class="section">
+            <h2>💬 메시지 전송</h2>
+            <label>메시지:</label>
+            <textarea id="messageContent" placeholder="메시지 입력 (한글 가능)"></textarea>
+            <button onclick="sendMessage()">📤 전송</button>
+        </div>
+
+        <div class="section">
+            <h2>📖 읽음 처리</h2>
+            <label>마지막으로 읽은 메시지 ID:</label>
+            <input type="text" id="lastReadMessageId" placeholder="메시지 ID 입력 (예: 5)">
+            <button onclick="markAsRead()">✅ 읽음 처리</button>
+        </div>
+
+        <div class="section">
+            <h2>📋 로그</h2>
+            <button onclick="clearLog()">🗑️ 지우기</button>
+            <div id="log" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let client = null;
+        let connected = false;
+        let subscription = null;
+
+        function log(message, type = 'info') {
+            console.log(`[${type}] ${message}`);
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('📋 로그 초기화됨', 'info');
+        }
+
+        function updateStatus(isConnected) {
+            connected = isConnected;
+            const statusDiv = document.getElementById('status');
+            if (isConnected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '✅ 연결됨';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ 연결 안됨';
+            }
+        }
+
+        function connect() {
+            try {
+                const wsUrl = document.getElementById('wsUrl').value;
+                const token = document.getElementById('token').value || 'test-token';
+
+                if (!wsUrl) {
+                    log('❌ SockJS 엔드포인트를 입력하세요', 'error');
+                    return;
+                }
+
+                log(`🔌 연결 시도: ${wsUrl}`, 'info');
+                log(`📋 Token: ${token}`, 'info');
+
+                const socket = new SockJS(wsUrl);
+                client = Stomp.over(socket);
+
+                // STOMP 디버그 모드 비활성화 - DEBUG 로그 제거
+                // client.debug = function(msg) {
+                //     log(`[STOMP DEBUG] ${msg}`, 'info');
+                // };
+
+                client.connect(
+                    { 'Authorization': `Bearer ${token}` },
+                    function(frame) {
+                        log('✅ STOMP 연결 성공!', 'success');
+                        log(`Frame: ${frame.command}`, 'success');
+                        updateStatus(true);
+
+                        // ✅ 개인 큐 구독 (읽음 처리 응답 수신)
+                        client.subscribe('/user/queue/private', function(message) {
+                            try {
+                                const data = JSON.parse(message.body);
+                                if (data.type === 'READ_COMPLETE') {
+                                    log(`✅ 읽음 처리 응답: ${data.message}`, 'success');
+                                    log(`📋 채팅방 ${data.roomId}의 unreadCount가 초기화됩니다.`, 'success');
+                                } else {
+                                    log(`📩 개인 메시지: ${data.message}`, 'info');
+                                }
+                            } catch (e) {
+                                log(`📩 ${message.body}`, 'info');
+                            }
+                        });
+                    },
+                    function(error) {
+                        log(`❌ 연결 실패: ${error}`, 'error');
+                        console.error('STOMP connection error:', error);
+                        updateStatus(false);
+                    }
+                );
+
+            } catch (error) {
+                log(`❌ 예외: ${error.message}`, 'error');
+                console.error('Exception:', error);
+            }
+        }
+
+        function disconnect() {
+            try {
+                if (client && client.connected) {
+                    client.disconnect(function() {
+                        log('✅ 연결 해제됨', 'info');
+                        updateStatus(false);
+                    });
+                } else {
+                    log('❌ 연결되어 있지 않습니다', 'error');
+                }
+            } catch (error) {
+                log(`❌ 에러: ${error.message}`, 'error');
+            }
+        }
+
+        function subscribe() {
+            try {
+                if (!client || !client.connected) {
+                    log('❌ 먼저 연결하세요', 'error');
+                    return;
+                }
+
+                const roomId = document.getElementById('roomId').value;
+                if (!roomId) {
+                    log('❌ 채팅방 ID를 입력하세요', 'error');
+                    return;
+                }
+
+                const destination = `/topic/rooms/${roomId}`;
+
+                if (subscription) {
+                    subscription.unsubscribe();
+                }
+
+                subscription = client.subscribe(destination, function(message) {
+                    try {
+                        const body = JSON.parse(message.body);
+                        log(`📩 메시지 수신: ${body.content || message.body}`, 'success');
+                    } catch (e) {
+                        log(`📩 ${message.body}`, 'success');
+                    }
+                });
+
+                log(`✅ 구독 성공: ${destination}`, 'success');
+
+                // 구독 후 과거 메시지 불러오기
+                loadHistoryMessages(roomId);
+
+            } catch (error) {
+                log(`❌ 구독 에러: ${error.message}`, 'error');
+            }
+        }
+
+        // 과거 메시지 불러오기 및 자동 읽음 처리
+        function loadHistoryMessages(roomId) {
+            try {
+                const apiUrl = `http://localhost:8081/api/v1/chat/rooms/${roomId}/messages?page=0&size=50`;
+
+                log(`📥 과거 메시지 불러오는 중...`, 'info');
+
+                let tokenValue = document.getElementById('token').value || 'test-token';
+                // Bearer가 없으면 추가, 있으면 그대로 사용
+                if (!tokenValue.startsWith('Bearer ')) {
+                    tokenValue = 'Bearer ' + tokenValue;
+                }
+
+                fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': tokenValue,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // data.data가 PageImpl 형태 또는 직접 content 배열
+                    let messages = [];
+
+                    if (data.data && Array.isArray(data.data.content)) {
+                        messages = data.data.content;
+                    } else if (Array.isArray(data.data)) {
+                        messages = data.data;
+                    } else if (data.content) {
+                        messages = data.content;
+                    }
+
+                    if (messages.length > 0) {
+                        log(`📥 ${messages.length}개의 과거 메시지 불러옴`, 'info');
+
+                        // 시간순으로 정렬 (오래된순)
+                        messages.reverse().forEach(msg => {
+                            log(`📜 [이전] ${msg.senderName}: ${msg.content}`, 'info');
+                        });
+
+                        // ✅ 자동 읽음 처리: 마지막 메시지 ID로 읽음 표시 (즉시 처리)
+                        const lastMessage = messages[messages.length - 1];
+                        if (lastMessage && lastMessage.id) {
+                            log(`📖 구독 완료 - 자동 읽음 처리: 메시지 ID ${lastMessage.id}`, 'info');
+
+                            // 자동 읽음 처리 실행 (지연 없음 - 바로 처리)
+                            autoMarkAsRead(roomId, lastMessage.id);
+                        }
+                    } else {
+                        log(`⚠️ 과거 메시지 없음`, 'info');
+                    }
+                })
+                .catch(error => {
+                    log(`⚠️ 과거 메시지 불러오기 실패: ${error.message}`, 'error');
+                    console.error('History load error:', error);
+                });
+
+            } catch (error) {
+                log(`❌ 에러: ${error.message}`, 'error');
+            }
+        }
+
+        // ✅ 자동 읽음 처리 함수 (채팅방 입장 시 호출)
+        function autoMarkAsRead(roomId, lastReadMessageId) {
+            try {
+                if (!client || !client.connected) {
+                    log('❌ 아직 연결되지 않음 - 읽음 처리 스킵', 'warn');
+                    return;
+                }
+
+                const payload = {
+                    roomId: parseInt(roomId),
+                    lastReadMessageId: parseInt(lastReadMessageId)
+                };
+
+                client.send('/app/chat/read', {}, JSON.stringify(payload));
+                log(`✅ 자동 읽음 처리 완료 - messageId: ${lastReadMessageId}`, 'success');
+
+            } catch (error) {
+                log(`⚠️ 자동 읽음 처리 실패: ${error.message}`, 'warn');
+            }
+        }
+
+        function unsubscribe() {
+            try {
+                if (subscription) {
+                    subscription.unsubscribe();
+                    log('✅ 구독 취소됨', 'info');
+                    subscription = null;
+                } else {
+                    log('❌ 구독 중인 채팅방이 없습니다', 'error');
+                }
+            } catch (error) {
+                log(`❌ 에러: ${error.message}`, 'error');
+            }
+        }
+
+        function sendMessage() {
+            try {
+                if (!client || !client.connected) {
+                    log('❌ 먼저 연결하세요', 'error');
+                    return;
+                }
+
+                const roomId = document.getElementById('roomId').value;
+                const content = document.getElementById('messageContent').value;
+
+                if (!roomId) {
+                    log('❌ 채팅방 ID를 입력하세요', 'error');
+                    return;
+                }
+
+                if (!content) {
+                    log('❌ 메시지를 입력하세요', 'error');
+                    return;
+                }
+
+                const payload = {
+                    roomId: parseInt(roomId),
+                    type: 'TEXT',
+                    content: content
+                };
+
+                log(`📤 메시지 전송: ${content}`, 'info');
+
+                client.send('/app/chat/send', {}, JSON.stringify(payload));
+
+                log('✅ 전송 완료', 'success');
+                document.getElementById('messageContent').value = '';
+
+            } catch (error) {
+                log(`❌ 전송 에러: ${error.message}`, 'error');
+            }
+        }
+
+        // 채팅방 목록 조회 (안 읽은 메시지 포함)
+        function loadChatRoomList() {
+            try {
+                const apiUrl = `http://localhost:8081/api/v1/chat/rooms?page=0&size=20`;
+
+                log(`📋 채팅방 목록 조회 중...`, 'info');
+
+                let tokenValue = document.getElementById('token').value || 'test-token';
+                if (!tokenValue.startsWith('Bearer ')) {
+                    tokenValue = 'Bearer ' + tokenValue;
+                }
+
+                fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': tokenValue,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const chatRoomList = document.getElementById('chatRoomList');
+                    chatRoomList.innerHTML = '';
+
+                    if (!data.content || data.content.length === 0) {
+                        chatRoomList.innerHTML = '<p style="color: #999;">채팅방이 없습니다.</p>';
+                        log('📋 채팅방 없음', 'info');
+                        return;
+                    }
+
+                    log(`📋 ${data.content.length}개의 채팅방 조회됨`, 'success');
+
+                    // 채팅방 목록 렌더링
+                    data.content.forEach(room => {
+                        const roomDiv = document.createElement('div');
+                        roomDiv.style.cssText = 'padding: 12px; margin-bottom: 10px; background: #f5f5f5; border-radius: 5px; border-left: 3px solid #667eea;';
+
+                        const unreadBadge = room.unreadCount > 0
+                            ? `<span style="background: #ff6b6b; color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold; margin-left: 10px;">${room.unreadCount}개</span>`
+                            : '<span style="color: #999; margin-left: 10px;">읽음</span>';
+
+                        roomDiv.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${room.name}</strong>
+                                    <div style="color: #666; font-size: 12px; margin-top: 3px;">${room.lastMessagePreview}</div>
+                                </div>
+                                ${unreadBadge}
+                            </div>
+                        `;
+
+                        chatRoomList.appendChild(roomDiv);
+
+                        // 로그 출력
+                        const unreadText = room.unreadCount > 0 ? `[안읽음: ${room.unreadCount}개]` : '[읽음]';
+                        log(`  📱 ${room.name}: ${unreadText}`, 'info');
+                    });
+
+                })
+                .catch(error => {
+                    log(`⚠️ 채팅방 목록 조회 실패: ${error.message}`, 'error');
+                    console.error('List load error:', error);
+                    const chatRoomList = document.getElementById('chatRoomList');
+                    chatRoomList.innerHTML = `<p style="color: #f44;">조회 실패: ${error.message}</p>`;
+                });
+
+            } catch (error) {
+                log(`❌ 에러: ${error.message}`, 'error');
+            }
+        }
+
+        // 읽음 처리
+        function markAsRead() {
+            try {
+                if (!client || !client.connected) {
+                    log('❌ 먼저 연결하세요', 'error');
+                    return;
+                }
+
+                const roomId = document.getElementById('roomId').value;
+                const lastReadMessageId = document.getElementById('lastReadMessageId').value;
+
+                if (!roomId) {
+                    log('❌ 채팅방 ID를 입력하세요', 'error');
+                    return;
+                }
+
+                if (!lastReadMessageId) {
+                    log('❌ 마지막 읽은 메시지 ID를 입력하세요', 'error');
+                    return;
+                }
+
+                const payload = {
+                    roomId: parseInt(roomId),
+                    lastReadMessageId: parseInt(lastReadMessageId)
+                };
+
+                log(`📖 읽음 처리 전송: roomId=${roomId}, messageId=${lastReadMessageId}`, 'info');
+
+                client.send('/app/chat/read', {}, JSON.stringify(payload));
+
+                log('✅ 읽음 처리 완료', 'success');
+
+                // 1초 후 채팅방 목록 자동 새로고침
+                setTimeout(() => {
+                    log('🔄 채팅방 목록 자동 갱신 중...', 'info');
+                    loadChatRoomList();
+                }, 1000);
+
+            } catch (error) {
+                log(`❌ 읽음 처리 에러: ${error.message}`, 'error');
+            }
+        }
+
+        window.addEventListener('load', function() {
+            log('🎯 채팅 테스트 준비 완료', 'info');
+            log('💡 1. 연결 → 2. 구독 → 3. 메시지 전송 순서로 진행하세요', 'info');
+        });
+    </script>
+</body>
+</html>
