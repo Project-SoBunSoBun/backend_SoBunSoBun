@@ -1,6 +1,6 @@
 package com.sobunsobun.backend.dto.chat;
 
-import com.sobunsobun.backend.domain.chat.ChatMessageType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +18,7 @@ public class MessageResponse {
     private Long senderId;
     private String senderName;
     private String senderProfileImageUrl;
-    private ChatMessageType type;
+    private String type;
     private String content;
     private String imageUrl;
     private String cardPayload;
