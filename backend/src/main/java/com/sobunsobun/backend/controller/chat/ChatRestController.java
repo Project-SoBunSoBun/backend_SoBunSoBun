@@ -5,6 +5,10 @@ import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.application.chat.ChatRoomService;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
+import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
+import com.sobunsobun.backend.dto.chat.CreatePrivateChatRoomRequest;
+import com.sobunsobun.backend.dto.chat.CreateGroupChatRoomRequest;
+import com.sobunsobun.backend.dto.chat.CreateChatRoomResponse;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -126,7 +130,7 @@ public class ChatRestController {
      * 응답: 최신순 정렬된 채팅방 목록, 각 채팅방에 unreadCount 포함
      */
     @GetMapping("/rooms")
-    public ResponseEntity<?> getChatRooms(
+    public ResponseEntity<Page<ChatRoomResponse>> getChatRooms(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Principal principal
@@ -140,20 +144,20 @@ public class ChatRestController {
             Page<ChatRoom> chatRooms = chatRoomRepository.findUserChatRooms(userId, pageable);
 
             // DTO 변환 (unreadCount 포함)
-            List<Map<String, Object>> responses = chatRooms.getContent()
+            List<ChatRoomResponse> responses = chatRooms.getContent()
                     .stream()
                     .map(room -> {
                         long unreadCount = chatMemberRepository.countUnreadMessages(room.getId(), userId);
-                        Map<String, Object> map = new java.util.HashMap<>();
-                        map.put("id", room.getId());
-                        map.put("name", room.getName() != null ? room.getName() : "");
-                        map.put("roomType", room.getRoomType().toString());
-                        map.put("ownerId", room.getOwner() != null ? room.getOwner().getId() : 0L);
-                        map.put("memberCount", room.getMembers().size());
-                        map.put("unreadCount", unreadCount);
-                        map.put("lastMessagePreview", room.getLastMessagePreview() != null ? room.getLastMessagePreview() : "");
-                        map.put("lastMessageAt", room.getLastMessageAt());
-                        return map;
+                        return ChatRoomResponse.builder()
+                                .id(room.getId())
+                                .name(room.getName() != null ? room.getName() : "")
+                                .roomType(room.getRoomType().toString())
+                                .ownerId(room.getOwner() != null ? room.getOwner().getId() : 0L)
+                                .memberCount(room.getMembers().size())
+                                .unreadCount(unreadCount)
+                                .lastMessagePreview(room.getLastMessagePreview() != null ? room.getLastMessagePreview() : "")
+                                .lastMessageAt(room.getLastMessageAt())
+                                .build();
                     })
                     .collect(Collectors.toList());
 
@@ -165,9 +169,7 @@ public class ChatRestController {
 
         } catch (Exception e) {
             log.error("❌ 채팅방 목록 조회 오류: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(java.util.Map.of(
-                    "error", e.getMessage()
-            ));
+            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -193,29 +195,28 @@ public class ChatRestController {
      * 개인 채팅방 생성
      */
     @PostMapping("/rooms/private")
-    public ResponseEntity<?> createPrivateChatRoom(
-            @RequestBody Map<String, Long> request,
+    public ResponseEntity<CreateChatRoomResponse> createPrivateChatRoom(
+            @RequestBody CreatePrivateChatRoomRequest request,
             Principal principal
     ) {
         try {
             Long userId = extractUserIdFromPrincipal(principal);
-            Long otherUserId = request.get("otherUserId");
 
-            log.info("🔒 개인 채팅방 생성 - userId: {}, otherUserId: {}", userId, otherUserId);
+            log.info("🔒 개인 채팅방 생성 - userId: {}, otherUserId: {}", userId, request.getOtherUserId());
 
-            ChatRoom chatRoom = chatRoomService.getOrCreatePrivateChatRoom(userId, otherUserId);
+            ChatRoom chatRoom = chatRoomService.getOrCreatePrivateChatRoom(userId, request.getOtherUserId());
 
-            return ResponseEntity.ok(java.util.Map.of(
-                    "roomId", chatRoom.getId(),
-                    "roomName", chatRoom.getName(),
-                    "roomType", chatRoom.getRoomType(),
-                    "message", "✅ 개인 채팅방 생성/조회 성공"
-            ));
+            CreateChatRoomResponse response = CreateChatRoomResponse.builder()
+                    .roomId(chatRoom.getId())
+                    .roomName(chatRoom.getName())
+                    .roomType(chatRoom.getRoomType().toString())
+                    .message("✅ 개인 채팅방 생성/조회 성공")
+                    .build();
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("❌ 채팅방 생성 오류: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(java.util.Map.of(
-                    "error", e.getMessage()
-            ));
+            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -223,30 +224,28 @@ public class ChatRestController {
      * 단체 채팅방 생성
      */
     @PostMapping("/rooms/group")
-    public ResponseEntity<?> createGroupChatRoom(
-            @RequestBody Map<String, Object> request,
+    public ResponseEntity<CreateChatRoomResponse> createGroupChatRoom(
+            @RequestBody CreateGroupChatRoomRequest request,
             Principal principal
     ) {
         try {
             Long userId = extractUserIdFromPrincipal(principal);
-            String roomName = (String) request.get("roomName");
-            Long groupPostId = ((Number) request.get("groupPostId")).longValue();
 
-            log.info("👥 단체 채팅방 생성 - roomName: {}, groupPostId: {}", roomName, groupPostId);
+            log.info("👥 단체 채팅방 생성 - roomName: {}, groupPostId: {}", request.getRoomName(), request.getGroupPostId());
 
-            ChatRoom chatRoom = chatRoomService.createGroupChatRoom(roomName, userId, groupPostId);
+            ChatRoom chatRoom = chatRoomService.createGroupChatRoom(request.getRoomName(), userId, request.getGroupPostId());
 
-            return ResponseEntity.ok(java.util.Map.of(
-                    "roomId", chatRoom.getId(),
-                    "roomName", chatRoom.getName(),
-                    "roomType", chatRoom.getRoomType(),
-                    "message", "✅ 단체 채팅방 생성 성공"
-            ));
+            CreateChatRoomResponse response = CreateChatRoomResponse.builder()
+                    .roomId(chatRoom.getId())
+                    .roomName(chatRoom.getName())
+                    .roomType(chatRoom.getRoomType().toString())
+                    .message("✅ 단체 채팅방 생성 성공")
+                    .build();
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("❌ 단체 채팅방 생성 오류: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(java.util.Map.of(
-                    "error", e.getMessage()
-            ));
+            throw new RuntimeException(e.getMessage());
         }
     }
 
