@@ -57,11 +57,14 @@ public class ChatRoomService {
         ChatRoom savedRoom = chatRoomRepository.save(chatRoom);
 
         // 두 사용자를 멤버로 추가
-        savedRoom.addMember(user1);
-        savedRoom.addMember(user2);
-        chatRoomRepository.save(savedRoom);
+        ChatMember member1 = savedRoom.addMember(user1);
+        ChatMember member2 = savedRoom.addMember(user2);
 
-        log.info("✅ 개인 채팅방 생성 완료 - roomId: {}", savedRoom.getId());
+        // 멤버 저장
+        chatMemberRepository.save(member1);
+        chatMemberRepository.save(member2);
+
+        log.info("✅ 개인 채팅방 생성 완료 - roomId: {}, members: 2", savedRoom.getId());
         return savedRoom;
     }
 
@@ -86,10 +89,10 @@ public class ChatRoomService {
         ChatRoom savedRoom = chatRoomRepository.save(chatRoom);
 
         // 방장을 멤버로 추가
-        savedRoom.addMember(owner);
-        chatRoomRepository.save(savedRoom);
+        ChatMember ownerMember = savedRoom.addMember(owner);
+        chatMemberRepository.save(ownerMember);
 
-        log.info("✅ 단체 채팅방 생성 완료 - roomId: {}", savedRoom.getId());
+        log.info("✅ 단체 채팅방 생성 완료 - roomId: {}, owner: {}", savedRoom.getId(), owner.getNickname());
         return savedRoom;
     }
 
@@ -112,9 +115,11 @@ public class ChatRoomService {
         }
 
         ChatMember newMember = chatRoom.addMember(user);
-        chatRoomRepository.save(chatRoom);
+        // 명시적 저장
+        chatMemberRepository.save(newMember);
 
-        log.info("✅ 멤버 추가 완료 - memberId: {}", newMember.getId());
+        log.info("✅ 멤버 추가 완료 - roomId: {}, userId: {}, memberId: {}",
+                roomId, userId, newMember.getId());
     }
 
     /**
