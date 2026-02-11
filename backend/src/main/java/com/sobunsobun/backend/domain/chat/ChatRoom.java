@@ -54,6 +54,7 @@ public class ChatRoom extends BaseTimeEntity {
     private Long messageCount;
 
     @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
     private Set<ChatMember> members = new HashSet<>();
 
     @PrePersist

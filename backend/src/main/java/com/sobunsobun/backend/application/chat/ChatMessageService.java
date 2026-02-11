@@ -118,7 +118,7 @@ public class ChatMessageService {
                 .senderId(message.getSender().getId())
                 .senderName(message.getSender().getNickname())
                 .senderProfileImageUrl(message.getSender().getProfileImageUrl())
-                .type(message.getType())
+                .type(message.getType().toString())
                 .content(message.getContent())
                 .imageUrl(message.getImageUrl())
                 .cardPayload(message.getCardPayload())
