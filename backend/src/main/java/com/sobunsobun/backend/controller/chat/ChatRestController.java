@@ -1,6 +1,9 @@
 package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatRoomService;
+import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.domain.chat.ChatMember;
+import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.*;
@@ -56,10 +59,16 @@ public class ChatRestController {
             Principal principal
     ) {
         try {
-            Long userId = extractUserIdFromPrincipal(principal);
-            log.info("🔒 개인 채팅방 생성/조회 - userId: {}, otherUserId: {}", userId, request.getOtherUserId());
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("📱 [REST] 개인 채팅방 생성/조회 API 요청");
 
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+            log.info("📝 요청 정보 - otherUserId: {}", request.getOtherUserId());
+
+            log.debug("🔄 ChatRoomService.getOrCreatePrivateChatRoom() 호출 중...");
             ChatRoom chatRoom = chatRoomService.getOrCreatePrivateChatRoom(userId, request.getOtherUserId());
+            log.info("✅ 채팅방 반환됨 - roomId: {}", chatRoom.getId());
 
             CreateChatRoomResponse response = CreateChatRoomResponse.builder()
                     .roomId(chatRoom.getId())
@@ -68,10 +77,18 @@ public class ChatRestController {
                     .message("✅ 개인 채팅방 생성/조회 성공")
                     .build();
 
+            log.info("✅ [REST] 개인 채팅방 API 완료 - roomId: {}", chatRoom.getId());
+            log.info("═════════════════════════════════════════════════════════════");
+
             return ResponseEntity.ok(ApiResponse.success(response, "채팅방 생성/조회 완료"));
 
         } catch (Exception e) {
-            log.error("❌ 개인 채팅방 생성 실패", e);
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 개인 채팅방 API 실패", e);
+            log.error("   - otherUserId: {}", request != null ? request.getOtherUserId() : "unknown");
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
             return ResponseEntity.badRequest()
                     .body(ApiResponse.badRequest("CREATE_PRIVATE_ROOM_FAILED", e.getMessage()));
         }
@@ -119,16 +136,58 @@ public class ChatRestController {
             Principal principal
     ) {
         try {
-            Long userId = extractUserIdFromPrincipal(principal);
-            log.info("📋 채팅방 목록 조회 - userId: {}, page: {}, size: {}", userId, page, size);
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("📋 [REST] 채팅방 목록 조회 API 요청");
 
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+            log.info("📝 요청 정보 - page: {}, size: {}", page, size);
+
+            log.debug("🔄 ChatRoomRepository.findUserChatRooms() 조회 중...");
             Pageable pageable = PageRequest.of(page, size);
             Page<ChatRoom> chatRooms = chatRoomRepository.findUserChatRooms(userId, pageable);
 
-            List<ChatRoomResponse> responses = chatRooms.getContent()
+            // 멤버가 아닌 그룹 채팅방을 자동으로 추가
+            log.debug("🔄 그룹 채팅방 자동 추가 처리 중...");
+            List<ChatRoom> allRooms = new java.util.ArrayList<>(chatRooms.getContent());
+            List<ChatRoom> groupRooms = chatRoomRepository.findAll();
+
+            for (ChatRoom room : groupRooms) {
+                // GROUP 타입이고 아직 멤버가 아닌 경우
+                if ("GROUP".equals(room.getRoomType().toString())) {
+                    boolean isMember = chatMemberRepository.isActiveMember(room.getId(), userId);
+
+                    if (!isMember && !allRooms.contains(room)) {
+                        log.info("📌 그룹 채팅방 멤버 추가 - roomId: {}, roomName: {}", room.getId(), room.getName());
+
+                        // 자동으로 멤버 추가
+                        User user = new User();
+                        user.setId(userId);
+
+                        ChatMember member = ChatMember.builder()
+                                .chatRoom(room)
+                                .user(user)
+                                .status(ChatMemberStatus.ACTIVE)
+                                .build();
+
+                        chatMemberRepository.save(member);
+                        allRooms.add(room);
+                        log.info("✅ 멤버 추가 완료 - roomId: {}", room.getId());
+                    }
+                }
+            }
+
+            log.info("✅ DB 조회 완료 - totalElements: {}, totalPages: {}",
+                    chatRooms.getTotalElements(), chatRooms.getTotalPages());
+
+            log.debug("🔄 채팅방 목록 변환 중...");
+            List<ChatRoomResponse> responses = allRooms
                     .stream()
                     .map(room -> {
                         long unreadCount = chatMemberRepository.countUnreadMessages(room.getId(), userId);
+                        log.debug("  - roomId: {}, roomName: {}, unreadCount: {}",
+                                room.getId(), room.getName(), unreadCount);
+
                         return ChatRoomResponse.builder()
                                 .id(room.getId())
                                 .name(room.getName())
@@ -141,19 +200,28 @@ public class ChatRestController {
                                 .build();
                     })
                     .collect(Collectors.toList());
+            log.info("✅ 채팅방 목록 변환 완료 - count: {}", responses.size());
 
             PageResponse<ChatRoomResponse> pageResponse = PageResponse.<ChatRoomResponse>builder()
                     .content(responses)
-                    .totalElements(chatRooms.getTotalElements())
-                    .totalPages(chatRooms.getTotalPages())
+                    .totalElements((long) responses.size())
+                    .totalPages((responses.size() + size - 1) / size)
                     .currentPage(page)
                     .size(size)
                     .build();
 
+            log.info("✅ [REST] 채팅방 목록 조회 완료 - count: {}, totalElements: {}",
+                    responses.size(), responses.size());
+            log.info("═════════════════════════════════════════════════════════════");
+
             return ResponseEntity.ok(ApiResponse.success(pageResponse, "채팅방 목록 조회 완료"));
 
         } catch (Exception e) {
-            log.error("❌ 채팅방 목록 조회 실패", e);
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 채팅방 목록 조회 실패", e);
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
             return ResponseEntity.badRequest()
                     .body(ApiResponse.badRequest("GET_ROOMS_FAILED", e.getMessage()));
         }
@@ -173,24 +241,39 @@ public class ChatRestController {
             Principal principal
     ) {
         try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("📥 [REST] 메시지 조회 API 요청");
+
             Long userId = extractUserIdFromPrincipal(principal);
-            log.info("📥 메시지 조회 - roomId: {}, userId: {}", roomId, userId);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+            log.info("📝 요청 정보 - roomId: {}, page: {}, size: {}", roomId, page, size);
 
             // 권한 체크
+            log.debug("🔐 권한 체크 중... roomId: {}, userId: {}", roomId, userId);
             boolean isMember = chatMemberRepository.findMember(roomId, userId).isPresent();
             if (!isMember) {
-                log.warn("❌ 권한 없음 - roomId: {}, userId: {}", roomId, userId);
+                log.warn("❌ 권한 없음 - userId: {}는 roomId: {} 멤버가 아님", userId, roomId);
                 return ResponseEntity.status(403)
                         .body(ApiResponse.forbidden("NOT_MEMBER", "채팅방 멤버가 아닙니다"));
             }
+            log.info("✅ 권한 확인 완료 - 멤버임");
 
+            log.debug("🔄 ChatMessageRepository.findByChatRoomIdOrderByCreatedAtDesc() 조회 중...");
             Pageable pageable = PageRequest.of(page, size);
             Page<ChatMessage> messages = chatMessageRepository.findByChatRoomIdOrderByCreatedAtDesc(roomId, pageable);
+            log.info("✅ DB 조회 완료 - totalElements: {}, totalPages: {}",
+                    messages.getTotalElements(), messages.getTotalPages());
 
+            log.debug("🔄 메시지 목록 변환 중...");
             List<MessageResponse> responses = messages.getContent()
                     .stream()
-                    .map(msg -> toMessageResponse(msg, userId))
+                    .map(msg -> {
+                        log.debug("  - messageId: {}, type: {}, contentLength: {}",
+                                msg.getId(), msg.getType(), msg.getContent() != null ? msg.getContent().length() : 0);
+                        return toMessageResponse(msg, userId);
+                    })
                     .collect(Collectors.toList());
+            log.info("✅ 메시지 목록 변환 완료 - count: {}", responses.size());
 
             PageResponse<MessageResponse> pageResponse = PageResponse.<MessageResponse>builder()
                     .content(responses)
@@ -200,10 +283,18 @@ public class ChatRestController {
                     .size(size)
                     .build();
 
+            log.info("✅ [REST] 메시지 조회 완료 - count: {}, totalElements: {}",
+                    responses.size(), messages.getTotalElements());
+            log.info("═════════════════════════════════════════════════════════════");
+
             return ResponseEntity.ok(ApiResponse.success(pageResponse, "메시지 조회 완료"));
 
         } catch (Exception e) {
-            log.error("❌ 메시지 조회 실패", e);
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 메시지 조회 실패", e);
+            log.error("   - roomId: {}, errorMsg: {}", roomId, e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
             return ResponseEntity.badRequest()
                     .body(ApiResponse.badRequest("GET_MESSAGES_FAILED", e.getMessage()));
         }

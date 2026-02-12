@@ -32,47 +32,74 @@ public class ChatRoomService {
      * 개인 채팅방 생성 또는 조회
      */
     public ChatRoom getOrCreatePrivateChatRoom(Long userId1, Long userId2) {
-        log.info("🔒 개인 채팅방 조회/생성 - userId1: {}, userId2: {}", userId1, userId2);
-
         try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("🔒 [개인 채팅방 생성/조회 시작] userId1: {}, userId2: {}", userId1, userId2);
+
             // 기존 채팅방 조회
+            log.debug("🔍 [단계1] 기존 개인 채팅방 조회 중...");
             Optional<ChatRoom> existingRoom = chatRoomRepository.findPrivateChatRoom(userId1, userId2);
             if (existingRoom.isPresent()) {
-                log.info("✅ 기존 개인 채팅방 발견 - roomId: {}", existingRoom.get().getId());
+                log.info("✅ [단계1 완료] 기존 개인 채팅방 발견 - roomId: {}", existingRoom.get().getId());
+                log.info("═════════════════════════════════════════════════════════════");
                 return existingRoom.get();
             }
+            log.info("ℹ️ [단계1 완료] 기존 채팅방 없음 - 새로 생성 필요");
 
             // 새 채팅방 생성
+            log.debug("🔍 [단계2] User1 조회 중... userId: {}", userId1);
             User user1 = userRepository.findById(userId1)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + userId1));
-            User user2 = userRepository.findById(userId2)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + userId2));
+                    .orElseThrow(() -> {
+                        log.error("❌ [단계2 실패] User1을 찾을 수 없음: userId={}", userId1);
+                        return new RuntimeException("User not found: " + userId1);
+                    });
+            log.info("✅ [단계2 완료] User1 조회됨: {}", user1.getNickname());
 
+            log.debug("🔍 [단계3] User2 조회 중... userId: {}", userId2);
+            User user2 = userRepository.findById(userId2)
+                    .orElseThrow(() -> {
+                        log.error("❌ [단계3 실패] User2를 찾을 수 없음: userId={}", userId2);
+                        return new RuntimeException("User not found: " + userId2);
+                    });
+            log.info("✅ [단계3 완료] User2 조회됨: {}", user2.getNickname());
+
+            log.debug("🔨 [단계4] ChatRoom 엔티티 생성 중...");
             ChatRoom chatRoom = ChatRoom.builder()
                     .name(user2.getNickname())  // 개인 채팅방은 상대방 이름으로 표시
                     .roomType(ChatRoomType.PRIVATE)
                     .owner(user1)
                     .messageCount(0L)
                     .build();
+            log.info("✅ [단계4 완료] ChatRoom 엔티티 생성됨");
 
-            log.info("💾 ChatRoom 저장 중...");
+            log.debug("💾 [단계5] ChatRoom DB 저장 중...");
             ChatRoom savedRoom = chatRoomRepository.saveAndFlush(chatRoom);
-            log.info("✅ ChatRoom 저장 완료 - roomId: {}", savedRoom.getId());
+            log.info("✅ [단계5 완료] ChatRoom DB 저장됨 - roomId: {}", savedRoom.getId());
 
             // 두 사용자를 멤버로 추가
+            log.debug("🔨 [단계6] ChatMember 엔티티 생성 중...");
             ChatMember member1 = savedRoom.addMember(user1);
             ChatMember member2 = savedRoom.addMember(user2);
+            log.info("✅ [단계6 완료] ChatMember 엔티티 생성됨");
 
-            log.info("💾 ChatMember 저장 중...");
+            log.debug("💾 [단계7] ChatMember DB 저장 중... member count: 2");
             // 멤버 저장
             chatMemberRepository.saveAndFlush(member1);
             chatMemberRepository.saveAndFlush(member2);
+            log.info("✅ [단계7 완료] ChatMember DB 저장됨");
 
-            log.info("✅ 개인 채팅방 생성 완료 - roomId: {}, members: 2", savedRoom.getId());
+            log.info("✅ [개인 채팅방 생성 완료] roomId: {}, owner: {}, member: {} <-> {}",
+                    savedRoom.getId(), user1.getNickname(), user1.getNickname(), user2.getNickname());
+            log.info("═════════════════════════════════════════════════════════════");
+
             return savedRoom;
 
         } catch (Exception e) {
-            log.error("❌ 개인 채팅방 생성 실패 - userId1: {}, userId2: {}", userId1, userId2, e);
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [개인 채팅방 생성 실패] 예외 발생", e);
+            log.error("   - userId1: {}, userId2: {}", userId1, userId2);
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
             throw new RuntimeException("개인 채팅방 생성 실패: " + e.getMessage(), e);
         }
     }
@@ -81,13 +108,20 @@ public class ChatRoomService {
      * 단체 채팅방 생성
      */
     public ChatRoom createGroupChatRoom(String roomName, Long ownerId, Long groupPostId) {
-        log.info("👥 단체 채팅방 생성 - roomName: {}, ownerId: {}, groupPostId: {}",
-                roomName, ownerId, groupPostId);
-
         try {
-            User owner = userRepository.findById(ownerId)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + ownerId));
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("👥 [단체 채팅방 생성 시작] roomName: {}, ownerId: {}, groupPostId: {}",
+                    roomName, ownerId, groupPostId);
 
+            log.debug("🔍 [단계1] Owner 조회 중... ownerId: {}", ownerId);
+            User owner = userRepository.findById(ownerId)
+                    .orElseThrow(() -> {
+                        log.error("❌ [단계1 실패] Owner를 찾을 수 없음: ownerId={}", ownerId);
+                        return new RuntimeException("User not found: " + ownerId);
+                    });
+            log.info("✅ [단계1 완료] Owner 조회됨: {}", owner.getNickname());
+
+            log.debug("🔨 [단계2] ChatRoom 엔티티 생성 중...");
             ChatRoom chatRoom = ChatRoom.builder()
                     .name(roomName)
                     .roomType(ChatRoomType.GROUP)
@@ -95,22 +129,33 @@ public class ChatRoomService {
                     .groupPostId(groupPostId)
                     .messageCount(0L)
                     .build();
+            log.info("✅ [단계2 완료] ChatRoom 엔티티 생성됨");
 
-            log.info("💾 ChatRoom 저장 중...");
+            log.debug("💾 [단계3] ChatRoom DB 저장 중...");
             ChatRoom savedRoom = chatRoomRepository.saveAndFlush(chatRoom);
-            log.info("✅ ChatRoom 저장 완료 - roomId: {}", savedRoom.getId());
+            log.info("✅ [단계3 완료] ChatRoom DB 저장됨 - roomId: {}", savedRoom.getId());
 
             // 방장을 멤버로 추가
+            log.debug("🔨 [단계4] Owner를 ChatMember로 추가 중...");
             ChatMember ownerMember = savedRoom.addMember(owner);
-            log.info("💾 ChatMember 저장 중...");
-            chatMemberRepository.saveAndFlush(ownerMember);
+            log.info("✅ [단계4 완료] ChatMember 엔티티 생성됨");
 
-            log.info("✅ 단체 채팅방 생성 완료 - roomId: {}, owner: {}", savedRoom.getId(), owner.getNickname());
+            log.debug("💾 [단계5] ChatMember DB 저장 중...");
+            chatMemberRepository.saveAndFlush(ownerMember);
+            log.info("✅ [단계5 완료] ChatMember DB 저장됨");
+
+            log.info("✅ [단체 채팅방 생성 완료] roomId: {}, owner: {}, roomName: {}",
+                    savedRoom.getId(), owner.getNickname(), roomName);
+            log.info("═════════════════════════════════════════════════════════════");
+
             return savedRoom;
 
         } catch (Exception e) {
-            log.error("❌ 단체 채팅방 생성 실패 - roomName: {}, ownerId: {}, groupPostId: {}",
-                    roomName, ownerId, groupPostId, e);
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [단체 채팅방 생성 실패] 예외 발생", e);
+            log.error("   - roomName: {}, ownerId: {}, groupPostId: {}", roomName, ownerId, groupPostId);
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
             throw new RuntimeException("단체 채팅방 생성 실패: " + e.getMessage(), e);
         }
     }

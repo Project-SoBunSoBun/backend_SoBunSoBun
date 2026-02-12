@@ -58,7 +58,7 @@ public class SecurityConfig {
         "/files/**",
 
         // 테스트용 HTML 파일
-        "/chat-test.html",
+        "/chat.html",
 
         // WebSocket (SockJS + STOMP) - HTTP 레벨에서 인증 건너뜀
         // STOMP 레벨에서 JWT 검증
@@ -103,21 +103,42 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 허용할 Origin (운영 시 특정 도메인으로 제한 권장)
-        configuration.setAllowedOrigins(List.of("*"));
+        // 허용할 Origin: 와일드카드 또는 구체적인 Origin 지정
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:*",                 // 모든 로컬 포트
+            "http://127.0.0.1:*",                // 모든 127.0.0.1 포트
+            "http://localhost:8081",             // 로컬 개발
+            "http://localhost:8080",             // 로컬 개발 (8080)
+            "http://localhost:3000",             // Node.js 개발 서버
+            "http://localhost:5173",             // Vite 개발 서버
+            "http://localhost:63342",            // JetBrains IDE Live Server
+            "http://127.0.0.1:8081",            // 로컬 IP
+            "http://158.180.80.135:8081",       // 운영 서버 IP
+            "*"                                   // 기타 환경 (credentials=false일 때만 작동)
+        ));
 
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
 
-        // 허용할 헤더
-        configuration.setAllowedHeaders(List.of("*"));
+        // 허용할 헤더 (WebSocket 포함)
+        configuration.setAllowedHeaders(List.of(
+            "*",                    // 모든 헤더
+            "Authorization",        // JWT 토큰
+            "Content-Type",         // JSON
+            "Origin",              // CORS
+            "Accept"               // Accept
+        ));
 
         // 응답에 노출할 헤더 (클라이언트에서 접근 가능)
-        configuration.setExposedHeaders(List.of("Authorization"));
+        configuration.setExposedHeaders(List.of(
+            "Authorization",
+            "X-Total-Count"
+        ));
 
         // 쿠키/인증 정보 포함 여부 (JWT 사용으로 false)
+        // 주의: allowCredentials=true이면 allowedOrigins에 "*" 사용 불가
         configuration.setAllowCredentials(false);
 
         // Preflight 캐시 시간 (1시간)
