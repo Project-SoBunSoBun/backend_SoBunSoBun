@@ -14,18 +14,36 @@ import java.util.Optional;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     @Query("""
-        SELECT r FROM ChatRoom r
+        SELECT DISTINCT r FROM ChatRoom r
+        LEFT JOIN FETCH r.members m
         WHERE r.id = :id
     """)
     Optional<ChatRoom> findByIdWithMembers(@Param("id") Long id);
 
     @Query("""
-        SELECT r FROM ChatRoom r
-        JOIN r.members m
-        WHERE m.user.id = :userId
-        ORDER BY r.lastMessageAt DESC
+        SELECT DISTINCT r FROM ChatRoom r
+        LEFT JOIN FETCH r.members m
+        WHERE r.id IN (
+            SELECT cm.chatRoom.id FROM ChatMember cm
+            WHERE cm.user.id = :userId AND cm.status = 'ACTIVE'
+        )
+        ORDER BY r.lastMessageAt DESC NULLS LAST
     """)
     Page<ChatRoom> findUserChatRooms(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("""
+        SELECT DISTINCT r FROM ChatRoom r
+        LEFT JOIN FETCH r.members m
+        WHERE (
+            r.id IN (
+                SELECT cm.chatRoom.id FROM ChatMember cm
+                WHERE cm.user.id = :userId AND cm.status = 'ACTIVE'
+            )
+            OR r.roomType = 'GROUP'
+        )
+        ORDER BY r.lastMessageAt DESC NULLS LAST
+    """)
+    Page<ChatRoom> findAllActiveChatRooms(@Param("userId") Long userId, Pageable pageable);
 
     @Query("""
         SELECT r FROM ChatRoom r

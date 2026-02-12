@@ -46,15 +46,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/chat")
-                .setAllowedOriginPatterns("*")
-                .withSockJS();
+                .setAllowedOriginPatterns("*");  // 모든 origin 허용
 
-        log.info("✅ WebSocket endpoint registered: /ws/chat (SockJS + STOMP)");
+        // SockJS 제거 - WebSocket만 사용하여 400 오류 해결
+        // SockJS는 HTTP 핸드셰이크에서 400 BAD_REQUEST 발생
+        // 최신 브라우저는 모두 WebSocket 지원하므로 SockJS 불필요
+
+        log.info("✅ WebSocket STOMP endpoint registered: /ws/chat");
+        log.info("📡 WebSocket only (SockJS fallback disabled)");
+        log.info("🔓 CORS: All origins allowed");
+        log.info("💓 Heartbeat: 25 seconds");
+        log.info("🔐 Authentication: JWT at STOMP CONNECT frame");
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // 내장 메시지 브로커 (TaskScheduler 사용)
+        // 내장 메시지 브로커 설정
         config.enableSimpleBroker("/topic", "/queue")
                 .setTaskScheduler(taskScheduler())
                 .setHeartbeatValue(new long[]{30000, 30000});
@@ -65,14 +72,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 개인 메시지 destination prefix
         config.setUserDestinationPrefix("/user");
 
-        log.info("✅ Message broker configured with heartbeat");
+        log.info("✅ Message broker configured");
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        // CONNECT 프레임에서 JWT 검증
+        // STOMP CONNECT 프레임에서 JWT 검증
         registration.interceptors(webSocketAuthInterceptor);
-        log.info("✅ WebSocket Auth Interceptor registered");
+        log.info("✅ WebSocket JWT Auth Interceptor registered");
     }
 }
 
