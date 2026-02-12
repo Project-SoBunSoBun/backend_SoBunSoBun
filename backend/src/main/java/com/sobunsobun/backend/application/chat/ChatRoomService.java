@@ -51,7 +51,7 @@ public class ChatRoomService {
             User user1 = userRepository.findById(userId1)
                     .orElseThrow(() -> {
                         log.error("❌ [단계2 실패] User1을 찾을 수 없음: userId={}", userId1);
-                        return new RuntimeException("User not found: " + userId1);
+                        return new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId1 + ")");
                     });
             log.info("✅ [단계2 완료] User1 조회됨: {}", user1.getNickname());
 
@@ -59,7 +59,7 @@ public class ChatRoomService {
             User user2 = userRepository.findById(userId2)
                     .orElseThrow(() -> {
                         log.error("❌ [단계3 실패] User2를 찾을 수 없음: userId={}", userId2);
-                        return new RuntimeException("User not found: " + userId2);
+                        return new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId2 + ")");
                     });
             log.info("✅ [단계3 완료] User2 조회됨: {}", user2.getNickname());
 
@@ -94,6 +94,10 @@ public class ChatRoomService {
 
             return savedRoom;
 
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [개인 채팅방 생성 실패] 유효하지 않은 요청 - userId1: {}, userId2: {}", userId1, userId2);
+            log.warn("   - errorMsg: {}", e.getMessage());
+            throw e;  // 그대로 전파하여 컨트롤러에서 처리
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
             log.error("❌ [개인 채팅방 생성 실패] 예외 발생", e);
@@ -104,61 +108,6 @@ public class ChatRoomService {
         }
     }
 
-    /**
-     * 단체 채팅방 생성
-     */
-    public ChatRoom createGroupChatRoom(String roomName, Long ownerId, Long groupPostId) {
-        try {
-            log.info("═════════════════════════════════════════════════════════════");
-            log.info("👥 [단체 채팅방 생성 시작] roomName: {}, ownerId: {}, groupPostId: {}",
-                    roomName, ownerId, groupPostId);
-
-            log.debug("🔍 [단계1] Owner 조회 중... ownerId: {}", ownerId);
-            User owner = userRepository.findById(ownerId)
-                    .orElseThrow(() -> {
-                        log.error("❌ [단계1 실패] Owner를 찾을 수 없음: ownerId={}", ownerId);
-                        return new RuntimeException("User not found: " + ownerId);
-                    });
-            log.info("✅ [단계1 완료] Owner 조회됨: {}", owner.getNickname());
-
-            log.debug("🔨 [단계2] ChatRoom 엔티티 생성 중...");
-            ChatRoom chatRoom = ChatRoom.builder()
-                    .name(roomName)
-                    .roomType(ChatRoomType.GROUP)
-                    .owner(owner)
-                    .groupPostId(groupPostId)
-                    .messageCount(0L)
-                    .build();
-            log.info("✅ [단계2 완료] ChatRoom 엔티티 생성됨");
-
-            log.debug("💾 [단계3] ChatRoom DB 저장 중...");
-            ChatRoom savedRoom = chatRoomRepository.saveAndFlush(chatRoom);
-            log.info("✅ [단계3 완료] ChatRoom DB 저장됨 - roomId: {}", savedRoom.getId());
-
-            // 방장을 멤버로 추가
-            log.debug("🔨 [단계4] Owner를 ChatMember로 추가 중...");
-            ChatMember ownerMember = savedRoom.addMember(owner);
-            log.info("✅ [단계4 완료] ChatMember 엔티티 생성됨");
-
-            log.debug("💾 [단계5] ChatMember DB 저장 중...");
-            chatMemberRepository.saveAndFlush(ownerMember);
-            log.info("✅ [단계5 완료] ChatMember DB 저장됨");
-
-            log.info("✅ [단체 채팅방 생성 완료] roomId: {}, owner: {}, roomName: {}",
-                    savedRoom.getId(), owner.getNickname(), roomName);
-            log.info("═════════════════════════════════════════════════════════════");
-
-            return savedRoom;
-
-        } catch (Exception e) {
-            log.error("═════════════════════════════════════════════════════════════");
-            log.error("❌ [단체 채팅방 생성 실패] 예외 발생", e);
-            log.error("   - roomName: {}, ownerId: {}, groupPostId: {}", roomName, ownerId, groupPostId);
-            log.error("   - errorMsg: {}", e.getMessage());
-            log.error("═════════════════════════════════════════════════════════════");
-            throw new RuntimeException("단체 채팅방 생성 실패: " + e.getMessage(), e);
-        }
-    }
 
     /**
      * 채팅방에 멤버 추가

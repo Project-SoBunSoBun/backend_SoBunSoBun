@@ -36,9 +36,6 @@ public class ChatRoom extends BaseTimeEntity {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    // 단체 채팅방: groupPostId로 모임 연결
-    @Column(name = "group_post_id")
-    private Long groupPostId;
 
     // 채팅방 정보 (마지막 메시지, 메시지 개수)
     @Column(name = "last_message_at")
