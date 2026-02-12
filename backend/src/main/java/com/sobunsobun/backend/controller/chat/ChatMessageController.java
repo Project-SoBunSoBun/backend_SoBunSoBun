@@ -160,29 +160,6 @@ public class ChatMessageController {
         }
     }
 
-    /**
-     * 초대장 수락
-     *
-     * 클라: SEND /app/chat/invite/accept
-     */
-    @MessageMapping("/chat/invite/accept")
-    public void acceptInvite(
-            @Payload Map<String, Object> payload,
-            Principal principal
-    ) {
-        try {
-            Long userId = Long.parseLong(principal.getName());
-            Long inviteId = ((Number) payload.get("inviteId")).longValue();
-            Long targetRoomId = ((Number) payload.get("targetRoomId")).longValue();
-
-            log.info("🎯 초대 수락 - inviteId: {}, userId: {}", inviteId, userId);
-
-            // TODO: ChatInviteService 연동
-
-        } catch (Exception e) {
-            log.error("❌ 초대 수락 오류: {}", e.getMessage());
-        }
-    }
 
     // 유틸리티 메서드
     private Long extractUserId(Principal principal, SimpMessageHeaderAccessor headerAccessor) {

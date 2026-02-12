@@ -32,20 +32,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     Page<ChatRoom> findUserChatRooms(@Param("userId") Long userId, Pageable pageable);
 
     @Query("""
-        SELECT DISTINCT r FROM ChatRoom r
-        LEFT JOIN FETCH r.members m
-        WHERE (
-            r.id IN (
-                SELECT cm.chatRoom.id FROM ChatMember cm
-                WHERE cm.user.id = :userId AND cm.status = 'ACTIVE'
-            )
-            OR r.roomType = 'GROUP'
-        )
-        ORDER BY r.lastMessageAt DESC NULLS LAST
-    """)
-    Page<ChatRoom> findAllActiveChatRooms(@Param("userId") Long userId, Pageable pageable);
-
-    @Query("""
         SELECT r FROM ChatRoom r
         WHERE r.roomType = 'PRIVATE'
         AND r.id IN (
@@ -61,6 +47,4 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             @Param("userId1") Long userId1,
             @Param("userId2") Long userId2
     );
-
-    Optional<ChatRoom> findByGroupPostIdAndRoomType(Long groupPostId, String roomType);
 }

@@ -52,7 +52,42 @@ public class ChatRestController {
     /**
      * 개인 채팅방 생성/조회
      */
-    @Operation(summary = "개인 채팅방 생성/조회", description = "상대방과의 개인 채팅방을 생성하거나 기존 채팅방을 조회합니다")
+    @Operation(
+        summary = "개인 채팅방 생성/조회",
+        description = "상대방과의 개인 채팅방을 생성하거나 기존 채팅방을 조회합니다"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "채팅방 생성/조회 성공",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"success\", \"code\": 200, \"data\": {\"roomId\": 1, \"roomName\": \"상대방이름\", \"roomType\": \"PRIVATE\"}, \"message\": \"채팅방 생성/조회 완료\"}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "존재하지 않는 사용자",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 404, \"error\": \"USER_NOT_FOUND\", \"message\": \"존재하지 않는 사용자입니다 (userId: 4)\"}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 400, \"error\": \"CREATE_PRIVATE_ROOM_FAILED\", \"message\": \"채팅방 생성 중 오류 발생\"}"
+                )
+            )
+        )
+    })
     @PostMapping("/rooms/private")
     public ResponseEntity<ApiResponse<CreateChatRoomResponse>> createPrivateChatRoom(
             @RequestBody CreatePrivateChatRoomRequest request,
@@ -82,6 +117,14 @@ public class ChatRestController {
 
             return ResponseEntity.ok(ApiResponse.success(response, "채팅방 생성/조회 완료"));
 
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 개인 채팅방 API - 유효하지 않은 사용자 요청");
+            log.warn("   - otherUserId: {}", request != null ? request.getOtherUserId() : "unknown");
+            log.warn("   - errorMsg: {}", e.getMessage());
+
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.notFound("USER_NOT_FOUND", e.getMessage()));
+
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
             log.error("❌ [REST] 개인 채팅방 API 실패", e);
@@ -94,36 +137,6 @@ public class ChatRestController {
         }
     }
 
-    /**
-     * 단체 채팅방 생성
-     */
-    @Operation(summary = "단체 채팅방 생성", description = "새로운 단체 채팅방을 생성합니다")
-    @PostMapping("/rooms/group")
-    public ResponseEntity<ApiResponse<CreateChatRoomResponse>> createGroupChatRoom(
-            @RequestBody CreateGroupChatRoomRequest request,
-            Principal principal
-    ) {
-        try {
-            Long userId = extractUserIdFromPrincipal(principal);
-            log.info("👥 단체 채팅방 생성 - roomName: {}, groupPostId: {}", request.getRoomName(), request.getGroupPostId());
-
-            ChatRoom chatRoom = chatRoomService.createGroupChatRoom(request.getRoomName(), userId, request.getGroupPostId());
-
-            CreateChatRoomResponse response = CreateChatRoomResponse.builder()
-                    .roomId(chatRoom.getId())
-                    .roomName(chatRoom.getName())
-                    .roomType(chatRoom.getRoomType().toString())
-                    .message("✅ 단체 채팅방 생성 성공")
-                    .build();
-
-            return ResponseEntity.ok(ApiResponse.success(response, "단체 채팅방 생성 완료"));
-
-        } catch (Exception e) {
-            log.error("❌ 단체 채팅방 생성 실패", e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("CREATE_GROUP_ROOM_FAILED", e.getMessage()));
-        }
-    }
 
     /**
      * 채팅방 목록 조회
@@ -147,41 +160,11 @@ public class ChatRestController {
             Pageable pageable = PageRequest.of(page, size);
             Page<ChatRoom> chatRooms = chatRoomRepository.findUserChatRooms(userId, pageable);
 
-            // 멤버가 아닌 그룹 채팅방을 자동으로 추가
-            log.debug("🔄 그룹 채팅방 자동 추가 처리 중...");
-            List<ChatRoom> allRooms = new java.util.ArrayList<>(chatRooms.getContent());
-            List<ChatRoom> groupRooms = chatRoomRepository.findAll();
-
-            for (ChatRoom room : groupRooms) {
-                // GROUP 타입이고 아직 멤버가 아닌 경우
-                if ("GROUP".equals(room.getRoomType().toString())) {
-                    boolean isMember = chatMemberRepository.isActiveMember(room.getId(), userId);
-
-                    if (!isMember && !allRooms.contains(room)) {
-                        log.info("📌 그룹 채팅방 멤버 추가 - roomId: {}, roomName: {}", room.getId(), room.getName());
-
-                        // 자동으로 멤버 추가
-                        User user = new User();
-                        user.setId(userId);
-
-                        ChatMember member = ChatMember.builder()
-                                .chatRoom(room)
-                                .user(user)
-                                .status(ChatMemberStatus.ACTIVE)
-                                .build();
-
-                        chatMemberRepository.save(member);
-                        allRooms.add(room);
-                        log.info("✅ 멤버 추가 완료 - roomId: {}", room.getId());
-                    }
-                }
-            }
-
             log.info("✅ DB 조회 완료 - totalElements: {}, totalPages: {}",
                     chatRooms.getTotalElements(), chatRooms.getTotalPages());
 
             log.debug("🔄 채팅방 목록 변환 중...");
-            List<ChatRoomResponse> responses = allRooms
+            List<ChatRoomResponse> responses = chatRooms.getContent()
                     .stream()
                     .map(room -> {
                         long unreadCount = chatMemberRepository.countUnreadMessages(room.getId(), userId);
