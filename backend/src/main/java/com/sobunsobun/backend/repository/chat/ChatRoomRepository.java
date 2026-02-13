@@ -33,7 +33,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     @Query("""
         SELECT r FROM ChatRoom r
-        WHERE r.roomType = 'PRIVATE'
+        WHERE r.roomType = 'ONE_TO_ONE'
         AND r.id IN (
             SELECT m.chatRoom.id FROM ChatMember m
             WHERE m.user.id = :userId1 AND m.status = 'ACTIVE'

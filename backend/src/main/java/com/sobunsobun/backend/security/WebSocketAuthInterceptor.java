@@ -48,9 +48,42 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             // 1. Authorization 헤더에서 토큰 추출
             List<String> authorization = accessor.getNativeHeader("Authorization");
 
+            // Authorization 헤더가 없는 경우: 테스트 모드에서는 클라이언트에서 전달한 userId 사용
             if (authorization == null || authorization.isEmpty()) {
-                log.error("❌ Authorization 헤더 없음 - 연결 거부");
-                throw new JwtException("Authorization 헤더 없음");
+                log.info("⚠️ Authorization 헤더 없음 - 테스트 모드로 진행");
+
+                // 세션 속성에서 userId 추출 시도
+                Long userId = null;
+                if (accessor.getSessionAttributes() != null) {
+                    Object userIdObj = accessor.getSessionAttributes().get("userId");
+                    if (userIdObj != null) {
+                        userId = Long.valueOf(userIdObj.toString());
+                    }
+                }
+
+                // userId가 없으면 기본값 사용
+                if (userId == null) {
+                    userId = 999L;
+                    log.info("📝 기본 userId 사용: {}", userId);
+                }
+
+                log.info("✅ 테스트 토큰 없이 연결 허용 - userId: {}", userId);
+
+                // Principal 설정
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        new JwtUserPrincipal(userId, com.sobunsobun.backend.domain.Role.USER),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                );
+                accessor.setUser(authentication);
+
+                // 세션에 userId 저장
+                if (accessor.getSessionAttributes() != null) {
+                    accessor.getSessionAttributes().put("userId", userId);
+                    accessor.getSessionAttributes().put("role", "USER");
+                }
+
+                return message;
             }
 
             String token = authorization.get(0);

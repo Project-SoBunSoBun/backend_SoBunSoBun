@@ -43,7 +43,9 @@ dependencies {
 	}
 
 	// Log4j2
-	implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+	implementation('org.springframework.boot:spring-boot-starter-log4j2') {
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+	}
 
 	// WebSocket & STOMP
 	implementation('org.springframework.boot:spring-boot-starter-websocket') {
@@ -51,7 +53,9 @@ dependencies {
 	}
 
 	// Swagger/OpenAPI (Spring 6.2 완전 지원)
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+	implementation('org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0') {
+		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+	}
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
@@ -68,6 +72,11 @@ dependencies {
 
 	// .env file support
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+
+    //redis
+    implementation('org.springframework.boot:spring-boot-starter-data-redis') {
+		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+	}
 
 	// Test
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {

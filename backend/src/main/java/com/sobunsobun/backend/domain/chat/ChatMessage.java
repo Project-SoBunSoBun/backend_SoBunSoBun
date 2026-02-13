@@ -30,9 +30,9 @@ public class ChatMessage extends BaseTimeEntity {
     @JoinColumn(name = "sender_id")
     private User sender;
 
-    // 메시지 타입 (TEXT, IMAGE, SYSTEM, INVITE_CARD, SETTLEMENT_CARD 등)
+    // 메시지 타입 (TEXT, IMAGE, SYSTEM, INVITE_CARD, SETTLEMENT_CARD, ENTER, LEAVE 등)
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private ChatMessageType type;
 
     // 메시지 내용

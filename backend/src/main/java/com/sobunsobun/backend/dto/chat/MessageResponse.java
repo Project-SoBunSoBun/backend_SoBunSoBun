@@ -19,7 +19,7 @@ public class MessageResponse {
     private String senderName;
     private String senderProfileImageUrl;
     private String type;
-    private String content;
+    private String content;  // ✅ @JsonProperty 제거
     private String imageUrl;
     private String cardPayload;
     private Integer readCount;

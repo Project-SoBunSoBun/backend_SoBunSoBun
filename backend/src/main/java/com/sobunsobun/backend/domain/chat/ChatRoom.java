@@ -11,7 +11,6 @@ import java.util.*;
 @Entity
 @Table(name = "chat_room", indexes = {
         @Index(name = "idx_room_type", columnList = "room_type"),
-        @Index(name = "idx_group_post_id", columnList = "group_post_id"),
         @Index(name = "idx_created_at", columnList = "created_at")
 })
 @Getter
