@@ -1,19 +1,65 @@
-# 운영 환경 설정
 spring:
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  messages:
+    basename: messages
+    encoding: UTF-8
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        format_sql: false  # SQL 포맷팅 비활성화
-    show-sql: false        # SQL 콘솔 출력 비활성화
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        default_batch_fetch_size: 50
+        use_sql_comments: true
+    show-sql: false
 
-# 로깅 설정 (운영 환경)
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      adjust-dates-to-context-time-zone: true
+
+# 프로덕션에서는 절대경로 또는 환경변수로 설정
+file:
+  # 예시: /var/app/sobunsobun/uploads/profiles 또는 환경변수 ${UPLOAD_DIR}
+  upload-dir: ${UPLOAD_DIR:/var/app/sobunsobun/uploads/profiles}
+  url-prefix: /files
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+server:
+  port: 8081
+
 logging:
   config: classpath:log4j2-prod.xml
   level:
-    root: INFO
+    root: WARN
     com.sobunsobun.backend: INFO
-    org.springframework: WARN
-    org.hibernate: WARN
+  file:
+    path: /var/log/sobunsobun
+    name: sobunsobun
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 

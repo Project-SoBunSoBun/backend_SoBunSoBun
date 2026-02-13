@@ -36,7 +36,7 @@ spring:
       adjust-dates-to-context-time-zone: true
 
 file:
-  upload-dir: /var/app/sobunsobun/uploads/profiles
+  upload-dir: ${user.home}/.sobunsobun/uploads/profiles
   url-prefix: /files
 
 # SpringDoc/Swagger 설정

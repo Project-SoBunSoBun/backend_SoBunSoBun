@@ -64,7 +64,13 @@ public class FileStorageService {
             }
 
         } catch (IOException e) {
-            log.error("❌ [FileStorageService Init] 디렉토리 생성 실패: {}", e.getMessage(), e);
+            String errorMsg = String.format(
+                    "❌ [FileStorageService Init] 디렉토리 생성 실패\n" +
+                    "   경로: %s\n" +
+                    "   원인: %s\n" +
+                    "   해결방법: 디렉토리 권한 확인 또는 application.yml의 file.upload-dir 확인",
+                    uploadDir, e.getMessage());
+            log.error(errorMsg, e);
             throw new RuntimeException("업로드 디렉토리를 생성할 수 없습니다: " + uploadDir, e);
         }
     }
