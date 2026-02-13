@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.controller.chat;
 
+import com.sobunsobun.backend.application.chat.ChatMessageService;
 import com.sobunsobun.backend.application.chat.ChatRoomService;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
 public class ChatRestController {
 
     private final ChatRoomService chatRoomService;
+    private final ChatMessageService chatMessageService;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMemberRepository chatMemberRepository;
@@ -339,5 +341,175 @@ public class ChatRestController {
                 .createdAt(msg.getCreatedAt())
                 .readByMe(readByMe)
                 .build();
+    }
+
+    /**
+     * 채팅방 목록 조회 (개선 버전)
+     *
+     * iOS 클라이언트용 최적화 엔드포인트
+     * 각 채팅방의 마지막 메시지와 안 읽은 메시지 개수를 포함
+     *
+     * API: GET /api/v1/chat/rooms/list
+     * 응답: List<ChatRoomListResponseDto>
+     * 정렬: lastMessageTime 기준 내림차순 (최신순)
+     */
+    @Operation(
+            summary = "채팅방 목록 조회 (iOS용)",
+            description = "사용자의 모든 채팅방을 조회합니다. 마지막 메시지와 안 읽은 메시지 개수를 포함하며, 최신 메시지 순으로 정렬됩니다."
+    )
+    @GetMapping("/rooms/list")
+    public ResponseEntity<ApiResponse<List<ChatRoomListResponseDto>>> getChatRoomList(
+            Principal principal
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("📋 [REST] 채팅방 목록 조회 API 요청");
+
+            // 인증된 사용자 ID 추출
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+
+            // ChatRoomService.getChatRoomList() 호출
+            log.debug("🔄 ChatRoomService.getChatRoomList() 호출 중...");
+            List<ChatRoomListResponseDto> chatRoomList = chatRoomService.getChatRoomList(userId);
+            log.info("✅ 채팅방 목록 조회 완료 - roomCount: {}", chatRoomList.size());
+
+            // 응답 반환
+            log.info("✅ [REST] 채팅방 목록 API 완료");
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.ok(ApiResponse.success(chatRoomList, "채팅방 목록 조회 성공"));
+
+        } catch (Exception e) {
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 채팅방 목록 API 실패", e);
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.serverError("CHAT_ROOM_LIST_FAILED", e.getMessage()));
+        }
+    }
+
+    /**
+     * 1:1 채팅방 생성/조회 (개선 버전)
+     *
+     * 새로운 사용자와 1:1 채팅을 시작할 때 호출합니다.
+     * 기존 1:1 채팅방이 있으면 그것을 반환하고,
+     * 없으면 새로운 ONE_TO_ONE 타입의 채팅방을 생성합니다.
+     *
+     * API: POST /api/v1/chat/rooms
+     * 요청: CreateOneToOneRoomRequest { targetUserId }
+     * 응답: CreateOneToOneRoomResponse { roomId, otherUserName, otherUserProfileImageUrl, isNewRoom }
+     */
+    @Operation(
+            summary = "1:1 채팅방 생성/조회",
+            description = "새로운 사용자와의 1:1 채팅방을 생성하거나 기존 채팅방을 조회합니다"
+    )
+    @PostMapping("/rooms")
+    public ResponseEntity<ApiResponse<com.sobunsobun.backend.dto.chat.CreateOneToOneRoomResponse>> createOneToOneRoom(
+            @RequestBody com.sobunsobun.backend.dto.chat.CreateOneToOneRoomRequest request,
+            Principal principal
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("📱 [REST] 1:1 채팅방 생성/조회 API 요청");
+
+            Long myUserId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - myUserId: {}", myUserId);
+            log.info("📝 요청 정보 - targetUserId: {}", request.getTargetUserId());
+
+            log.debug("🔄 ChatRoomService.createOrGetOneToOneRoom() 호출 중...");
+            var response = chatRoomService.createOrGetOneToOneRoom(myUserId, request.getTargetUserId());
+            log.info("✅ 1:1 채팅방 생성/조회 완료 - roomId: {}, isNewRoom: {}",
+                    response.getRoomId(), response.getIsNewRoom());
+
+            log.info("✅ [REST] 1:1 채팅방 API 완료");
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.ok(ApiResponse.success(response, "1:1 채팅방 생성/조회 성공"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 1:1 채팅방 API - 유효하지 않은 사용자 요청");
+            log.warn("   - targetUserId: {}", request != null ? request.getTargetUserId() : "unknown");
+            log.warn("   - errorMsg: {}", e.getMessage());
+
+            return ResponseEntity.status(400)
+                    .body(ApiResponse.badRequest("INVALID_USER", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 1:1 채팅방 API 실패", e);
+            log.error("   - targetUserId: {}", request != null ? request.getTargetUserId() : "unknown");
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("CREATE_ONE_TO_ONE_ROOM_FAILED", e.getMessage()));
+        }
+    }
+
+    /**
+     * 과거 메시지 조회 (무한 스크롤)
+     *
+     * 커서 기반 페이징을 사용하여 채팅방의 과거 메시지를 조회합니다.
+     * 모바일 앱의 무한 스크롤 기능을 지원합니다.
+     *
+     * API: GET /api/v1/chat/rooms/{roomId}/messages/cursor
+     * 쿼리 파라미터: lastMessageId (커서, 처음엔 null), size (기본 20)
+     * 응답: List<ChatMessageDto> (오름차순, 시간순)
+     */
+    @Operation(
+            summary = "과거 메시지 조회 (무한 스크롤)",
+            description = "채팅방의 과거 메시지를 커서 기반 페이징으로 조회합니다. 클라이언트 무한 스크롤 기능을 지원합니다."
+    )
+    @GetMapping("/rooms/{roomId}/messages/cursor")
+    public ResponseEntity<ApiResponse<List<com.sobunsobun.backend.dto.chat.ChatMessageDto>>> getChatMessages(
+            @PathVariable Long roomId,
+            @RequestParam(required = false) Long lastMessageId,
+            @RequestParam(defaultValue = "20") int size,
+            Principal principal
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("📜 [REST] 과거 메시지 조회 API 요청");
+
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+            log.info("📝 요청 정보 - roomId: {}, lastMessageId: {}, size: {}",
+                    roomId, lastMessageId, size);
+
+            log.debug("🔄 ChatMessageService.getChatMessages() 호출 중...");
+            List<com.sobunsobun.backend.dto.chat.ChatMessageDto> messages = chatMessageService.getChatMessages(
+                    roomId,
+                    userId,
+                    lastMessageId,
+                    size
+            );
+            log.info("✅ 과거 메시지 조회 완료 - messageCount: {}", messages.size());
+
+            log.info("✅ [REST] 과거 메시지 API 완료");
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.ok(ApiResponse.success(messages, "과거 메시지 조회 성공"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 과거 메시지 API - 권한 오류");
+            log.warn("   - roomId: {}, userId: {}", roomId, principal.getName());
+            log.warn("   - errorMsg: {}", e.getMessage());
+
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.forbidden("ACCESS_DENIED", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 과거 메시지 API 실패", e);
+            log.error("   - roomId: {}, userId: {}", roomId, principal.getName());
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.serverError("GET_CHAT_MESSAGES_FAILED", e.getMessage()));
+        }
     }
 }

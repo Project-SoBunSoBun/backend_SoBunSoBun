@@ -39,7 +39,10 @@ public class ChatMessageController {
      * 메시지 전송
      *
      * 클라: SEND /app/chat/send
-     * 서버: /topic/rooms/{roomId} 브로드캐스트
+     * 서버: /topic/chat/room/{roomId} 브로드캐스트
+     *
+     * Note: @MessageMapping("/chat/send")는 /app 프리픽스와 합쳐져서
+     *       /app/chat/send 경로를 의미합니다.
      */
     @MessageMapping("/chat/send")
     public void sendMessage(
@@ -75,15 +78,10 @@ public class ChatMessageController {
                     request.getCardPayload()
             );
             log.info("✅ [단계1 완료] 메시지 저장됨: messageId={}", response.getId());
-
-            // 채팅방의 모든 구독자에게 브로드캐스트
-            String destination = "/topic/rooms/" + request.getRoomId();
-            log.debug("📢 [단계2] 메시지 브로드캐스팅 중... destination: {}", destination);
-            messagingTemplate.convertAndSend(destination, response);
-            log.info("✅ [단계2 완료] 메시지 브로드캐스트 완료");
-
-            log.info("✅ [메시지 전송 완료] roomId: {}, messageId: {}, receiver count: ?",
-                    request.getRoomId(), response.getId());
+            log.info("📢 [Redis Pub/Sub를 통해 메시지가 브로드캐스트됩니다]");
+            log.info("   - Redis가 모든 구독자에게 메시지를 전송합니다");
+            log.info("✅ [메시지 전송 완료] roomId: {}, messageId: {}, sender: {}",
+                    request.getRoomId(), response.getId(), response.getSenderName());
             log.info("═════════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
