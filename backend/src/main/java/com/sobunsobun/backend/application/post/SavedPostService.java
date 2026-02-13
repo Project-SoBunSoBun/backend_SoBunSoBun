@@ -4,6 +4,7 @@ import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.post.SavedPostDto;
+import com.sobunsobun.backend.dto.post.PostResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
@@ -80,6 +81,15 @@ public class SavedPostService {
     }
 
     /**
+     * 사용자의 저장된 게시글 목록 조회 (PostResponse 형식)
+     */
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getMySavedPostsAsPostResponse(Long userId, Pageable pageable) {
+        return savedPostRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(this::convertSavedPostToPostResponse);
+    }
+
+    /**
      * 사용자의 저장된 게시글 목록 조회
      */
     @Transactional(readOnly = true)
@@ -152,6 +162,38 @@ public class SavedPostService {
                 .totalSavedPosts(totalSavedPosts)
                 .activePosts(activePosts)
                 .closedPosts(closedPosts)
+                .build();
+    }
+
+    /**
+     * SavedPost를 PostResponse로 변환
+     */
+    private PostResponse convertSavedPostToPostResponse(SavedPost savedPost) {
+        GroupPost post = savedPost.getPost();
+        User owner = post.getOwner();
+
+        return PostResponse.builder()
+                .id(post.getId())
+                .owner(PostResponse.OwnerInfo.builder()
+                        .id(owner.getId())
+                        .nickname(owner.getNickname())
+                        .profileImageUrl(owner.getProfileImageUrl())
+                        .address(owner.getAddress())
+                        .build())
+                .title(post.getTitle())
+                .categoryCode(post.getCategories())
+                .content(post.getContent())
+                .itemsText(post.getItemsText())
+                .notesText(post.getNotesText())
+                .locationName(post.getLocationName())
+                .meetAt(post.getMeetAt())
+                .deadlineAt(post.getDeadlineAt())
+                .minMembers(post.getMinMembers())
+                .maxMembers(post.getMaxMembers())
+                .joinedMembers(post.getJoinedMembers())
+                .status(post.getStatus())
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
                 .build();
     }
 
