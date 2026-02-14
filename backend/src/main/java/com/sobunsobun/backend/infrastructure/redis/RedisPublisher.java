@@ -2,10 +2,12 @@ package com.sobunsobun.backend.infrastructure.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.dto.chat.ChatMessageDto;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 /**
  * Redis Pub/Sub Publisher
@@ -21,11 +23,25 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class RedisPublisher {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    private final Optional<RedisTemplate<String, String>> redisTemplate;
     private final ObjectMapper objectMapper;
+    private boolean redisAvailable = false;
+
+    @Autowired
+    public RedisPublisher(
+            @Autowired(required = false) RedisTemplate<String, String> redisTemplate,
+            ObjectMapper objectMapper
+    ) {
+        this.redisTemplate = Optional.ofNullable(redisTemplate);
+        this.objectMapper = objectMapper;
+        this.redisAvailable = this.redisTemplate.isPresent();
+
+        if (!redisAvailable) {
+            log.warn("⚠️ RedisPublisher - Redis가 사용 불가능합니다. 실시간 채팅이 제한됩니다.");
+        }
+    }
 
     /**
      * 채팅 메시지를 Redis Topic으로 발행
@@ -34,6 +50,11 @@ public class RedisPublisher {
      * @param chatMessageDto 발행할 메시지 DTO
      */
     public void publish(Long roomId, ChatMessageDto chatMessageDto) {
+        if (!redisAvailable) {
+            log.warn("⚠️ Redis 미사용: 메시지 발행 건너뜀 - roomId: {}", roomId);
+            return;
+        }
+
         try {
             // 채팅방별 Topic 이름: chat:room:{roomId}
             String topic = "chat:room:" + roomId;
@@ -42,7 +63,7 @@ public class RedisPublisher {
             String jsonMessage = objectMapper.writeValueAsString(chatMessageDto);
 
             // Redis Topic으로 메시지 발행
-            redisTemplate.convertAndSend(topic, jsonMessage);
+            redisTemplate.get().convertAndSend(topic, jsonMessage);
 
             log.info("[Redis Publish] Topic: {}, Message: {}", topic, jsonMessage);
         } catch (Exception e) {

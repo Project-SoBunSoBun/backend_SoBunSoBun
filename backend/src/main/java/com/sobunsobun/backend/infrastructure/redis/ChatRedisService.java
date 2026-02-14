@@ -1,14 +1,15 @@
 package com.sobunsobun.backend.infrastructure.redis;
 
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -22,14 +23,15 @@ import java.util.concurrent.TimeUnit;
  * - 빠른 조회: DB 조회 없이 Redis에서 즉시 처리
  * - 자동 만료: TTL 설정으로 abandoned 데이터 자동 정리
  * - 트랜잭션 안전: 중요한 작업은 @Transactional로 보호
+ * - Redis 선택적: Redis가 없어도 다른 기능은 정상 작동 (채팅만 제한)
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatRedisService {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    private final Optional<RedisTemplate<String, String>> redisTemplate;
     private final ChatMemberRepository chatMemberRepository;
+    private boolean redisAvailable = false;
 
     // Redis Key 프리픽스
     private static final String USER_ACTIVE_ROOM_PREFIX = "user:";
@@ -40,6 +42,47 @@ public class ChatRedisService {
     // TTL 설정 (24시간)
     private static final long REDIS_EXPIRE_TIME = 24;
     private static final TimeUnit REDIS_EXPIRE_UNIT = TimeUnit.HOURS;
+
+    @Autowired
+    public ChatRedisService(
+            @Autowired(required = false) RedisTemplate<String, String> redisTemplate,
+            ChatMemberRepository chatMemberRepository
+    ) {
+        this.redisTemplate = Optional.ofNullable(redisTemplate);
+        this.chatMemberRepository = chatMemberRepository;
+
+        // Redis 사용 가능 여부 확인
+        this.redisAvailable = this.redisTemplate.isPresent();
+
+        if (redisAvailable) {
+            try {
+                // 연결 테스트
+                this.redisTemplate.get().opsForValue().get("connection-test");
+                log.info("✅ ChatRedisService - Redis 연결 확인됨");
+            } catch (Exception e) {
+                log.warn("⚠️ ChatRedisService - Redis 연결 실패: {}", e.getMessage());
+                log.warn("⚠️ 채팅 기능이 제한됩니다. 다른 API는 정상 작동합니다.");
+                this.redisAvailable = false;
+            }
+        } else {
+            log.warn("⚠️ ═══════════════════════════════════════════════════════");
+            log.warn("⚠️ Redis 서버가 연결되지 않았습니다!");
+            log.warn("⚠️ 채팅 기능을 사용하려면 Redis 서버를 시작해주세요.");
+            log.warn("⚠️ 다른 API는 정상적으로 작동합니다.");
+            log.warn("⚠️ ═══════════════════════════════════════════════════════");
+        }
+    }
+
+    /**
+     * Redis 사용 가능 여부 확인
+     */
+    private boolean isRedisAvailable() {
+        if (!redisAvailable) {
+            log.warn("⚠️ Redis가 사용 불가능합니다. 채팅 기능이 제한됩니다.");
+            return false;
+        }
+        return true;
+    }
 
     /**
      * 사용자가 채팅방에 입장할 때 호출
@@ -54,12 +97,17 @@ public class ChatRedisService {
      */
     @Transactional
     public void enterRoom(Long userId, Long roomId) {
+        if (!isRedisAvailable()) {
+            log.warn("⚠️ Redis 미사용: enterRoom 작업 건너뜀");
+            return;
+        }
+
         try {
             log.info("🚪 [채팅방 입장] userId: {}, roomId: {}", userId, roomId);
 
             // 1. Redis에 사용자의 현재 접속 방 저장
             String activeRoomKey = buildActiveRoomKey(userId);
-            redisTemplate.opsForValue().set(
+            redisTemplate.get().opsForValue().set(
                     activeRoomKey,
                     String.valueOf(roomId),
                     REDIS_EXPIRE_TIME,
@@ -69,7 +117,7 @@ public class ChatRedisService {
 
             // 2. 해당 방의 unread 카운트 초기화
             String unreadKey = buildUnreadKey(roomId, userId);
-            redisTemplate.delete(unreadKey);
+            redisTemplate.get().delete(unreadKey);
             log.debug("✅ [Redis] unread 카운트 초기화: {}", unreadKey);
 
             // 3. DB의 ChatMember.lastReadAt 업데이트
@@ -99,12 +147,17 @@ public class ChatRedisService {
      * @param userId 사용자 ID
      */
     public void leaveRoom(Long userId) {
+        if (!isRedisAvailable()) {
+            log.warn("⚠️ Redis 미사용: leaveRoom 작업 건너뜀");
+            return;
+        }
+
         try {
             log.info("🚪 [채팅방 퇴장] userId: {}", userId);
 
             // Redis에서 사용자의 현재 접속 방 정보 삭제
             String activeRoomKey = buildActiveRoomKey(userId);
-            boolean deleted = Boolean.TRUE.equals(redisTemplate.delete(activeRoomKey));
+            boolean deleted = Boolean.TRUE.equals(redisTemplate.get().delete(activeRoomKey));
 
             if (deleted) {
                 log.debug("✅ [Redis] {} 삭제 완료", activeRoomKey);
@@ -138,6 +191,11 @@ public class ChatRedisService {
      * @param memberIds 방의 모든 멤버 ID 리스트
      */
     public void addUnreadMessageCount(Long roomId, Long senderId, List<Long> memberIds) {
+        if (!isRedisAvailable()) {
+            log.warn("⚠️ Redis 미사용: addUnreadMessageCount 작업 건너뜀");
+            return;
+        }
+
         try {
             log.info("🔔 [안 읽은 메시지 카운트 증가] roomId: {}, senderId: {}, memberCount: {}",
                     roomId, senderId, memberIds.size());
@@ -151,15 +209,15 @@ public class ChatRedisService {
 
                 // 해당 유저의 현재 접속 방 확인
                 String activeRoomKey = buildActiveRoomKey(memberId);
-                String activeRoom = redisTemplate.opsForValue().get(activeRoomKey);
+                String activeRoom = redisTemplate.get().opsForValue().get(activeRoomKey);
 
                 // 현재 방에 접속 중이 아닌 경우에만 unread 카운트 증가
                 if (activeRoom == null || !activeRoom.equals(String.valueOf(roomId))) {
                     String unreadKey = buildUnreadKey(roomId, memberId);
-                    Long newCount = redisTemplate.opsForValue().increment(unreadKey);
+                    Long newCount = redisTemplate.get().opsForValue().increment(unreadKey);
 
                     // TTL 설정 (이전에 설정되지 않았을 경우)
-                    redisTemplate.expire(unreadKey, REDIS_EXPIRE_TIME, REDIS_EXPIRE_UNIT);
+                    redisTemplate.get().expire(unreadKey, REDIS_EXPIRE_TIME, REDIS_EXPIRE_UNIT);
 
                     log.debug("✅ [증가] roomId: {}, userId: {}, newCount: {}",
                             roomId, memberId, newCount);
@@ -185,9 +243,13 @@ public class ChatRedisService {
      * @return 안 읽은 메시지 카운트 (없으면 0)
      */
     public Long getUnreadCount(Long roomId, Long userId) {
+        if (!isRedisAvailable()) {
+            return 0L;
+        }
+
         try {
             String unreadKey = buildUnreadKey(roomId, userId);
-            String count = redisTemplate.opsForValue().get(unreadKey);
+            String count = redisTemplate.get().opsForValue().get(unreadKey);
 
             if (count == null) {
                 return 0L;
@@ -208,9 +270,13 @@ public class ChatRedisService {
      * @param userId 사용자 ID
      */
     public void resetUnreadCount(Long roomId, Long userId) {
+        if (!isRedisAvailable()) {
+            return;
+        }
+
         try {
             String unreadKey = buildUnreadKey(roomId, userId);
-            redisTemplate.delete(unreadKey);
+            redisTemplate.get().delete(unreadKey);
             log.debug("✅ [unread 카운트 리셋] roomId: {}, userId: {}", roomId, userId);
         } catch (Exception e) {
             log.warn("⚠️ [unread 카운트 리셋 실패] roomId: {}, userId: {}",
@@ -225,9 +291,13 @@ public class ChatRedisService {
      * @return 현재 접속 중인 방 ID (접속 중이 아니면 null)
      */
     public Long getActiveRoom(Long userId) {
+        if (!isRedisAvailable()) {
+            return null;
+        }
+
         try {
             String activeRoomKey = buildActiveRoomKey(userId);
-            String activeRoom = redisTemplate.opsForValue().get(activeRoomKey);
+            String activeRoom = redisTemplate.get().opsForValue().get(activeRoomKey);
 
             if (activeRoom == null) {
                 return null;
