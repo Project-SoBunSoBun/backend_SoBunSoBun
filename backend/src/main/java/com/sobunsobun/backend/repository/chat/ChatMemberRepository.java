@@ -97,12 +97,13 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
 
     /**
      * 특정 사용자가 속한 모든 ACTIVE 채팅방 조회
-    /**
+     *
      * @param userId 사용자 ID
-     * @return 사용자가 속한 채팅방 리스트
+     * @return 사용자가 속한 ChatMember 리스트
      */
     @Query("""
-        SELECT DISTINCT m.chatRoom FROM ChatMember m
+        SELECT m FROM ChatMember m
+        JOIN FETCH m.chatRoom
         WHERE m.user.id = :userId
         AND m.status = 'ACTIVE'
         ORDER BY m.chatRoom.lastMessageAt DESC
