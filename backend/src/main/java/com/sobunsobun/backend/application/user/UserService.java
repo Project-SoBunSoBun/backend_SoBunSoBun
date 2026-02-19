@@ -383,11 +383,15 @@ public class UserService {
 
         // 3. 사용자 상태 변경 및 탈퇴 일시 저장
         LocalDateTime withdrawnAt = LocalDateTime.now();
+        LocalDateTime reactivatableAt = withdrawnAt.plusDays(90); // 90일 후 재가입 가능
+
         user.setStatus(UserStatus.DELETED);
         user.setWithdrawnAt(withdrawnAt);
+        user.setReactivatableAt(reactivatableAt);
         userRepository.saveAndFlush(user);
 
-        log.info("✅ 사용자 상태 변경 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, withdrawnAt);
+        log.info("✅ 사용자 상태 변경 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
+                userId, withdrawnAt, reactivatableAt);
 
         // 4. 탈퇴 사유 저장
         WithdrawalReason withdrawalReason = WithdrawalReason.builder()
@@ -403,6 +407,7 @@ public class UserService {
         return WithdrawResponse.builder()
                 .message("회원탈퇴가 완료되었습니다.")
                 .withdrawnAt(withdrawnAt)
+                .reactivatableAt(reactivatableAt)
                 .dataRetentionDays(30)  // 개인정보 보관 기간
                 .build();
     }

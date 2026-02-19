@@ -20,6 +20,11 @@ public class WithdrawResponse {
     private LocalDateTime withdrawnAt;
 
     /**
+     * 재가입 가능 일시 (탈퇴일 + 90일)
+     */
+    private LocalDateTime reactivatableAt;
+
+    /**
      * 개인정보 보관 기간 (일)
      */
     private Integer dataRetentionDays;

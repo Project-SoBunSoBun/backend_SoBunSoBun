@@ -23,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -94,11 +95,34 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 이메일 동의가 필요합니다.");
         }
 
-        // 4. 기존 사용자 여부 확인 (카카오 OAuth ID로 조회)
-        boolean isNewUser = !authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId).isPresent();
+        // 4. 탈퇴한 사용자 재가입 제한 확인 (90일)
+        var existingAuthProvider = authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId);
+        if (existingAuthProvider.isPresent()) {
+            User existingUser = existingAuthProvider.get().getUser();
+
+            // 탈퇴한 사용자인 경우
+            if (existingUser.getStatus() == UserStatus.DELETED) {
+                LocalDateTime reactivatableAt = existingUser.getReactivatableAt();
+
+                // 재가입 가능 일시 확인
+                if (reactivatableAt != null && LocalDateTime.now().isBefore(reactivatableAt)) {
+                    log.warn("재가입 제한 기간 - 사용자 ID: {}, 재가입 가능 일시: {}",
+                            existingUser.getId(), reactivatableAt);
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "탈퇴 후 90일 이내에는 재가입할 수 없습니다. 재가입 가능 일시: " + reactivatableAt);
+                }
+
+                // 90일 경과: 재가입 가능하므로 신규 사용자로 처리
+                log.info("재가입 가능 기간 경과 - 기존 사용자 ID: {}, 새 계정으로 가입 진행", existingUser.getId());
+            }
+        }
+
+        // 5. 기존 활성 사용자 여부 확인 (카카오 OAuth ID로 조회)
+        boolean isNewUser = !existingAuthProvider.isPresent()
+                || existingAuthProvider.get().getUser().getStatus() == UserStatus.DELETED;
         log.info("사용자 상태 확인 - 신규 사용자: {}", isNewUser);
 
-        // 5. 임시 로그인 토큰 발급 (이용약관 동의용, 10분 만료)
+        // 6. 임시 로그인 토큰 발급 (이용약관 동의용, 10분 만료)
         String loginToken = jwtTokenProvider.createLoginToken(email, oauthId, LOGIN_TOKEN_TTL);
         log.info("임시 로그인 토큰 발급 완료");
 
@@ -318,12 +342,50 @@ public class AuthService {
     /**
      * 사용자 검색 또는 생성 (신규 회원가입용)
      * AuthProvider로 카카오 OAuth ID 관리
+     *
+     * 탈퇴 후 재가입 시나리오:
+     * - 기존 User 레코드는 유지 (status=DELETED)
+     * - 새로운 User 레코드 생성
+     * - AuthProvider의 user_id를 새 User로 변경
      */
     private User findOrCreateUser(String email, String oauthId) {
-        // 1. AuthProvider로 기존 사용자 확인
-        return authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId)
-                .map(AuthProvider::getUser)
-                .orElseGet(() -> createNewUserWithAuthProvider(email, oauthId));
+        // 1. AuthProvider로 기존 OAuth 연결 확인
+        var existingAuthProvider = authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId);
+
+        if (existingAuthProvider.isPresent()) {
+            User existingUser = existingAuthProvider.get().getUser();
+
+            // 2. 탈퇴한 사용자인 경우 - 새 계정 생성
+            if (existingUser.getStatus() == UserStatus.DELETED) {
+                log.info("탈퇴 사용자 재가입 - 기존 사용자 ID: {}, 새 계정 생성", existingUser.getId());
+
+                // 새 User 생성
+                User newUser = User.builder()
+                        .email(email)
+                        .nickname(null)
+                        .mannerScore(BigDecimal.ZERO)
+                        .role(Role.USER)
+                        .status(UserStatus.ACTIVE)
+                        .build();
+                User savedNewUser = userRepository.save(newUser);
+
+                // 기존 AuthProvider를 새 User로 연결 변경
+                AuthProvider authProvider = existingAuthProvider.get();
+                authProvider.setUser(savedNewUser);
+                authProviderRepository.save(authProvider);
+
+                log.info("재가입 완료 - 새 사용자 ID: {}, 기존 사용자 ID: {} (삭제 상태 유지)",
+                        savedNewUser.getId(), existingUser.getId());
+
+                return savedNewUser;
+            }
+
+            // 3. 활성 사용자인 경우 - 기존 사용자 반환
+            return existingUser;
+        }
+
+        // 4. 신규 사용자 - 새 계정 생성
+        return createNewUserWithAuthProvider(email, oauthId);
     }
 
     /**

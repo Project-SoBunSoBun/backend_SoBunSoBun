@@ -353,6 +353,8 @@ public class UserController {
     /**
      * 회원 탈퇴 API - 인증 필요
      *
+     * @deprecated 대신 POST /api/me/withdraw 사용을 권장합니다.
+     *
      * 사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다.
      * 동시에 탈퇴 사유를 withdrawal_reason 테이블에 저장합니다.
      *
@@ -367,9 +369,12 @@ public class UserController {
      * @param request 탈퇴 요청 정보 (사유 코드 및 상세)
      * @return 탈퇴 응답 정보
      */
+    @Deprecated
     @Operation(
-        summary = "회원 탈퇴",
-        description = "사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다. 탈퇴 사유는 withdrawal_reason 테이블에 저장됩니다."
+        summary = "회원 탈퇴 (Deprecated)",
+        description = "⚠️ Deprecated: POST /api/me/withdraw 사용을 권장합니다. " +
+                "사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다. 탈퇴 사유는 withdrawal_reason 테이블에 저장됩니다.",
+        deprecated = true
     )
     @PostMapping("/me/withdraw")
     public ResponseEntity<WithdrawResponse> withdrawUser(
@@ -379,6 +384,7 @@ public class UserController {
 
         try {
             Long userId = principal.id();
+            log.warn("⚠️ Deprecated API 사용 - /users/me/withdraw → /api/me/withdraw 권장");
             log.info("🚪 회원 탈퇴 요청 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
 
             WithdrawResponse response = userService.withdrawUser(userId, request);

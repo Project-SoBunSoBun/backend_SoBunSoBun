@@ -16,17 +16,8 @@ spring:
 
   data:
     redis:
-      host: ${redisHost:localhost}
-      port: ${redisPort:6379}
-      timeout: 3000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
-        shutdown-timeout: 100ms
-      # Redis 연결 실패 시에도 애플리케이션 시작 허용
-      client-type: lettuce
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
 
   jpa:
     hibernate:
