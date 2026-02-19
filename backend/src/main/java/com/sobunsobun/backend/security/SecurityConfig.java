@@ -57,6 +57,10 @@ public class SecurityConfig {
         // 정적 파일 접근
         "/files/**",
 
+        // 홈페이지
+        "/",
+        "/index.html",
+
         // 테스트용 HTML 파일
         "/chat.html",
         "/chatTest.html",
