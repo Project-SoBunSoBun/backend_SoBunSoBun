@@ -53,7 +53,7 @@ public class RedisConfig {
     }
 
     /**
-     * Redis 데이터 처리를 위한 템플릿 설정
+     * Redis 데이터 처리를 위한 템플릿 설정 (Object 타입)
      *
      * RedisConnectionFactory Bean이 있을 때만 생성됩니다.
      */
@@ -69,7 +69,31 @@ public class RedisConfig {
 
         redisTemplate.afterPropertiesSet();
 
-        log.info("✅ RedisTemplate 생성 완료");
+        log.info("✅ RedisTemplate<String, Object> 생성 완료");
+
+        return redisTemplate;
+    }
+
+    /**
+     * Redis 데이터 처리를 위한 템플릿 설정 (String 타입)
+     *
+     * ChatRedisService에서 사용하는 String 전용 템플릿입니다.
+     */
+    @Bean
+    @ConditionalOnBean(RedisConnectionFactory.class)
+    public RedisTemplate<String, String> stringRedisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setConnectionFactory(connectionFactory);
+
+        // 직렬화 설정 (모두 String으로)
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setValueSerializer(new StringRedisSerializer());
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashValueSerializer(new StringRedisSerializer());
+
+        redisTemplate.afterPropertiesSet();
+
+        log.info("✅ RedisTemplate<String, String> 생성 완료");
 
         return redisTemplate;
     }

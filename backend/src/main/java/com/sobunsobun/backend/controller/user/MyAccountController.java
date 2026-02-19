@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.controller.user;
 
+import com.sobunsobun.backend.application.user.UserService;
 import com.sobunsobun.backend.dto.account.*;
 import com.sobunsobun.backend.dto.common.ApiResponse;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
@@ -12,6 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * 사용자 계정 관리 컨트롤러
  *
@@ -20,8 +24,6 @@ import org.springframework.web.bind.annotation.*;
  * - 로그아웃
  * - 회원 탈퇴
  * - 탈퇴 사유 목록 조회
- *
- * TODO: AccountService 주입 및 구현
  */
 @Slf4j
 @Tag(name = "User - 계정 관리", description = "로그아웃/탈퇴 API")
@@ -30,8 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MyAccountController {
 
-    // TODO: AccountService 주입 및 구현
-    // private final AccountService accountService;
+    private final UserService userService;
 
     /**
      * 계정 정보 조회
@@ -125,16 +126,22 @@ public class MyAccountController {
         try {
             log.info("📋 탈퇴 사유 목록 조회 요청");
 
-            // TODO: Service 호출로 교체
-            // WithdrawReasonListResponse reasons = accountService.getWithdrawReasons();
+            List<WithdrawReasonListResponse.WithdrawReasonItem> reasons = Arrays.asList(
+                    new WithdrawReasonListResponse.WithdrawReasonItem("RARELY_USED", "잘 사용하지 않아요"),
+                    new WithdrawReasonListResponse.WithdrawReasonItem("NO_NEARBY_POSTS", "근처에 게시글이 없어요"),
+                    new WithdrawReasonListResponse.WithdrawReasonItem("INCONVENIENT", "사용이 불편해요"),
+                    new WithdrawReasonListResponse.WithdrawReasonItem("PRIVACY_CONCERN", "개인정보가 걱정돼요"),
+                    new WithdrawReasonListResponse.WithdrawReasonItem("BAD_EXPERIENCE", "나쁜 경험이 있었어요"),
+                    new WithdrawReasonListResponse.WithdrawReasonItem("OTHER", "기타")
+            );
 
-            // 임시 응답
-            WithdrawReasonListResponse reasons = WithdrawReasonListResponse.builder()
+            WithdrawReasonListResponse response = WithdrawReasonListResponse.builder()
+                    .reasons(reasons)
                     .build();
 
-            log.info("✅ 탈퇴 사유 목록 조회 완료");
+            log.info("✅ 탈퇴 사유 목록 조회 완료 - {} 개", reasons.size());
 
-            return ResponseEntity.ok(ApiResponse.success(reasons));
+            return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
             log.error("❌ 탈퇴 사유 목록 조회 중 오류 발생", e);
             throw e;
@@ -145,22 +152,21 @@ public class MyAccountController {
      * 회원 탈퇴
      *
      * 처리 사항:
-     * - 회원 정보 삭제 또는 비활성화
-     * - 관련 데이터 처리 (게시글, 댓글 등)
-     * - Refresh Token 무효화
-     * - FCM 토큰 삭제
+     * - User 상태를 DELETED로 변경
+     * - withdrawn_at, reactivatable_at 기록
+     * - 탈퇴 사유 저장
      *
-     * 주의사항:
-     * - 진행 중인 공동구매가 있는 경우 탈퇴 불가
-     * - 정산되지 않은 내역이 있는 경우 탈퇴 불가
+     * 재가입 제한:
+     * - 탈퇴 후 90일간 재가입 불가
+     * - 90일 경과 후 재가입 시 새 계정으로 생성
      *
      * @param authentication 현재 로그인한 사용자 인증 정보
-     * @param request 탈퇴 요청 (사유, 비밀번호 확인 등)
+     * @param request 탈퇴 요청 (사유, 동의 여부)
      * @return 탈퇴 처리 결과
      */
     @Operation(
         summary = "회원 탈퇴",
-        description = "회원 탈퇴를 처리합니다. 진행 중인 공동구매나 미정산 내역이 있으면 탈퇴할 수 없습니다."
+        description = "회원 탈퇴를 처리합니다. 탈퇴 후 90일간 재가입이 제한됩니다."
     )
     @PostMapping("/withdraw")
     public ResponseEntity<ApiResponse<WithdrawResponse>> withdraw(
@@ -170,19 +176,15 @@ public class MyAccountController {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
             log.info("⚠️ 회원 탈퇴 요청 - 사용자 ID: {}", principal.id());
 
-            // TODO: Service 호출로 교체
-            // WithdrawResponse response = accountService.withdraw(principal.id(), request);
+            WithdrawResponse response = userService.withdrawUser(principal.id(), request);
 
-            // 임시 응답
-            WithdrawResponse response = WithdrawResponse.builder()
-                    .message("회원 탈퇴가 완료되었습니다.")
-                    .build();
-
-            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}", principal.id());
+            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
+                    principal.id(), response.getWithdrawnAt(), response.getReactivatableAt());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 회원 탈퇴 처리 중 오류 발생", e);
+            log.error("❌ 회원 탈퇴 처리 중 오류 발생 - 사용자 ID: {}",
+                    ((JwtUserPrincipal) authentication.getPrincipal()).id(), e);
             throw e;
         }
     }

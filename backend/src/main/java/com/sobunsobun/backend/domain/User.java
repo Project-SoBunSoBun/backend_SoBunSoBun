@@ -101,6 +101,13 @@ public class User {
     private LocalDateTime withdrawnAt;
 
     /**
+     * 재가입 가능 일시 (탈퇴일 + 90일)
+     * 이 날짜 이전에는 동일한 OAuth ID로 재가입 불가
+     */
+    @Column(name = "reactivatable_at")
+    private LocalDateTime reactivatableAt;
+
+    /**
      * OAuth 제공자 추가 헬퍼 메서드
      */
     public void addAuthProvider(AuthProvider authProvider) {
