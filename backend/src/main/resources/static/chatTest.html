@@ -184,7 +184,11 @@
         appendLog('🔐 로그인 시도: ' + jwtToken.substring(0, 30) + '...');
 
         // /api/me 엔드포인트 호출하여 사용자 정보 조회
-        fetch('http://localhost:8081/api/me', {
+        // 현재 페이지의 호스트를 사용
+        const apiUrl = window.location.protocol + '//' + window.location.host + '/api/me';
+        appendLog('📡 API 호출: ' + apiUrl);
+
+        fetch(apiUrl, {
             method: 'GET',
             headers: {
                 'Authorization': 'Bearer ' + jwtToken,
@@ -252,11 +256,15 @@
         currentSenderId = document.getElementById('senderId').value;  // ✅ 전역 변수에 할당
 
         appendMessage('시스템', '✏️ 연결 시도 중...', 'orange');
-        appendLog('🔌 WebSocket 연결 시도: ws://localhost:8081/ws-stomp');
+
+        // WebSocket URL 동적 생성 (현재 페이지의 호스트 사용)
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = protocol + '//' + window.location.host + '/ws-stomp';
+        appendLog('🔌 WebSocket 연결 시도: ' + wsUrl);
 
         // 1. STOMP 클라이언트 설정
         const clientConfig = {
-            brokerURL: 'ws://localhost:8081/ws-stomp',
+            brokerURL: wsUrl,
             connectHeaders: {
                 'Authorization': 'Bearer ' + currentJwtToken
             },
