@@ -35,6 +35,7 @@ public enum ErrorCode {
     INVALID_POST_STATUS("POST_003", "유효하지 않은 게시글 상태입니다.", HttpStatus.BAD_REQUEST),
     UNAUTHORIZED_POST_ACCESS("POST_004", "게시글 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     INVALID_POST_DATA("POST_005", "유효하지 않은 게시글 데이터입니다.", HttpStatus.BAD_REQUEST),
+    ONGOING_POST_EXISTS("POST_006", "이미 진행 중인 공동구매가 있습니다.", HttpStatus.CONFLICT),
 
     // 댓글 관련 (4000~4099)
     COMMENT_NOT_FOUND("COMMENT_001", "댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

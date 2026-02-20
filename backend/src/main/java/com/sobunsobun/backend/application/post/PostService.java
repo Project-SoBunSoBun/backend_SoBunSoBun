@@ -6,6 +6,8 @@ import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.post.*;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.support.exception.BusinessException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -54,7 +56,18 @@ public class PostService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
                 });
 
-        // 2. 게시글 엔티티 생성
+        // 2. 진행 중인 게시글 존재 여부 확인
+        // OPEN 상태(모집 중)인 게시글이 이미 있는지 체크
+        // 향후 IN_PROGRESS 등 상태 추가 시 List에 포함하면 됨
+        List<PostStatus> ongoingStatuses = List.of(PostStatus.OPEN);
+        boolean hasOngoingPost = postRepository.existsByOwnerIdAndStatusIn(userId, ongoingStatuses);
+
+        if (hasOngoingPost) {
+            log.warn("진행 중인 게시글이 이미 존재함 - 사용자 ID: {}", userId);
+            throw new BusinessException(ErrorCode.ONGOING_POST_EXISTS);
+        }
+
+        // 3. 게시글 엔티티 생성
         GroupPost post = GroupPost.builder()
                 .owner(user)
                 .title(request.getTitle())
@@ -69,7 +82,7 @@ public class PostService {
                 .status(PostStatus.OPEN)
                 .build();
 
-        // 3. 저장
+        // 4. 저장
         GroupPost savedPost = postRepository.save(post);
         log.info("[사용자 작동] 게시글 생성 완료 - 게시글 ID: {}, 사용자 ID: {}", savedPost.getId(), userId);
 
