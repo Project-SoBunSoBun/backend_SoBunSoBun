@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 1:1 문의 서비스
@@ -30,6 +31,11 @@ public class InquiryService {
     private final InquiryRepository inquiryRepository;
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
+
+    // 이메일 검증 정규식
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+        "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$"
+    );
 
     /**
      * 문의 제출
@@ -46,13 +52,23 @@ public class InquiryService {
             // 필드 검증
             if (request.getContent() == null || request.getContent().isBlank()) {
                 log.warn("⚠️ [submitInquiry] content 필드가 null 또는 빈 문자열입니다");
+                throw new IllegalArgumentException("문의 내용은 필수입니다.");
             }
             if (request.getTypeCode() == null || request.getTypeCode().isBlank()) {
                 log.warn("⚠️ [submitInquiry] typeCode 필드가 null 또는 빈 문자열입니다");
+                throw new IllegalArgumentException("문의 유형은 필수입니다.");
             }
             if (request.getReplyEmail() == null || request.getReplyEmail().isBlank()) {
                 log.warn("⚠️ [submitInquiry] replyEmail 필드가 null 또는 빈 문자열입니다");
+                throw new IllegalArgumentException("답변 받을 이메일은 필수입니다.");
             }
+
+            // 이메일 형식 검증
+            if (!isValidEmail(request.getReplyEmail())) {
+                log.warn("⚠️ [submitInquiry] 잘못된 이메일 형식: '{}'", request.getReplyEmail());
+                throw new IllegalArgumentException("올바른 이메일 형식이 아닙니다: " + request.getReplyEmail());
+            }
+            log.info("✅ [submitInquiry] 이메일 형식 검증 통과: '{}'", request.getReplyEmail());
 
             // 스크린샷 파일 저장
             List<String> imageUrls = new ArrayList<>();
@@ -181,5 +197,17 @@ public class InquiryService {
             log.warn("⚠️ [getInquiryImageUrls] 이미지 URL 파싱 실패: {}", e.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * 이메일 형식 검증
+     * @param email 검증할 이메일 주소
+     * @return 유효한 이메일이면 true, 아니면 false
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        return EMAIL_PATTERN.matcher(email.trim()).matches();
     }
 }
