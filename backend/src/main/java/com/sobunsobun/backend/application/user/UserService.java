@@ -11,6 +11,7 @@ import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.CommentRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
+import com.sobunsobun.backend.repository.UserDeviceRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatInviteRepository;
@@ -46,6 +47,7 @@ public class UserService {
     private final GroupPostRepository groupPostRepository;
     private final CommentRepository commentRepository;
     private final SavedPostRepository savedPostRepository;
+    private final UserDeviceRepository userDeviceRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMemberRepository chatMemberRepository;
     private final ChatInviteRepository chatInviteRepository;

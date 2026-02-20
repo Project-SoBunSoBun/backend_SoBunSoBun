@@ -111,7 +111,10 @@ public class SupportController {
     /**
      * 1:1 문의 제출 (스크린샷 첨부 가능)
      *
-     * @param request 문의 요청
+     * @param typeCode 문의 유형 코드
+     * @param content 문의 내용
+     * @param replyEmail 답변 받을 이메일
+     * @param screenshots 스크린샷 파일 (선택)
      * @param principal 인증 사용자
      * @return 문의 응답
      */
@@ -122,16 +125,30 @@ public class SupportController {
             description = "스크린샷 첨부가 가능한 1:1 문의를 제출합니다. 최대 5개의 스크린샷(jpg/png/webp, 각 5MB)을 첨부할 수 있습니다."
     )
     public ResponseEntity<InquiryResponse> submitInquiry(
-            @RequestParam String typeCode,
-            @RequestParam String content,
-            @RequestParam String replyEmail,
-            @RequestParam(required = false) List<MultipartFile> screenshots,
+            @RequestParam("typeCode") String typeCode,
+            @RequestParam("content") String content,
+            @RequestParam("replyEmail") String replyEmail,
+            @RequestParam(value = "screenshots", required = false) List<MultipartFile> screenshots,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
         log.info("📝 [submitInquiry API] 1:1 문의 제출 - userId: {}", principal.id());
-        log.info("📝 [submitInquiry API] 요청 데이터 - typeCode: {}, content: {}, replyEmail: {}, screenshots: {}",
-                typeCode, content, replyEmail,
-                screenshots != null ? screenshots.size() : 0);
+        log.info("📝 [submitInquiry API] 요청 파라미터 검증");
+        log.info("  - typeCode: '{}' (null: {})", typeCode, typeCode == null);
+        log.info("  - content: '{}' (null: {}, length: {})",
+                content, content == null, content != null ? content.length() : 0);
+        log.info("  - replyEmail: '{}' (null: {})", replyEmail, replyEmail == null);
+        log.info("  - screenshots: {} (null: {})",
+                screenshots != null ? screenshots.size() : 0, screenshots == null);
+
+        // 스크린샷 상세 로그
+        if (screenshots != null && !screenshots.isEmpty()) {
+            for (int i = 0; i < screenshots.size(); i++) {
+                MultipartFile file = screenshots.get(i);
+                log.info("  - screenshot[{}]: name='{}', originalFilename='{}', size={}, contentType='{}', empty={}",
+                        i, file.getName(), file.getOriginalFilename(), file.getSize(),
+                        file.getContentType(), file.isEmpty());
+            }
+        }
 
         // InquiryRequest 객체 생성
         InquiryRequest request = InquiryRequest.builder()
@@ -243,7 +260,11 @@ public class SupportController {
     /**
      * 버그 신고 제출 (스크린샷 첨부 가능)
      *
-     * @param request 버그 신고 요청
+     * @param typeCode 버그 유형 코드
+     * @param content 버그 내용
+     * @param replyEmail 답변 받을 이메일
+     * @param screenshots 스크린샷 파일 (선택)
+     * @param deviceInfo 디바이스 정보 (선택)
      * @param principal 인증 사용자
      * @return 버그 신고 응답
      */
