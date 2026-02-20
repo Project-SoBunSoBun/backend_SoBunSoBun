@@ -134,5 +134,10 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
             @Param("user1Id") Long user1Id,
             @Param("user2Id") Long user2Id
     );
+
+    /**
+     * 특정 사용자의 모든 채팅 멤버 정보 삭제 (회원탈퇴용)
+     */
+    void deleteByUserId(Long userId);
 }
 
