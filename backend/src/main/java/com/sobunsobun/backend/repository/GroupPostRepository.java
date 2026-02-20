@@ -19,6 +19,16 @@ import java.util.List;
 public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
 
     /**
+     * 작성자와 상태로 게시글 존재 여부 확인
+     * 새 게시글 작성 전 진행 중인 게시글이 있는지 검증하는 데 사용
+     *
+     * @param ownerId 작성자 ID
+     * @param statuses 확인할 상태 목록 (예: OPEN, IN_PROGRESS 등)
+     * @return 해당 상태의 게시글이 존재하면 true
+     */
+    boolean existsByOwnerIdAndStatusIn(Long ownerId, List<PostStatus> statuses);
+
+    /**
      * 상태별 게시글 조회 (마감일 오름차순)
      */
     Page<GroupPost> findByStatusOrderByDeadlineAtAsc(PostStatus status, Pageable pageable);
