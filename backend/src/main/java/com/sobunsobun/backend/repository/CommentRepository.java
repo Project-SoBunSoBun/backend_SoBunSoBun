@@ -49,9 +49,7 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
      * @param postId 게시글 ID
      * @return 댓글 개수
      */
-    @Query("SELECT COUNT(c) FROM Comment c " +
-           "WHERE c.post.id = :postId " +
-           "AND c.deleted = false")
+    @Query("SELECT COUNT(c) FROM Comment c WHERE c.post.id = :postId AND c.deleted = false")
     long countActiveCommentsByPostId(@Param("postId") Long postId);
 
     /**
@@ -87,6 +85,22 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
 
     /**
      * 부모 댓글 삭제 시 대댓글 존재 여부 확인
+     *
+     * @param parentCommentId 부모 댓글 ID
+     * @return 활성 대댓글 존재 여부
+     */
+    @Query("SELECT COUNT(c) > 0 FROM Comment c " +
+           "WHERE c.parentComment.id = :parentCommentId " +
+           "AND c.deleted = false")
+    boolean hasActiveChildComments(@Param("parentCommentId") Long parentCommentId);
+
+    /**
+     * 특정 사용자의 모든 댓글 삭제 (회원탈퇴용)
+     */
+    void deleteByUserId(Long userId);
+
+    /**
+     * 특정 부모 댓글의 활성 대댓글 존재 여부 확인
      *
      * @param parentCommentId 부모 댓글 ID
      * @return 활성 대댓글 존재 여부

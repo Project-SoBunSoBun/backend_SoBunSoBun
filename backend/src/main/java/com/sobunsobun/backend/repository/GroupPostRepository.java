@@ -91,4 +91,9 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
      * TODO: 참여 정보를 저장하는 엔티티/테이블 필요
      */
     // long countByParticipantsId(Long userId);
+
+    /**
+     * 특정 사용자의 모든 게시글 삭제 (회원탈퇴용)
+     */
+    void deleteByOwnerId(Long ownerId);
 }

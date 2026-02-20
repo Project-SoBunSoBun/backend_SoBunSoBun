@@ -73,4 +73,9 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("lastMessageId") Long lastMessageId,
             Pageable pageable
     );
+
+    /**
+     * 특정 사용자가 보낸 모든 메시지 삭제 (회원탈퇴용)
+     */
+    void deleteBySenderId(Long senderId);
 }

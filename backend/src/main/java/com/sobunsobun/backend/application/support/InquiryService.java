@@ -58,26 +58,45 @@ public class InquiryService {
             List<String> imageUrls = new ArrayList<>();
             if (request.getScreenshots() != null && !request.getScreenshots().isEmpty()) {
                 log.info("📷 [submitInquiry] 스크린샷 {} 개 저장 시작", request.getScreenshots().size());
-                for (MultipartFile screenshot : request.getScreenshots()) {
+                for (int i = 0; i < request.getScreenshots().size(); i++) {
+                    MultipartFile screenshot = request.getScreenshots().get(i);
+                    log.info("📷 [submitInquiry] 처리 중: screenshot[{}] - name='{}', originalFilename='{}', size={}, contentType='{}', empty={}",
+                            i, screenshot.getName(), screenshot.getOriginalFilename(),
+                            screenshot.getSize(), screenshot.getContentType(), screenshot.isEmpty());
+
                     if (screenshot != null && !screenshot.isEmpty()) {
                         try {
                             String imageUrl = fileStorageService.saveImage(screenshot);
-                            if (imageUrl != null) {
+                            if (imageUrl != null && !imageUrl.isBlank()) {
                                 imageUrls.add(imageUrl);
-                                log.info("✅ [submitInquiry] 스크린샷 저장 성공: {}", imageUrl);
+                                log.info("✅ [submitInquiry] 스크린샷[{}] 저장 성공: {}", i, imageUrl);
+                            } else {
+                                log.warn("⚠️ [submitInquiry] 스크린샷[{}] 저장 실패: imageUrl이 null 또는 빈 문자열", i);
                             }
                         } catch (Exception e) {
-                            log.warn("⚠️ [submitInquiry] 스크린샷 저장 실패: {}", e.getMessage());
+                            log.error("❌ [submitInquiry] 스크린샷[{}] 저장 중 예외 발생: {}", i, e.getMessage(), e);
                         }
+                    } else {
+                        log.warn("⚠️ [submitInquiry] 스크린샷[{}]이 null 또는 비어있음", i);
                     }
                 }
+            } else {
+                log.info("📷 [submitInquiry] 첨부된 스크린샷 없음 (screenshots: {})",
+                        request.getScreenshots() == null ? "null" : "empty list");
             }
 
             // 이미지 URL을 JSON 배열로 변환
             String imageUrlsJson = null;
             if (!imageUrls.isEmpty()) {
-                imageUrlsJson = objectMapper.writeValueAsString(imageUrls);
-                log.info("📦 [submitInquiry] 이미지 URL JSON: {}", imageUrlsJson);
+                try {
+                    imageUrlsJson = objectMapper.writeValueAsString(imageUrls);
+                    log.info("📦 [submitInquiry] 이미지 URL JSON 변환 성공: {} (총 {} 개)", imageUrlsJson, imageUrls.size());
+                } catch (Exception e) {
+                    log.error("❌ [submitInquiry] 이미지 URL JSON 변환 실패: {}", e.getMessage(), e);
+                    imageUrlsJson = null;
+                }
+            } else {
+                log.info("📦 [submitInquiry] 저장된 이미지 URL 없음, imageUrls 필드는 null로 저장됨");
             }
 
             // 문의 엔티티 생성

@@ -8,6 +8,13 @@ import com.sobunsobun.backend.dto.account.WithdrawRequest;
 import com.sobunsobun.backend.dto.account.WithdrawResponse;
 import com.sobunsobun.backend.repository.WithdrawalReasonRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.repository.GroupPostRepository;
+import com.sobunsobun.backend.repository.CommentRepository;
+import com.sobunsobun.backend.repository.SavedPostRepository;
+import com.sobunsobun.backend.repository.UserDeviceRepository;
+import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
+import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
+import com.sobunsobun.backend.repository.chat.ChatInviteRepository;
 import com.sobunsobun.backend.support.util.NicknameNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +27,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
-import java.time.LocalDateTime;
-
 /**
  * 사용자 비즈니스 로직 서비스
  *
@@ -29,6 +34,7 @@ import java.time.LocalDateTime;
  * - 닉네임 중복 확인 및 정규화
  * - 사용자 프로필 관리
  * - 닉네임 유효성 검증
+ * - 회원 탈퇴 및 관련 데이터 초기화
  */
 @Slf4j
 @Service
@@ -38,6 +44,13 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final WithdrawalReasonRepository withdrawalReasonRepository;
+    private final GroupPostRepository groupPostRepository;
+    private final CommentRepository commentRepository;
+    private final SavedPostRepository savedPostRepository;
+    private final UserDeviceRepository userDeviceRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final ChatMemberRepository chatMemberRepository;
+    private final ChatInviteRepository chatInviteRepository;
     private final NicknameNormalizer nicknameNormalizer;
     private final FileStorageService fileStorageService;
 
@@ -381,7 +394,46 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 탈퇴한 사용자입니다.");
         }
 
-        // 3. 사용자 상태 변경 및 탈퇴 일시 저장
+        // 3. 사용자 관련 데이터 모두 삭제
+        log.info("🗑️ 사용자 관련 데이터 삭제 시작 - 사용자 ID: {}", userId);
+
+        try {
+            // 3-1. 게시글 삭제 (작성한 모든 게시글)
+            log.debug("게시글 삭제 중...");
+            groupPostRepository.deleteByOwnerId(userId);
+
+            // 3-2. 댓글 삭제 (작성한 모든 댓글)
+            log.debug("댓글 삭제 중...");
+            commentRepository.deleteByUserId(userId);
+
+            // 3-3. 저장한 게시글 삭제
+            log.debug("저장한 게시글 삭제 중...");
+            savedPostRepository.deleteByUserId(userId);
+
+            // 3-4. 사용자 디바이스 정보 삭제 (FCM 토큰 등)
+            log.debug("디바이스 정보 삭제 중...");
+            userDeviceRepository.deleteByUserId(userId);
+
+            // 3-5. 채팅 메시지 삭제 (보낸 모든 메시지)
+            log.debug("채팅 메시지 삭제 중...");
+            chatMessageRepository.deleteBySenderId(userId);
+
+            // 3-6. 채팅방 멤버 정보 삭제
+            log.debug("채팅방 멤버 정보 삭제 중...");
+            chatMemberRepository.deleteByUserId(userId);
+
+            // 3-7. 채팅 초대 삭제 (받은 초대 + 보낸 초대)
+            log.debug("채팅 초대 삭제 중...");
+            chatInviteRepository.deleteByInviteeId(userId);
+            chatInviteRepository.deleteByInviterId(userId);
+
+            log.info("✅ 사용자 관련 데이터 삭제 완료 - 사용자 ID: {}", userId);
+        } catch (Exception e) {
+            log.error("❌ 사용자 관련 데이터 삭제 중 오류 발생 - 사용자 ID: {}", userId, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "데이터 삭제 중 오류가 발생했습니다.");
+        }
+
+        // 4. 사용자 상태 변경 및 탈퇴 일시 저장
         LocalDateTime withdrawnAt = LocalDateTime.now();
         LocalDateTime reactivatableAt = withdrawnAt.plusDays(90); // 90일 후 재가입 가능
 
@@ -393,7 +445,7 @@ public class UserService {
         log.info("✅ 사용자 상태 변경 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
                 userId, withdrawnAt, reactivatableAt);
 
-        // 4. 탈퇴 사유 저장
+        // 5. 탈퇴 사유 저장
         WithdrawalReason withdrawalReason = WithdrawalReason.builder()
                 .user(user)
                 .reasonCode(request.getReasonCode())
@@ -403,12 +455,12 @@ public class UserService {
         withdrawalReasonRepository.save(withdrawalReason);
         log.info("✅ 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
 
-        // 5. 응답 반환
+        // 6. 응답 반환
         return WithdrawResponse.builder()
-                .message("회원탈퇴가 완료되었습니다.")
+                .message("회원탈퇴가 완료되었습니다. 관련 데이터가 모두 삭제되었습니다.")
                 .withdrawnAt(withdrawnAt)
                 .reactivatableAt(reactivatableAt)
-                .dataRetentionDays(30)  // 개인정보 보관 기간
+                .dataRetentionDays(90)  // 90일 후 재가입 가능
                 .build();
     }
 

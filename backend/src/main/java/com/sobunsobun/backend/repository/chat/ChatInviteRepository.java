@@ -33,4 +33,14 @@ public interface ChatInviteRepository extends JpaRepository<ChatInvite, Long> {
         ORDER BY i.createdAt DESC
     """)
     List<ChatInvite> findPendingInvites(@Param("inviteeId") Long inviteeId);
+
+    /**
+     * 특정 사용자가 받은 모든 채팅 초대 삭제 (회원탈퇴용)
+     */
+    void deleteByInviteeId(Long inviteeId);
+
+    /**
+     * 특정 사용자가 보낸 모든 채팅 초대 삭제 (회원탈퇴용)
+     */
+    void deleteByInviterId(Long inviterId);
 }
