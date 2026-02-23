@@ -6,6 +6,8 @@ package com.sobunsobun.backend.domain;
 public enum PostStatus {
     OPEN,       // 모집 중
     CLOSED,     // 모집 완료
+    PROCESSING, // 정산 진행 중
+    COMPLETED,  // 정산 완료
     CANCELLED   // 취소됨
 }
 

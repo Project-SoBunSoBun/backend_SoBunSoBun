@@ -57,9 +57,13 @@ public class PostService {
                 });
 
         // 2. 진행 중인 게시글 존재 여부 확인
-        // OPEN 상태(모집 중)인 게시글이 이미 있는지 체크
-        // 향후 IN_PROGRESS 등 상태 추가 시 List에 포함하면 됨
-        List<PostStatus> ongoingStatuses = List.of(PostStatus.OPEN);
+        // 정산되지 않은 상태(OPEN, CLOSED, PROCESSING)의 게시글이 이미 있는지 체크
+        // COMPLETED(정산 완료), CANCELLED(취소)는 제외
+        List<PostStatus> ongoingStatuses = List.of(
+                PostStatus.OPEN,
+                PostStatus.CLOSED,
+                PostStatus.PROCESSING
+        );
         boolean hasOngoingPost = postRepository.existsByOwnerIdAndStatusIn(userId, ongoingStatuses);
 
         if (hasOngoingPost) {
@@ -129,7 +133,7 @@ public class PostService {
     /**
      * 상태별 게시글 목록 조회 (마감일 오름차순)
      *
-     * @param status 게시글 상태 (OPEN, CLOSED, CANCELLED)
+     * @param status 게시글 상태 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)
      * @param page 페이지 번호
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
@@ -145,7 +149,7 @@ public class PostService {
             return convertToListResponse(postPage);
         } catch (IllegalArgumentException e) {
             log.error("잘못된 상태 값 입력 {}: {}", e.getClass().getSimpleName(), status);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, CANCELLED)");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)");
         }
     }
 
@@ -270,7 +274,7 @@ public class PostService {
                 post.setStatus(PostStatus.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
                 log.error("잘못된 상태 값 입력 {}: {}", e.getClass().getSimpleName(), request.getStatus());
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, CANCELLED)");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)");
             }
         }
 
@@ -280,13 +284,14 @@ public class PostService {
 
     /**
      * 게시글 삭제 (작성자만 가능)
+     * 실제 DB에서 삭제하지 않고 상태를 CANCELLED로 변경 (소프트 삭제)
      *
      * @param postId 게시글 ID
      * @param userId 요청 사용자 ID
      */
     @Transactional
     public void deletePost(Long postId, Long userId) {
-        log.info("[사용자 작동] 게시글 삭제 시도 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
+        log.info("[사용자 작동] 게시글 삭제(취소) 시도 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
 
         // 1. 게시글 조회
         GroupPost post = postRepository.findById(postId)
@@ -301,9 +306,15 @@ public class PostService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다");
         }
 
-        // 3. 삭제
-        postRepository.delete(post);
-        log.info("[사용자 작동] 게시글 삭제 완료 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
+        // 3. 이미 취소된 게시글인지 확인
+        if (post.getStatus() == PostStatus.CANCELLED) {
+            log.warn("이미 취소된 게시글 - 게시글 ID: {}", postId);
+            throw new BusinessException(ErrorCode.POST_ALREADY_DELETED);
+        }
+
+        // 4. 상태를 CANCELLED로 변경 (소프트 삭제)
+        post.setStatus(PostStatus.CANCELLED);
+        log.info("[사용자 작동] 게시글 삭제(취소) 완료 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
     }
 
     /**
