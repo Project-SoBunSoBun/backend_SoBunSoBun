@@ -829,63 +829,6 @@ public class ChatRestController {
         }
     }
 
-    /**
-     * 1:1 채팅방 생성/조회 (개선 버전)
-     *
-     * 새로운 사용자와 1:1 채팅을 시작할 때 호출합니다.
-     * 기존 1:1 채팅방이 있으면 그것을 반환하고,
-     * 없으면 새로운 ONE_TO_ONE 타입의 채팅방을 생성합니다.
-     *
-     * API: POST /api/v1/chat/rooms
-     * 요청: CreateOneToOneRoomRequest { targetUserId }
-     * 응답: CreateOneToOneRoomResponse { roomId, otherUserName, otherUserProfileImageUrl, isNewRoom }
-     */
-    @Operation(
-            summary = "1:1 채팅방 생성/조회",
-            description = "새로운 사용자와의 1:1 채팅방을 생성하거나 기존 채팅방을 조회합니다"
-    )
-    @PostMapping("/rooms")
-    public ResponseEntity<ApiResponse<com.sobunsobun.backend.dto.chat.CreateOneToOneRoomResponse>> createOneToOneRoom(
-            @RequestBody com.sobunsobun.backend.dto.chat.CreateOneToOneRoomRequest request,
-            Principal principal
-    ) {
-        try {
-            log.info("═════════════════════════════════════════════════════════════");
-            log.info("📱 [REST] 1:1 채팅방 생성/조회 API 요청");
-
-            Long myUserId = extractUserIdFromPrincipal(principal);
-            log.info("✅ 인증 완료 - myUserId: {}", myUserId);
-            log.info("📝 요청 정보 - targetUserId: {}", request.getTargetUserId());
-
-            log.debug("🔄 ChatRoomService.createOrGetOneToOneRoom() 호출 중...");
-            var response = chatRoomService.createOrGetOneToOneRoom(myUserId, request.getTargetUserId());
-            log.info("✅ 1:1 채팅방 생성/조회 완료 - roomId: {}, isNewRoom: {}",
-                    response.getRoomId(), response.getIsNewRoom());
-
-            log.info("✅ [REST] 1:1 채팅방 API 완료");
-            log.info("═════════════════════════════════════════════════════════════");
-
-            return ResponseEntity.ok(ApiResponse.success(response, "1:1 채팅방 생성/조회 성공"));
-
-        } catch (IllegalArgumentException e) {
-            log.warn("⚠️ [REST] 1:1 채팅방 API - 유효하지 않은 사용자 요청");
-            log.warn("   - targetUserId: {}", request != null ? request.getTargetUserId() : "unknown");
-            log.warn("   - errorMsg: {}", e.getMessage());
-
-            return ResponseEntity.status(400)
-                    .body(ApiResponse.badRequest("INVALID_USER", e.getMessage()));
-
-        } catch (Exception e) {
-            log.error("═════════════════════════════════════════════════════════════");
-            log.error("❌ [REST] 1:1 채팅방 API 실패", e);
-            log.error("   - targetUserId: {}", request != null ? request.getTargetUserId() : "unknown");
-            log.error("   - errorMsg: {}", e.getMessage());
-            log.error("═════════════════════════════════════════════════════════════");
-
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("CREATE_ONE_TO_ONE_ROOM_FAILED", e.getMessage()));
-        }
-    }
 
     /**
      * 과거 메시지 조회 (무한 스크롤)
