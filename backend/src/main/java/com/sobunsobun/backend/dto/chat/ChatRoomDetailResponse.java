@@ -67,11 +67,6 @@ public class ChatRoomDetailResponse {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
-    // ====== 개인 채팅(ONE_TO_ONE) 전용 필드 ======
-
-    @Schema(description = "[개인] 상대방 사용자 정보")
-    @JsonProperty("otherUser")
-    private MemberInfo otherUser;
 
     // ====== 단체 채팅(GROUP) 전용 필드 ======
 
@@ -83,7 +78,7 @@ public class ChatRoomDetailResponse {
     @JsonProperty("groupPostTitle")
     private String groupPostTitle;
 
-    @Schema(description = "채팅방 멤버 목록 (개인/단체 모두 포함)")
+    @Schema(description = "채팅방 멤버 목록")
     @JsonProperty("members")
     private List<MemberInfo> members;
 

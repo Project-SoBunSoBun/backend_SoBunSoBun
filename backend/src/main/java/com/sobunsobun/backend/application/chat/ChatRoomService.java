@@ -723,24 +723,17 @@ public class ChatRoomService {
                     .createdAt(chatRoom.getCreatedAt());
 
             if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
-                // ⑥-A 개인 채팅: roomName을 상대방 이름으로, otherUser 세팅
-                ChatRoomDetailResponse.MemberInfo otherUser = chatRoom.getMembers().stream()
+                // ⑥-A 개인 채팅: roomName을 상대방 이름으로 설정
+                ChatMember otherMember = chatRoom.getMembers().stream()
                         .filter(m -> !m.getUser().getId().equals(userId) && m.getStatus() == ChatMemberStatus.ACTIVE)
                         .findFirst()
-                        .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
-                                .userId(m.getUser().getId())
-                                .nickname(m.getUser().getNickname())
-                                .profileImage(m.getUser().getProfileImageUrl())
-                                .isOwner(chatRoom.isOwner(m.getUser().getId()))
-                                .build())
                         .orElse(null);
 
-                if (otherUser != null) {
-                    builder.roomName(otherUser.getNickname());
+                if (otherMember != null) {
+                    builder.roomName(otherMember.getUser().getNickname());
                 }
-                builder.otherUser(otherUser);
 
-                // 개인 채팅도 멤버 목록 포함
+                // 멤버 목록 포함
                 List<ChatRoomDetailResponse.MemberInfo> memberList = chatRoom.getMembers().stream()
                         .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
                         .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
