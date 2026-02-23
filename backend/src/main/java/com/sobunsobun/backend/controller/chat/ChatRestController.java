@@ -442,7 +442,92 @@ public class ChatRestController {
     /**
      * 채팅방 메시지 조회
      */
-    @Operation(summary = "메시지 조회", description = "채팅방의 메시지 목록을 조회합니다")
+    @Operation(
+        summary = "메시지 조회 (페이징)",
+        description = "채팅방의 메시지 목록을 페이징하여 조회합니다. 최신 메시지부터 내림차순으로 정렬됩니다."
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "메시지 조회 성공",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = """
+                    {
+                      "status": "success",
+                      "code": 200,
+                      "data": {
+                        "content": [
+                          {
+                            "id": 123,
+                            "roomId": 1,
+                            "senderId": 456,
+                            "userId": 456,
+                            "senderName": "홍길동",
+                            "nickname": "홍길동",
+                            "senderProfileImageUrl": "/files/profile456.jpg",
+                            "profileImage": "/files/profile456.jpg",
+                            "type": "TEXT",
+                            "content": "안녕하세요!",
+                            "imageUrl": null,
+                            "cardPayload": null,
+                            "readCount": 1,
+                            "createdAt": "2026-02-24T14:30:00",
+                            "readByMe": true
+                          },
+                          {
+                            "id": 122,
+                            "roomId": 1,
+                            "senderId": 123,
+                            "userId": 123,
+                            "senderName": "나",
+                            "nickname": "나",
+                            "senderProfileImageUrl": "/files/profile123.jpg",
+                            "profileImage": "/files/profile123.jpg",
+                            "type": "IMAGE",
+                            "content": "사진 보내드려요",
+                            "imageUrl": "/files/chat-img-abc123.jpg",
+                            "cardPayload": null,
+                            "readCount": 2,
+                            "createdAt": "2026-02-24T14:25:00",
+                            "readByMe": true
+                          }
+                        ],
+                        "totalElements": 100,
+                        "totalPages": 2,
+                        "currentPage": 0,
+                        "size": 50,
+                        "first": true,
+                        "last": false
+                      },
+                      "message": "메시지 조회 완료"
+                    }
+                    """
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "채팅방 멤버가 아님",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 403, \"error\": \"NOT_MEMBER\", \"message\": \"채팅방 멤버가 아닙니다\"}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 400, \"error\": \"GET_MESSAGES_FAILED\", \"message\": \"메시지 조회 실패\"}"
+                )
+            )
+        )
+    })
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<ApiResponse<PageResponse<MessageResponse>>> getMessages(
             @PathVariable("roomId") Long roomId,
@@ -491,6 +576,8 @@ public class ChatRestController {
                     .totalPages(messages.getTotalPages())
                     .currentPage(page)
                     .size(size)
+                    .first(page == 0)
+                    .last(page >= messages.getTotalPages() - 1)
                     .build();
 
             log.info("✅ [REST] 메시지 조회 완료 - count: {}, totalElements: {}",
