@@ -27,5 +27,10 @@ public interface AuthProviderRepository extends JpaRepository<AuthProvider, Long
      * @return AuthProvider
      */
     Optional<AuthProvider> findByUserIdAndProvider(Long userId, String provider);
+
+    /**
+     * 특정 사용자의 모든 OAuth 연결 삭제 (스케줄러 정리용)
+     */
+    void deleteByUserId(Long userId);
 }
 

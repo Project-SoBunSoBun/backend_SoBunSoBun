@@ -16,4 +16,9 @@ public interface WithdrawalReasonRepository extends JpaRepository<WithdrawalReas
      * 사용자 ID로 탈퇴 사유 조회
      */
     Optional<WithdrawalReason> findByUserId(Long userId);
+
+    /**
+     * 사용자 ID로 탈퇴 사유 삭제 (스케줄러 정리용)
+     */
+    void deleteByUserId(Long userId);
 }
