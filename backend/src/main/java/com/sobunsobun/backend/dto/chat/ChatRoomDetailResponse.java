@@ -83,7 +83,7 @@ public class ChatRoomDetailResponse {
     @JsonProperty("groupPostTitle")
     private String groupPostTitle;
 
-    @Schema(description = "[단체] 채팅방 멤버 목록")
+    @Schema(description = "채팅방 멤버 목록 (개인/단체 모두 포함)")
     @JsonProperty("members")
     private List<MemberInfo> members;
 
