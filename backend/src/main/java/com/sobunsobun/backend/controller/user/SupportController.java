@@ -262,9 +262,7 @@ public class SupportController {
      *
      * @param typeCode 버그 유형 코드
      * @param content 버그 내용
-     * @param replyEmail 답변 받을 이메일
      * @param screenshots 스크린샷 파일 (선택)
-     * @param deviceInfo 디바이스 정보 (선택)
      * @param principal 인증 사용자
      * @return 버그 신고 응답
      */
@@ -272,27 +270,23 @@ public class SupportController {
     @PreAuthorize("isAuthenticated()")
     @Operation(
             summary = "버그 신고 제출",
-            description = "스크린샷과 디바이스 정보를 첨부할 수 있는 버그 신고를 제출합니다. 최대 5개의 스크린샷(jpg/png/webp, 각 5MB)을 첨부할 수 있습니다."
+            description = "스크린샷을 첨부할 수 있는 버그 신고를 제출합니다. 최대 5개의 스크린샷(jpg/png/webp, 각 5MB)을 첨부할 수 있습니다."
     )
     public ResponseEntity<BugReportResponse> submitBugReport(
             @RequestParam String typeCode,
             @RequestParam String content,
-            @RequestParam String replyEmail,
             @RequestParam(required = false) List<MultipartFile> screenshots,
-            @RequestParam(required = false) String deviceInfo,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
         log.info("🐛 [submitBugReport API] 버그 신고 제출 - userId: {}", principal.id());
-        log.info("🐛 [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}, replyEmail: {}, deviceInfo: {}",
-                typeCode, content, replyEmail, deviceInfo);
+        log.info("🐛 [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}",
+                typeCode, content);
 
         // BugReportRequest 객체 생성
         BugReportRequest request = BugReportRequest.builder()
                 .typeCode(typeCode)
                 .content(content)
-                .replyEmail(replyEmail)
                 .screenshots(screenshots)
-                .deviceInfo(deviceInfo != null ? parseDeviceInfo(deviceInfo) : null)
                 .build();
 
         User user = new User();
@@ -302,18 +296,6 @@ public class SupportController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * deviceInfo JSON 문자열을 파싱하는 헬퍼 메서드
-     */
-    private BugReportRequest.DeviceInfo parseDeviceInfo(String deviceInfoJson) {
-        try {
-            return new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readValue(deviceInfoJson, BugReportRequest.DeviceInfo.class);
-        } catch (Exception e) {
-            log.warn("⚠️ [parseDeviceInfo] deviceInfo 파싱 실패: {}", e.getMessage());
-            return null;
-        }
-    }
 
     /**
      * 사용자의 버그 신고 목록 조회
