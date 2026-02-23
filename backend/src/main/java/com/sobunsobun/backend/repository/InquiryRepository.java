@@ -40,4 +40,9 @@ public interface InquiryRepository extends JpaRepository<Inquiry, Long> {
      * 사용자별 문의 개수 조회
      */
     long countByUser(User user);
+
+    /**
+     * 특정 사용자의 모든 문의 삭제 (회원탈퇴용)
+     */
+    void deleteByUser(User user);
 }

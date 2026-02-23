@@ -100,5 +100,14 @@ public interface SettleUpRepository extends JpaRepository<SettleUp, Long> {
     @Query("SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END FROM SettleUp s " +
            "WHERE s.groupPost.id = :groupPostId AND s.status != 3")
     boolean existsActiveSettleUpByGroupPostId(@Param("groupPostId") Long groupPostId);
-}
 
+    /**
+     * 특정 사용자가 생성한 모든 정산 삭제 (회원탈퇴용)
+     */
+    void deleteBySettledById(Long settledById);
+
+    /**
+     * 특정 게시글의 모든 정산 삭제 (게시글 삭제 시)
+     */
+    void deleteByGroupPostId(Long groupPostId);
+}

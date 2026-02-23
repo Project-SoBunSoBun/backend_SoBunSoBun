@@ -100,6 +100,11 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     void deleteByUserId(Long userId);
 
     /**
+     * 특정 게시글의 모든 댓글 삭제 (게시글 삭제 시)
+     */
+    void deleteByPostId(Long postId);
+
+    /**
      * 특정 부모 댓글의 활성 대댓글 존재 여부 확인
      *
      * @param parentCommentId 부모 댓글 ID

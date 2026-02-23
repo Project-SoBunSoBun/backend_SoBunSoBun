@@ -99,9 +99,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 log.info("✅ JWT 토큰 검증 성공 - 사용자 ID: {}, 역할: {}", userId, role);
 
-                // 5. 사용자 존재 확인 (선택적, 보안 강화)
-                if (!userRepository.existsById(userId)) {
+                // 5. 사용자 존재 및 활성 상태 확인 (보안 강화)
+                var userOptional = userRepository.findById(userId);
+                if (userOptional.isEmpty()) {
                     log.warn("❌ 토큰의 사용자 ID가 DB에 존재하지 않음: {}", userId);
+                    return; // 인증 실패로 처리
+                }
+
+                // 탈퇴한 사용자의 토큰은 즉시 무효화
+                var user = userOptional.get();
+                if (user.getStatus() == com.sobunsobun.backend.domain.UserStatus.DELETED) {
+                    log.warn("❌ 탈퇴한 사용자의 토큰 접근 차단 - 사용자 ID: {}", userId);
                     return; // 인증 실패로 처리
                 }
 

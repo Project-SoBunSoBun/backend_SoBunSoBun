@@ -47,4 +47,14 @@ public interface PostReportRepository extends JpaRepository<PostReport, Long> {
      * 특정 게시글에 대한 신고 상태별 개수
      */
     long countByPostIdAndStatus(Long postId, ReportStatus status);
+
+    /**
+     * 특정 사용자가 한 모든 게시글 신고 삭제 (회원탈퇴용)
+     */
+    void deleteByUserId(Long userId);
+
+    /**
+     * 특정 게시글에 대한 모든 신고 삭제 (게시글 삭제 시)
+     */
+    void deleteByPostId(Long postId);
 }

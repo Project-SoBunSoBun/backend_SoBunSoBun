@@ -40,4 +40,9 @@ public interface SavedPostRepository extends JpaRepository<SavedPost, Long> {
      * 특정 사용자의 모든 저장된 게시글 삭제 (회원탈퇴용)
      */
     void deleteByUserId(Long userId);
+
+    /**
+     * 특정 게시글의 모든 저장 삭제 (게시글 삭제 시)
+     */
+    void deleteByPostId(Long postId);
 }

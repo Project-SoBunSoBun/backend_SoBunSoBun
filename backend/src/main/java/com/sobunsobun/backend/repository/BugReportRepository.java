@@ -45,4 +45,9 @@ public interface BugReportRepository extends JpaRepository<BugReport, Long> {
      * 상태별 버그 신고 개수 조회
      */
     long countByStatus(String status);
+
+    /**
+     * 특정 사용자의 모든 버그 신고 삭제 (회원탈퇴용)
+     */
+    void deleteByUser(User user);
 }

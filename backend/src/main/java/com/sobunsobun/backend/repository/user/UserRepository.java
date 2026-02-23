@@ -1,9 +1,12 @@
 package com.sobunsobun.backend.repository.user;
 
 import com.sobunsobun.backend.domain.User;
+import com.sobunsobun.backend.domain.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -52,4 +55,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return 중복되면 true, 없으면 false
      */
     boolean existsByNicknameAndIdNot(String nickname, Long id);
+
+    /**
+     * 특정 상태이고 재가입 가능 일시가 지정된 시각 이전인 사용자 목록 조회
+     * (90일 경과 탈퇴 사용자 정리 스케줄러용)
+     *
+     * @param status 사용자 상태 (DELETED)
+     * @param dateTime 기준 일시 (현재 시각)
+     * @return 정리 대상 사용자 목록
+     */
+    List<User> findByStatusAndReactivatableAtBefore(UserStatus status, LocalDateTime dateTime);
 }

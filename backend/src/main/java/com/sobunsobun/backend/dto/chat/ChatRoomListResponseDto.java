@@ -41,6 +41,21 @@ public class ChatRoomListResponseDto {
     private String roomName;
 
     /**
+     * 채팅방 타입
+     *
+     * ONE_TO_ONE: 1:1 개인 채팅
+     * GROUP: 단체 채팅
+     */
+    @JsonProperty("roomType")
+    private String roomType;
+
+    /**
+     * 채팅방 멤버 수 (단체 채팅일 때 유용)
+     */
+    @JsonProperty("memberCount")
+    private Integer memberCount;
+
+    /**
      * 마지막 메시지 내용 (미리보기)
      *
      * null인 경우: 메시지 없음
