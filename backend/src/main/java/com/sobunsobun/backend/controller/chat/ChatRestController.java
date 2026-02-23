@@ -895,14 +895,88 @@ public class ChatRestController {
      *
      * API: GET /api/v1/chat/rooms/{roomId}/messages/cursor
      * 쿼리 파라미터: lastMessageId (커서, 처음엔 null), size (기본 20)
-     * 응답: List<ChatMessageDto> (오름차순, 시간순)
+     * 응답: List<MessageResponse> (오름차순, 시간순) — 6번 메시지 조회와 동일한 DTO
      */
     @Operation(
             summary = "과거 메시지 조회 (무한 스크롤)",
-            description = "채팅방의 과거 메시지를 커서 기반 페이징으로 조회합니다. 클라이언트 무한 스크롤 기능을 지원합니다."
+            description = "채팅방의 과거 메시지를 커서 기반 페이징으로 조회합니다. 클라이언트 무한 스크롤 기능을 지원합니다. 응답 형식은 메시지 조회(페이징) API와 동일합니다."
     )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "과거 메시지 조회 성공",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = """
+                    {
+                      "status": "success",
+                      "code": 200,
+                      "data": [
+                        {
+                          "id": 121,
+                          "roomId": 1,
+                          "senderId": 456,
+                          "userId": 456,
+                          "senderName": "홍길동",
+                          "nickname": "홍길동",
+                          "senderProfileImageUrl": "/files/profile456.jpg",
+                          "profileImage": "/files/profile456.jpg",
+                          "type": "TEXT",
+                          "content": "안녕하세요!",
+                          "imageUrl": null,
+                          "cardPayload": null,
+                          "readCount": 2,
+                          "createdAt": "2026-02-24T14:20:00",
+                          "readByMe": true
+                        },
+                        {
+                          "id": 122,
+                          "roomId": 1,
+                          "senderId": 123,
+                          "userId": 123,
+                          "senderName": "나",
+                          "nickname": "나",
+                          "senderProfileImageUrl": "/files/profile123.jpg",
+                          "profileImage": "/files/profile123.jpg",
+                          "type": "IMAGE",
+                          "content": "사진 보내드려요",
+                          "imageUrl": "/files/chat-img-abc123.jpg",
+                          "cardPayload": null,
+                          "readCount": 2,
+                          "createdAt": "2026-02-24T14:25:00",
+                          "readByMe": true
+                        }
+                      ],
+                      "message": "과거 메시지 조회 성공"
+                    }
+                    """
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "접근 권한 없음",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 403, \"error\": \"ACCESS_DENIED\", \"message\": \"이 채팅방에 접근 권한이 없습니다\"}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "500",
+            description = "서버 오류",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 500, \"error\": \"GET_CHAT_MESSAGES_FAILED\", \"message\": \"과거 메시지 조회 실패\"}"
+                )
+            )
+        )
+    })
     @GetMapping("/rooms/{roomId}/messages/cursor")
-    public ResponseEntity<ApiResponse<List<com.sobunsobun.backend.dto.chat.ChatMessageDto>>> getChatMessages(
+    public ResponseEntity<ApiResponse<List<MessageResponse>>> getChatMessages(
             @PathVariable("roomId") Long roomId,
             @RequestParam(required = false) Long lastMessageId,
             @RequestParam(defaultValue = "20") int size,
@@ -918,7 +992,7 @@ public class ChatRestController {
                     roomId, lastMessageId, size);
 
             log.debug("🔄 ChatMessageService.getChatMessages() 호출 중...");
-            List<com.sobunsobun.backend.dto.chat.ChatMessageDto> messages = chatMessageService.getChatMessages(
+            List<MessageResponse> messages = chatMessageService.getChatMessages(
                     roomId,
                     userId,
                     lastMessageId,
