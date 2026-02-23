@@ -228,7 +228,7 @@ public class ChatRestController {
     @Operation(summary = "메시지 조회", description = "채팅방의 메시지 목록을 조회합니다")
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<ApiResponse<PageResponse<MessageResponse>>> getMessages(
-            @PathVariable Long roomId,
+            @PathVariable("roomId") Long roomId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             Principal principal
@@ -331,7 +331,7 @@ public class ChatRestController {
     })
     @PostMapping(value = "/rooms/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ChatImageMessageResponse>> uploadChatImage(
-            @PathVariable Long chatId,
+            @PathVariable("chatId") Long chatId,
             @Parameter(description = "이미지 파일 (jpg/png/webp, 최대 5MB)", required = true)
             @RequestParam("image") MultipartFile image,
             @Parameter(description = "메시지 내용 (선택)")
@@ -599,7 +599,7 @@ public class ChatRestController {
     )
     @GetMapping("/rooms/{roomId}/messages/cursor")
     public ResponseEntity<ApiResponse<List<com.sobunsobun.backend.dto.chat.ChatMessageDto>>> getChatMessages(
-            @PathVariable Long roomId,
+            @PathVariable("roomId") Long roomId,
             @RequestParam(required = false) Long lastMessageId,
             @RequestParam(defaultValue = "20") int size,
             Principal principal
