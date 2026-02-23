@@ -59,5 +59,12 @@ public class PostException extends BusinessException {
     public static PostException invalidStatus(String message) {
         return new PostException(ErrorCode.INVALID_POST_STATUS, message);
     }
+
+    /**
+     * 진행 중인 공동구매 게시글이 이미 존재
+     */
+    public static PostException ongoingPostExists() {
+        return new PostException(ErrorCode.ONGOING_POST_EXISTS);
+    }
 }
 
