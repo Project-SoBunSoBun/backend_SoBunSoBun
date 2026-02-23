@@ -1,13 +1,18 @@
 package com.sobunsobun.backend.application.chat;
 
+import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.domain.chat.ChatRoomType;
+import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
+import com.sobunsobun.backend.dto.chat.ChatRoomDetailResponse;
 import com.sobunsobun.backend.dto.chat.ChatRoomListResponseDto;
 import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
+import com.sobunsobun.backend.dto.chat.CreateChatRoomResponse;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
+import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -34,6 +39,7 @@ public class ChatRoomService {
     private final ChatMemberRepository chatMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
+    private final GroupPostRepository groupPostRepository;
     private final ChatRedisService chatRedisService;
 
     /**
@@ -96,6 +102,8 @@ public class ChatRoomService {
                             return ChatRoomListResponseDto.builder()
                                     .roomId(roomId)
                                     .roomName(roomName)
+                                    .roomType(chatRoom.getRoomType().toString())
+                                    .memberCount(chatRoom.getMembers().size())
                                     .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
                                     .lastMessageTime(latestMessage.map(ChatMessage::getCreatedAt).orElse(null))
                                     .unreadCount(unreadCount)
@@ -415,6 +423,351 @@ public class ChatRoomService {
             log.error("   - errorMsg: {}", e.getMessage());
             log.error("═════════════════════════════════════════════════════════════");
             throw new RuntimeException("1:1 채팅방 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    // ====== 단체 채팅방 관련 메서드 ======
+
+    /**
+     * 단체 채팅방 생성 또는 기존 방 조회
+     *
+     * 공동구매 게시글에 연결된 단체 채팅방을 생성하거나,
+     * 이미 존재하면 기존 채팅방을 반환합니다 (getOrCreate 패턴).
+     *
+     * 처리 순서:
+     * ① groupPostId로 기존 단체 채팅방이 있는지 확인
+     * ② 이미 존재하면 기존 방 정보 반환
+     * ③ 없으면 새 ChatRoom(type=GROUP) 생성
+     * ④ 요청자(owner)를 첫 번째 멤버로 추가
+     * ⑤ memberIds에 포함된 사용자들을 멤버로 추가
+     *
+     * @param userId     요청 사용자 ID (방장)
+     * @param roomName   채팅방 이름
+     * @param groupPostId 공동구매 게시글 ID
+     * @param memberIds  초대할 사용자 ID 목록 (선택, null 가능)
+     * @return 채팅방 생성/조회 응답 DTO
+     * @throws IllegalArgumentException 게시글이 존재하지 않을 때
+     */
+    @Transactional
+    public CreateChatRoomResponse createOrGetGroupChatRoom(
+            Long userId,
+            String roomName,
+            Long groupPostId,
+            java.util.List<Long> memberIds
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("👥 [단체 채팅방 생성/조회 시작] userId: {}, groupPostId: {}, roomName: {}",
+                    userId, groupPostId, roomName);
+
+            // ① 공동구매 게시글 존재 확인
+            log.debug("🔍 [단계1] 공동구매 게시글 조회 중... groupPostId: {}", groupPostId);
+            GroupPost groupPost = groupPostRepository.findById(groupPostId)
+                    .orElseThrow(() -> {
+                        log.error("❌ [단계1 실패] 게시글을 찾을 수 없음: groupPostId={}", groupPostId);
+                        return new IllegalArgumentException("존재하지 않는 게시글입니다 (groupPostId: " + groupPostId + ")");
+                    });
+            log.info("✅ [단계1 완료] 게시글 조회됨: {}", groupPost.getTitle());
+
+            // ② 기존 단체 채팅방 확인
+            log.debug("🔍 [단계2] 기존 단체 채팅방 확인 중... groupPostId: {}", groupPostId);
+            Optional<ChatRoom> existingRoom = chatRoomRepository.findByGroupPostId(groupPostId);
+
+            if (existingRoom.isPresent()) {
+                ChatRoom room = existingRoom.get();
+                log.info("✅ [단계2] 기존 단체 채팅방 발견 - roomId: {}", room.getId());
+
+                // 요청자가 멤버가 아니면 멤버로 추가
+                if (!room.isMember(userId)) {
+                    log.info("ℹ️ 요청자가 멤버가 아닙니다. 멤버로 추가합니다. userId: {}", userId);
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId + ")"));
+                    ChatMember newMember = room.addMember(user);
+                    chatMemberRepository.saveAndFlush(newMember);
+                }
+
+                int memberCount = (int) chatMemberRepository.findActiveMembersByRoomId(room.getId()).size();
+
+                log.info("═════════════════════════════════════════════════════════════");
+                return CreateChatRoomResponse.builder()
+                        .roomId(room.getId())
+                        .roomName(room.getName())
+                        .roomType(room.getRoomType().toString())
+                        .groupPostId(groupPostId)
+                        .memberCount(memberCount)
+                        .isNewRoom(false)
+                        .message("✅ 기존 단체 채팅방 조회 성공")
+                        .build();
+            }
+
+            log.info("ℹ️ [단계2] 기존 채팅방 없음 - 새로 생성 필요");
+
+            // ③ 요청 사용자(방장) 조회
+            log.debug("🔍 [단계3] 요청 사용자 조회 중... userId: {}", userId);
+            User owner = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        log.error("❌ [단계3 실패] 사용자를 찾을 수 없음: userId={}", userId);
+                        return new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId + ")");
+                    });
+            log.info("✅ [단계3 완료] 사용자 조회됨: {}", owner.getNickname());
+
+            // ④ 채팅방 이름 결정: 요청값이 없으면 게시글 제목 사용
+            String finalRoomName = (roomName != null && !roomName.isBlank()) ? roomName : groupPost.getTitle();
+
+            // ⑤ 새로운 ChatRoom 생성 (GROUP 타입)
+            log.debug("🔨 [단계4] ChatRoom 엔티티 생성 중...");
+            ChatRoom chatRoom = ChatRoom.builder()
+                    .name(finalRoomName)
+                    .roomType(ChatRoomType.GROUP)
+                    .owner(owner)
+                    .groupPost(groupPost)
+                    .messageCount(0L)
+                    .build();
+            log.info("✅ [단계4 완료] ChatRoom 엔티티 생성됨");
+
+            log.debug("💾 [단계5] ChatRoom DB 저장 중...");
+            ChatRoom savedRoom = chatRoomRepository.saveAndFlush(chatRoom);
+            log.info("✅ [단계5 완료] ChatRoom DB 저장됨 - roomId: {}", savedRoom.getId());
+
+            // ⑥ 방장을 첫 번째 멤버로 추가
+            log.debug("🔨 [단계6] 방장을 첫 번째 멤버로 추가 중...");
+            ChatMember ownerMember = savedRoom.addMember(owner);
+            chatMemberRepository.saveAndFlush(ownerMember);
+            log.info("✅ [단계6 완료] 방장 멤버 추가됨");
+
+            // ⑦ 추가 멤버 초대
+            int addedMemberCount = 1; // 방장 포함
+            if (memberIds != null && !memberIds.isEmpty()) {
+                log.debug("🔨 [단계7] 추가 멤버 초대 중... memberIds: {}", memberIds);
+                for (Long memberId : memberIds) {
+                    // 방장은 이미 추가됨
+                    if (memberId.equals(userId)) {
+                        continue;
+                    }
+                    try {
+                        User memberUser = userRepository.findById(memberId).orElse(null);
+                        if (memberUser == null) {
+                            log.warn("⚠️ 존재하지 않는 사용자 건너뜀: userId={}", memberId);
+                            continue;
+                        }
+                        ChatMember newMember = savedRoom.addMember(memberUser);
+                        chatMemberRepository.saveAndFlush(newMember);
+                        addedMemberCount++;
+                        log.debug("  ✅ 멤버 추가됨: userId={}, nickname={}", memberId, memberUser.getNickname());
+                    } catch (Exception e) {
+                        log.warn("⚠️ 멤버 추가 실패 (건너뜀): userId={}, error={}", memberId, e.getMessage());
+                    }
+                }
+                log.info("✅ [단계7 완료] 총 {} 명 멤버 추가됨", addedMemberCount);
+            }
+
+            log.info("✅ [단체 채팅방 생성 완료] roomId: {}, roomName: {}, memberCount: {}, groupPostId: {}",
+                    savedRoom.getId(), finalRoomName, addedMemberCount, groupPostId);
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return CreateChatRoomResponse.builder()
+                    .roomId(savedRoom.getId())
+                    .roomName(finalRoomName)
+                    .roomType(ChatRoomType.GROUP.toString())
+                    .groupPostId(groupPostId)
+                    .memberCount(addedMemberCount)
+                    .isNewRoom(true)
+                    .message("✅ 단체 채팅방 생성 성공")
+                    .build();
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [단체 채팅방 생성 실패] 유효하지 않은 요청");
+            log.warn("   - userId: {}, groupPostId: {}", userId, groupPostId);
+            log.warn("   - errorMsg: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [단체 채팅방 생성 실패] 예외 발생", e);
+            log.error("   - userId: {}, groupPostId: {}", userId, groupPostId);
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+            throw new RuntimeException("단체 채팅방 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 단체 채팅방에 멤버 추가 (초대)
+     *
+     * @param roomId 채팅방 ID
+     * @param userId 요청 사용자 ID (초대하는 사람)
+     * @param targetUserId 초대할 사용자 ID
+     * @throws IllegalArgumentException 채팅방이 단체 채팅이 아니거나, 권한이 없을 때
+     */
+    @Transactional
+    public void addMemberToGroupChat(Long roomId, Long userId, Long targetUserId) {
+        try {
+            log.info("➕ [단체 채팅 멤버 초대] roomId: {}, inviter: {}, target: {}", roomId, userId, targetUserId);
+
+            ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다 (roomId: " + roomId + ")"));
+
+            // 단체 채팅방인지 확인
+            if (chatRoom.getRoomType() != ChatRoomType.GROUP) {
+                throw new IllegalArgumentException("단체 채팅방에서만 멤버를 초대할 수 있습니다");
+            }
+
+            // 요청자가 멤버인지 확인
+            if (!chatRoom.isMember(userId)) {
+                throw new IllegalArgumentException("채팅방 멤버만 다른 사용자를 초대할 수 있습니다");
+            }
+
+            // 이미 멤버인지 확인
+            if (chatRoom.isMember(targetUserId)) {
+                log.warn("⚠️ 이미 멤버임 - roomId: {}, targetUserId: {}", roomId, targetUserId);
+                return;
+            }
+
+            User targetUser = userRepository.findById(targetUserId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + targetUserId + ")"));
+
+            ChatMember newMember = chatRoom.addMember(targetUser);
+            chatMemberRepository.saveAndFlush(newMember);
+
+            log.info("✅ [단체 채팅 멤버 초대 완료] roomId: {}, targetUser: {}", roomId, targetUser.getNickname());
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ 단체 채팅 멤버 초대 실패 - roomId: {}, targetUserId: {}", roomId, targetUserId, e);
+            throw new RuntimeException("멤버 초대 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 단체 채팅방 나가기
+     *
+     * @param roomId 채팅방 ID
+     * @param userId 나가는 사용자 ID
+     */
+    @Transactional
+    public void leaveGroupChatRoom(Long roomId, Long userId) {
+        try {
+            log.info("🚪 [단체 채팅 퇴장] roomId: {}, userId: {}", roomId, userId);
+
+            ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다 (roomId: " + roomId + ")"));
+
+            if (chatRoom.getRoomType() != ChatRoomType.GROUP) {
+                throw new IllegalArgumentException("단체 채팅방에서만 나갈 수 있습니다");
+            }
+
+            if (!chatRoom.isMember(userId)) {
+                throw new IllegalArgumentException("채팅방 멤버가 아닙니다");
+            }
+
+            chatRoom.removeMember(userId);
+            chatRoomRepository.save(chatRoom);
+
+            log.info("✅ [단체 채팅 퇴장 완료] roomId: {}, userId: {}", roomId, userId);
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ 단체 채팅 퇴장 실패 - roomId: {}, userId: {}", roomId, userId, e);
+            throw new RuntimeException("채팅방 퇴장 실패: " + e.getMessage(), e);
+        }
+    }
+
+    // ====== 채팅방 상세 정보 조회 ======
+
+    /**
+     * 채팅방 상세 정보 조회
+     *
+     * 개인(ONE_TO_ONE) / 단체(GROUP) 채팅방 모두 지원합니다.
+     * - 개인: 상대방 유저 정보 포함
+     * - 단체: 멤버 목록 + 연결된 게시글 정보 포함
+     *
+     * @param roomId 채팅방 ID
+     * @param userId 요청 사용자 ID
+     * @return 채팅방 상세 정보 DTO
+     */
+    @Transactional(readOnly = true)
+    public ChatRoomDetailResponse getChatRoomDetail(Long roomId, Long userId) {
+        try {
+            log.info("ℹ️ [채팅방 상세 조회 시작] roomId: {}, userId: {}", roomId, userId);
+
+            // ① 채팅방 조회 (멤버 포함)
+            ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다 (roomId: " + roomId + ")"));
+
+            // ② 멤버 권한 확인
+            if (!chatRoom.isMember(userId)) {
+                throw new IllegalArgumentException("채팅방 멤버가 아닙니다");
+            }
+
+            // ③ 안 읽은 메시지 수
+            Long unreadCount = chatRedisService.getUnreadCount(roomId, userId);
+
+            // ④ 마지막 메시지
+            Optional<ChatMessage> latestMessage = chatMessageRepository.findLatestMessageByRoomId(roomId);
+
+            // ⑤ 공통 빌더
+            ChatRoomDetailResponse.ChatRoomDetailResponseBuilder builder = ChatRoomDetailResponse.builder()
+                    .roomId(chatRoom.getId())
+                    .roomName(chatRoom.getName())
+                    .roomType(chatRoom.getRoomType().toString())
+                    .ownerId(chatRoom.getOwner() != null ? chatRoom.getOwner().getId() : null)
+                    .memberCount(
+                            (int) chatRoom.getMembers().stream()
+                                    .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                                    .count()
+                    )
+                    .unreadCount(unreadCount)
+                    .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
+                    .lastMessageAt(chatRoom.getLastMessageAt())
+                    .createdAt(chatRoom.getCreatedAt());
+
+            if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
+                // ⑥-A 개인 채팅: roomName을 상대방 이름으로, otherUser 세팅
+                ChatRoomDetailResponse.MemberInfo otherUser = chatRoom.getMembers().stream()
+                        .filter(m -> !m.getUser().getId().equals(userId) && m.getStatus() == ChatMemberStatus.ACTIVE)
+                        .findFirst()
+                        .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
+                                .userId(m.getUser().getId())
+                                .nickname(m.getUser().getNickname())
+                                .profileImage(m.getUser().getProfileImageUrl())
+                                .isOwner(chatRoom.isOwner(m.getUser().getId()))
+                                .build())
+                        .orElse(null);
+
+                if (otherUser != null) {
+                    builder.roomName(otherUser.getNickname());
+                }
+                builder.otherUser(otherUser);
+
+            } else {
+                // ⑥-B 단체 채팅: members 목록, groupPost 정보
+                List<ChatRoomDetailResponse.MemberInfo> memberList = chatRoom.getMembers().stream()
+                        .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                        .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
+                                .userId(m.getUser().getId())
+                                .nickname(m.getUser().getNickname())
+                                .profileImage(m.getUser().getProfileImageUrl())
+                                .isOwner(chatRoom.isOwner(m.getUser().getId()))
+                                .build())
+                        .collect(Collectors.toList());
+
+                builder.members(memberList);
+
+                if (chatRoom.getGroupPost() != null) {
+                    builder.groupPostId(chatRoom.getGroupPost().getId());
+                    builder.groupPostTitle(chatRoom.getGroupPost().getTitle());
+                }
+            }
+
+            log.info("✅ [채팅방 상세 조회 완료] roomId: {}, roomType: {}", roomId, chatRoom.getRoomType());
+            return builder.build();
+
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ 채팅방 상세 조회 실패 - roomId: {}, userId: {}", roomId, userId, e);
+            throw new RuntimeException("채팅방 상세 조회 실패: " + e.getMessage(), e);
         }
     }
 }

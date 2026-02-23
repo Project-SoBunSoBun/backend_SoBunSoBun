@@ -147,6 +147,159 @@ public class ChatRestController {
         }
     }
 
+    // ====== 단체 채팅방 API ======
+
+    /**
+     * 단체 채팅방 생성/조회
+     *
+     * 공동구매 게시글에 연결된 단체 채팅방을 생성하거나 기존 채팅방을 조회합니다.
+     * 동일 게시글에 이미 단체 채팅방이 있으면 기존 방을 반환합니다.
+     */
+    @Operation(
+        summary = "단체 채팅방 생성/조회",
+        description = "공동구매 게시글에 연결된 단체 채팅방을 생성하거나 기존 채팅방을 조회합니다"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "단체 채팅방 생성/조회 성공",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"success\", \"code\": 200, \"data\": {\"roomId\": 1, \"roomName\": \"떠나바 모임\", \"roomType\": \"GROUP\", \"groupPostId\": 5, \"memberCount\": 3, \"isNewRoom\": true}, \"message\": \"단체 채팅방 생성 성공\"}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "존재하지 않는 게시글",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(
+                    example = "{\"status\": \"error\", \"code\": 404, \"error\": \"POST_NOT_FOUND\", \"message\": \"존재하지 않는 게시글입니다 (groupPostId: 5)\"}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청"
+        )
+    })
+    @PostMapping("/rooms/group")
+    public ResponseEntity<ApiResponse<CreateChatRoomResponse>> createGroupChatRoom(
+            @RequestBody CreateGroupChatRoomRequest request,
+            Principal principal
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("👥 [REST] 단체 채팅방 생성/조회 API 요청");
+
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+            log.info("📝 요청 정보 - roomName: {}, groupPostId: {}, memberIds: {}",
+                    request.getRoomName(), request.getGroupPostId(), request.getMemberIds());
+
+            CreateChatRoomResponse response = chatRoomService.createOrGetGroupChatRoom(
+                    userId,
+                    request.getRoomName(),
+                    request.getGroupPostId(),
+                    request.getMemberIds()
+            );
+
+            log.info("✅ [REST] 단체 채팅방 API 완료 - roomId: {}, isNewRoom: {}",
+                    response.getRoomId(), response.getIsNewRoom());
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.ok(ApiResponse.success(response,
+                    Boolean.TRUE.equals(response.getIsNewRoom()) ? "단체 채팅방 생성 성공" : "기존 단체 채팅방 조회 성공"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 단체 채팅방 API - 유효하지 않은 요청");
+            log.warn("   - groupPostId: {}", request != null ? request.getGroupPostId() : "unknown");
+            log.warn("   - errorMsg: {}", e.getMessage());
+
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.notFound("POST_NOT_FOUND", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 단체 채팅방 API 실패", e);
+            log.error("   - groupPostId: {}", request != null ? request.getGroupPostId() : "unknown");
+            log.error("   - errorMsg: {}", e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("CREATE_GROUP_ROOM_FAILED", e.getMessage()));
+        }
+    }
+
+    /**
+     * 단체 채팅방 멤버 초대
+     */
+    @Operation(
+        summary = "단체 채팅방 멤버 초대",
+        description = "단체 채팅방에 새 멤버를 초대합니다. 채팅방 멤버만 다른 사용자를 초대할 수 있습니다."
+    )
+    @PostMapping("/rooms/{roomId}/members/{targetUserId}")
+    public ResponseEntity<ApiResponse<Void>> inviteMemberToGroupChat(
+            @PathVariable("roomId") Long roomId,
+            @PathVariable("targetUserId") Long targetUserId,
+            Principal principal
+    ) {
+        try {
+            log.info("➕ [REST] 단체 채팅 멤버 초대 - roomId: {}, targetUserId: {}", roomId, targetUserId);
+
+            Long userId = extractUserIdFromPrincipal(principal);
+            chatRoomService.addMemberToGroupChat(roomId, userId, targetUserId);
+
+            log.info("✅ [REST] 멤버 초대 완료");
+            return ResponseEntity.ok(ApiResponse.success(null, "멤버 초대 성공"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 멤버 초대 실패 - {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("INVITE_FAILED", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("❌ [REST] 멤버 초대 실패", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("INVITE_FAILED", e.getMessage()));
+        }
+    }
+
+    /**
+     * 단체 채팅방 나가기
+     */
+    @Operation(
+        summary = "단체 채팅방 나가기",
+        description = "단체 채팅방에서 나갑니다. 나간 사용자는 더 이상 메시지를 받지 않습니다."
+    )
+    @DeleteMapping("/rooms/{roomId}/members/me")
+    public ResponseEntity<ApiResponse<Void>> leaveGroupChatRoom(
+            @PathVariable("roomId") Long roomId,
+            Principal principal
+    ) {
+        try {
+            log.info("🚪 [REST] 단체 채팅 퇴장 - roomId: {}", roomId);
+
+            Long userId = extractUserIdFromPrincipal(principal);
+            chatRoomService.leaveGroupChatRoom(roomId, userId);
+
+            log.info("✅ [REST] 채팅방 퇴장 완료");
+            return ResponseEntity.ok(ApiResponse.success(null, "채팅방 퇴장 성공"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 채팅방 퇴장 실패 - {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("LEAVE_FAILED", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("❌ [REST] 채팅방 퇴장 실패", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("LEAVE_FAILED", e.getMessage()));
+        }
+    }
+
 
     /**
      * 채팅방 목록 조회
@@ -217,6 +370,70 @@ public class ChatRestController {
 
             return ResponseEntity.badRequest()
                     .body(ApiResponse.badRequest("GET_ROOMS_FAILED", e.getMessage()));
+        }
+    }
+
+    // ====== 채팅방 상세 정보 API ======
+
+    /**
+     * 채팅방 상세 정보 조회
+     *
+     * 개인(ONE_TO_ONE) / 단체(GROUP) 채팅방 모두 지원합니다.
+     * - 개인: 상대방 유저 정보 (userId, nickname, profileImage) 포함
+     * - 단체: 전체 멤버 목록 + 연결된 공동구매 게시글 정보 포함
+     */
+    @Operation(
+        summary = "채팅방 상세 정보 조회",
+        description = "채팅방의 상세 정보를 조회합니다. 개인 채팅방은 상대방 정보, 단체 채팅방은 멤버 목록과 게시글 정보를 포함합니다."
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "채팅방 상세 정보 조회 성공"
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "존재하지 않는 채팅방"
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "채팅방 멤버가 아님"
+        )
+    })
+    @GetMapping("/rooms/{roomId}/detail")
+    public ResponseEntity<ApiResponse<ChatRoomDetailResponse>> getChatRoomDetail(
+            @PathVariable("roomId") Long roomId,
+            Principal principal
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("ℹ️ [REST] 채팅방 상세 조회 API 요청 - roomId: {}", roomId);
+
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+
+            ChatRoomDetailResponse response = chatRoomService.getChatRoomDetail(roomId, userId);
+
+            log.info("✅ [REST] 채팅방 상세 조회 완료 - roomType: {}, memberCount: {}",
+                    response.getRoomType(), response.getMemberCount());
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.ok(ApiResponse.success(response, "채팅방 상세 정보 조회 성공"));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("⚠️ [REST] 채팅방 상세 조회 실패 - {}", e.getMessage());
+
+            if (e.getMessage().contains("멤버가 아닙니다")) {
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.forbidden("NOT_MEMBER", e.getMessage()));
+            }
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.notFound("ROOM_NOT_FOUND", e.getMessage()));
+
+        } catch (Exception e) {
+            log.error("❌ [REST] 채팅방 상세 조회 실패", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("GET_ROOM_DETAIL_FAILED", e.getMessage()));
         }
     }
 

@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.domain.chat;
 
 import com.sobunsobun.backend.domain.BaseTimeEntity;
+import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,6 +36,12 @@ public class ChatRoom extends BaseTimeEntity {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
+    /**
+     * 연결된 공동구매 게시글 (단체 채팅방인 경우에만 사용, 1:1은 null)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_post_id")
+    private GroupPost groupPost;
 
     // 채팅방 정보 (마지막 메시지, 메시지 개수)
     @Column(name = "last_message_at")
