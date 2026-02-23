@@ -256,7 +256,7 @@ public class ChatMessageService {
      * ① 요청한 사용자가 채팅방의 멤버인지 검증 (Authorization)
      * ② ChatMessageRepository.findMessagesByRoomIdAndMessageIdLessThanOrderByIdDesc() 호출
      * ③ lastMessageId가 null이면 가장 최신 메시지부터 시작
-     * ④ 조회된 메시지들을 ChatMessageDto로 변환
+     * ④ 조회된 메시지들을 MessageResponse로 변환 (6번 메시지 조회와 동일한 DTO)
      * ⑤ 클라이언트가 시간순으로 보기 쉽게 오름차순으로 정렬하여 반환
      *
      * @param roomId 채팅방 ID
@@ -267,7 +267,7 @@ public class ChatMessageService {
      * @throws IllegalArgumentException 사용자가 채팅방의 멤버가 아닐 때
      */
     @Transactional(readOnly = true)
-    public List<ChatMessageDto> getChatMessages(
+    public List<MessageResponse> getChatMessages(
             Long roomId,
             Long userId,
             Long lastMessageId,
@@ -291,8 +291,6 @@ public class ChatMessageService {
             log.debug("🔍 [단계2] 과거 메시지 조회 중... roomId: {}, lastMessageId: {}, size: {}",
                     roomId, lastMessageId, size);
 
-            // Pageable은 커스텀 쿼리에서 LIMIT으로 처리하지만,
-            // 스프링의 Pageable 인터페이스를 사용하려면 PageRequest를 생성해야 함
             org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, size);
 
             List<ChatMessage> messages = chatMessageRepository.findMessagesByRoomIdAndMessageIdLessThanOrderByIdDesc(
@@ -302,28 +300,37 @@ public class ChatMessageService {
             );
             log.info("✅ [단계2] 메시지 조회 완료: messageCount={}", messages.size());
 
-            // ③ 조회된 메시지들을 ChatMessageDto로 변환
-            log.debug("🔄 [단계3] ChatMessageDto로 변환 중...");
-            List<ChatMessageDto> chatMessageDtos = messages.stream()
-                    .map(msg -> ChatMessageDto.builder()
-                            .type(msg.getType())
-                            .roomId(msg.getChatRoom().getId())
-                            .senderId(msg.getSender() != null ? msg.getSender().getId() : null)
-                            .senderName(msg.getSender() != null ? msg.getSender().getNickname() : "알 수 없음")
-                            .message(msg.getContent())
-                            .imageUrl(msg.getImageUrl())
-                            .cardPayload(msg.getCardPayload())
-                            .messageId(msg.getId())
-                            .timestamp(msg.getCreatedAt() != null ?
-                                    msg.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() :
-                                    System.currentTimeMillis())
-                            .build())
+            // ③ 조회된 메시지들을 MessageResponse로 변환 (6번 API와 동일한 DTO)
+            log.debug("🔄 [단계3] MessageResponse로 변환 중...");
+            List<MessageResponse> messageResponses = messages.stream()
+                    .map(msg -> {
+                        boolean readByMe = msg.getSender().getId().equals(userId)
+                                || (msg.getReadCount() != null && msg.getReadCount() > 0);
+
+                        return MessageResponse.builder()
+                                .id(msg.getId())
+                                .roomId(msg.getChatRoom().getId())
+                                .senderId(msg.getSender() != null ? msg.getSender().getId() : null)
+                                .userId(msg.getSender() != null ? msg.getSender().getId() : null)
+                                .senderName(msg.getSender() != null ? msg.getSender().getNickname() : "알 수 없음")
+                                .nickname(msg.getSender() != null ? msg.getSender().getNickname() : "알 수 없음")
+                                .senderProfileImageUrl(msg.getSender() != null ? msg.getSender().getProfileImageUrl() : null)
+                                .profileImage(msg.getSender() != null ? msg.getSender().getProfileImageUrl() : null)
+                                .type(msg.getType().toString())
+                                .content(msg.getContent())
+                                .imageUrl(msg.getImageUrl())
+                                .cardPayload(msg.getCardPayload())
+                                .readCount(msg.getReadCount())
+                                .createdAt(msg.getCreatedAt())
+                                .readByMe(readByMe)
+                                .build();
+                    })
                     .toList();
 
             // ④ 클라이언트가 시간순으로 보기 쉽게 오름차순으로 정렬
             log.debug("🔄 [단계4] 메시지를 시간순(오름차순)으로 정렬 중...");
-            List<ChatMessageDto> sortedMessages = chatMessageDtos.stream()
-                    .sorted((a, b) -> Long.compare(a.getTimestamp(), b.getTimestamp()))
+            List<MessageResponse> sortedMessages = messageResponses.stream()
+                    .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
                     .toList();
 
             log.info("✅ [과거 메시지 조회 완료] roomId: {}, messageCount: {}", roomId, sortedMessages.size());
