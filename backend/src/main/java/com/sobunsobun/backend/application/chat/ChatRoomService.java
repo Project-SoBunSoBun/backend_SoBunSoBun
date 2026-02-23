@@ -740,6 +740,18 @@ public class ChatRoomService {
                 }
                 builder.otherUser(otherUser);
 
+                // 개인 채팅도 멤버 목록 포함
+                List<ChatRoomDetailResponse.MemberInfo> memberList = chatRoom.getMembers().stream()
+                        .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                        .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
+                                .userId(m.getUser().getId())
+                                .nickname(m.getUser().getNickname())
+                                .profileImage(m.getUser().getProfileImageUrl())
+                                .isOwner(chatRoom.isOwner(m.getUser().getId()))
+                                .build())
+                        .collect(Collectors.toList());
+                builder.members(memberList);
+
             } else {
                 // ⑥-B 단체 채팅: members 목록, groupPost 정보
                 List<ChatRoomDetailResponse.MemberInfo> memberList = chatRoom.getMembers().stream()
