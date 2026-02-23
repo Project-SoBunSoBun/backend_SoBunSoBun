@@ -47,22 +47,11 @@ public class BugReport {
     private String content;
 
     /**
-     * 답변 받을 이메일
-     */
-    @Column(name = "reply_email", nullable = false, length = 100)
-    private String replyEmail;
-
-    /**
      * 첨부 이미지 URL (JSON 배열 형식)
      */
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls;
 
-    /**
-     * 디바이스 정보 (JSON 형식)
-     */
-    @Column(name = "device_info", columnDefinition = "TEXT")
-    private String deviceInfo;
 
     /**
      * 상태 (RECEIVED, IN_REVIEW, FIXED, CLOSED)
