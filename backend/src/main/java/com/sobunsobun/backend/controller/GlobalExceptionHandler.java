@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -105,6 +106,23 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    /**
+     * 파일 업로드 크기 초과 처리
+     * 최대 파일 크기(10MB) 또는 요청 크기(15MB) 초과 시
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<?>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("[MaxUploadSizeExceededException] 파일 크기 초과: {}", e.getMessage());
+
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "FILE_SIZE_EXCEEDED",
+                "파일 크기가 허용된 최대 크기(10MB)를 초과했습니다. 더 작은 파일을 업로드해주세요."
+        );
+
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
     }
 
     /**

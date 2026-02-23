@@ -14,6 +14,11 @@ java {
 	}
 }
 
+// Java 컴파일러 옵션 설정 - 메서드 파라미터 이름 유지
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs.add('-parameters')
+}
+
 configurations {
 	compileOnly {
 		extendsFrom annotationProcessor

@@ -148,9 +148,35 @@
 
     <div id="chat-box"></div>
 
+        <!-- 메시지 입력 영역 -->
     <div class="msg-input-group">
         <input type="text" id="message" placeholder="메시지 입력 후 Enter 또는 전송 클릭..." onkeypress="if(event.keyCode==13) sendMessage()">
         <button onclick="sendMessage()">전송</button>
+    </div>
+
+    <!-- 이미지 업로드 영역 -->
+    <div style="margin-top: 10px; padding: 15px; background: #fff3e0; border-radius: 5px; border: 1px solid #ffcc80;">
+        <div style="font-weight: bold; margin-bottom: 10px; color: #e65100;">📷 이미지 전송</div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp"
+                   style="flex: 1; min-width: 150px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; background: white;">
+            <input type="text" id="imageMessage" placeholder="이미지와 함께 보낼 메시지 (선택)"
+                   style="flex: 2; min-width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="sendImageMessage()"
+                    style="padding: 10px 20px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                📤 이미지 전송
+            </button>
+        </div>
+        <div style="margin-top: 8px; font-size: 11px; color: #666;">
+            💡 지원 형식: JPG, PNG, WEBP (최대 5MB)
+        </div>
+        <!-- 업로드 진행 상태 -->
+        <div id="uploadProgress" style="display: none; margin-top: 10px;">
+            <div style="background: #e0e0e0; border-radius: 4px; height: 20px; overflow: hidden;">
+                <div id="progressBar" style="background: #4CAF50; height: 100%; width: 0%; transition: width 0.3s;"></div>
+            </div>
+            <div id="progressText" style="text-align: center; font-size: 12px; margin-top: 5px;"></div>
+        </div>
     </div>
 
     <!-- 로그 영역 -->
@@ -169,6 +195,7 @@
     let currentUser = null;
     let currentRoomId = null;  // ✅ 전역 변수 추가
     let currentSenderId = null;  // ✅ 전역 변수 추가
+    let displayedMessageIds = new Set();  // ✅ 이미 표시된 메시지 ID 추적 (중복 방지)
 
     /**
      * JWT 토큰으로 로그인하고 사용자 정보 조회
@@ -302,12 +329,30 @@
                     console.log('📨 파싱된 메시지:', data);
                     appendLog('📨 파싱 성공: ' + JSON.stringify(data));
 
+                    // ✅ 중복 메시지 체크 (messageId 기반)
+                    const messageId = data.messageId || data.id;
+                    if (messageId && displayedMessageIds.has(messageId)) {
+                        appendLog('⚠️ 중복 메시지 무시: messageId=' + messageId);
+                        return;  // 이미 표시된 메시지면 무시
+                    }
+                    if (messageId) {
+                        displayedMessageIds.add(messageId);
+                    }
+
                     const messageContent = data.message || data.content;  // ✅ message와 content 모두 지원
                     const isMyMsg = String(data.senderId) === String(currentSenderId);  // ✅ currentSenderId 사용
-                    appendLog('👤 발송자: ' + (data.senderName || data.senderId) + ', 내용: ' + messageContent);
-                    appendLog('✅ 채팅창에 표시 중...');
+                    const senderName = data.nickname || data.senderName || data.senderId;  // ✅ nickname 우선 사용
+                    const imageUrl = data.imageUrl || null;  // ✅ 이미지 URL
 
-                    appendMessage(data.senderName || data.senderId, messageContent, isMyMsg ? 'blue' : 'green');
+                    appendLog('👤 발송자: ' + senderName + ', 타입: ' + (data.type || 'TEXT') + ', msgId: ' + messageId);
+
+                    // 이미지 메시지인 경우
+                    if (data.type === 'IMAGE' && imageUrl) {
+                        appendLog('📸 이미지 메시지 수신: ' + imageUrl);
+                        appendMessage(senderName, messageContent, isMyMsg ? 'blue' : 'green', imageUrl);
+                    } else {
+                        appendMessage(senderName, messageContent, isMyMsg ? 'blue' : 'green');
+                    }
 
                     appendLog('✅ 메시지 표시 완료!');
                 } catch (e) {
@@ -350,6 +395,7 @@
         if (stompClient !== null && stompClient.connected) {
             stompClient.deactivate();
             updateStatus(false);
+            displayedMessageIds.clear();  // ✅ 메시지 ID 초기화
             appendMessage('시스템', '✂️ 연결이 끊어졌습니다.', 'red');
         } else {
             appendMessage('시스템', '❌ 연결된 상태가 아닙니다.', 'red');
@@ -418,13 +464,26 @@
         }
     }
 
-    function appendMessage(sender, message, color) {
+    function appendMessage(sender, message, color, imageUrl = null) {
         const chatBox = document.getElementById('chat-box');
         const msgDiv = document.createElement('div');
         msgDiv.className = 'msg';
         msgDiv.style.color = color;
         msgDiv.style.fontSize = '12px';
-        msgDiv.innerText = `[${new Date().toLocaleTimeString()}] [${sender}] ${message}`;
+
+        // 이미지가 있는 경우
+        if (imageUrl) {
+            const timestamp = new Date().toLocaleTimeString();
+            msgDiv.innerHTML = `
+                <div>[${timestamp}] [${sender}]</div>
+                <img src="${imageUrl}" style="max-width: 200px; max-height: 200px; margin: 5px 0; border-radius: 5px; cursor: pointer;"
+                     onclick="window.open('${imageUrl}', '_blank')" title="클릭하여 원본 보기">
+                ${message ? `<div>${message}</div>` : ''}
+            `;
+        } else {
+            msgDiv.innerText = `[${new Date().toLocaleTimeString()}] [${sender}] ${message}`;
+        }
+
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -453,6 +512,139 @@
         } else {
             statusDiv.className = 'disconnected';
             statusDiv.innerText = '❌ 연결 안 됨';
+        }
+    }
+
+    /**
+     * 이미지 메시지 전송 (FormData + multipart/form-data)
+     */
+    async function sendImageMessage() {
+        // 로그인 확인
+        if (!currentJwtToken) {
+            alert('먼저 로그인해주세요');
+            appendMessage('시스템', '❌ 로그인이 필요합니다', 'red');
+            return;
+        }
+
+        // 채팅방 연결 확인
+        if (!currentRoomId) {
+            alert('먼저 채팅방에 접속해주세요');
+            appendMessage('시스템', '❌ 채팅방에 접속해주세요', 'red');
+            return;
+        }
+
+        const fileInput = document.getElementById('imageFile');
+        const messageInput = document.getElementById('imageMessage');
+        const file = fileInput.files[0];
+        const message = messageInput.value.trim() || null;
+
+        // 파일 선택 확인
+        if (!file) {
+            alert('이미지를 선택해주세요');
+            appendMessage('시스템', '❌ 이미지 파일을 선택해주세요', 'red');
+            return;
+        }
+
+        // 파일 타입 검증
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('지원하지 않는 이미지 형식입니다. (jpg/png/webp만 가능)');
+            appendMessage('시스템', '❌ 지원하지 않는 이미지 형식입니다', 'red');
+            return;
+        }
+
+        // 파일 크기 검증 (5MB)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert('파일 크기가 5MB를 초과합니다');
+            appendMessage('시스템', '❌ 파일 크기가 5MB를 초과합니다', 'red');
+            return;
+        }
+
+        // 진행 상태 표시
+        const progressDiv = document.getElementById('uploadProgress');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        progressDiv.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.innerText = '업로드 준비 중...';
+
+        appendLog('📤 이미지 업로드 시작: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + 'KB)');
+        appendMessage('시스템', '📤 이미지 업로드 중...', 'orange');
+
+        try {
+            // FormData 생성
+            const formData = new FormData();
+            formData.append('image', file);
+            if (message) {
+                formData.append('message', message);
+            }
+
+            // API URL 생성
+            const apiUrl = window.location.protocol + '//' + window.location.host +
+                           '/api/v1/chat/rooms/' + currentRoomId + '/images';
+
+            appendLog('📡 API 호출: ' + apiUrl);
+
+            // XMLHttpRequest로 업로드 (진행 상태 표시를 위해)
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.innerText = '업로드 중... ' + percentComplete + '%';
+                    appendLog('📊 업로드 진행: ' + percentComplete + '%');
+                }
+            });
+
+            xhr.addEventListener('load', function() {
+                progressDiv.style.display = 'none';
+
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    appendLog('✅ 이미지 업로드 성공: ' + JSON.stringify(response));
+
+                    if (response.status === 'success' && response.data) {
+                        const data = response.data;
+                        // WebSocket으로 메시지가 브로드캐스트되므로 여기서는 표시하지 않음
+                        // (중복 표시 방지)
+                        appendLog('📸 이미지 URL: ' + data.imageUrl);
+                        appendLog('👤 발신자: ' + (data.nickname || data.senderName) + ' (userId: ' + data.userId + ')');
+                        appendLog('🕐 생성시간: ' + data.createdAt);
+                        appendLog('ℹ️ WebSocket으로 메시지가 전달됩니다.');
+                    }
+
+                    // 입력 초기화
+                    fileInput.value = '';
+                    messageInput.value = '';
+                } else {
+                    let errorMsg = '이미지 업로드 실패';
+                    try {
+                        const errorResponse = JSON.parse(xhr.responseText);
+                        errorMsg = errorResponse.message || errorMsg;
+                    } catch (e) {}
+
+                    appendLog('❌ 업로드 실패: HTTP ' + xhr.status);
+                    appendMessage('시스템', '❌ ' + errorMsg, 'red');
+                }
+            });
+
+            xhr.addEventListener('error', function() {
+                progressDiv.style.display = 'none';
+                appendLog('❌ 네트워크 오류');
+                appendMessage('시스템', '❌ 네트워크 오류가 발생했습니다', 'red');
+            });
+
+            xhr.open('POST', apiUrl, true);
+            xhr.setRequestHeader('Authorization', 'Bearer ' + currentJwtToken);
+            // Content-Type은 FormData 사용 시 자동 설정됨 (boundary 포함)
+            xhr.send(formData);
+
+        } catch (error) {
+            progressDiv.style.display = 'none';
+            appendLog('❌ 이미지 업로드 오류: ' + error.message);
+            appendMessage('시스템', '❌ 이미지 업로드 실패: ' + error.message, 'red');
         }
     }
 </script>

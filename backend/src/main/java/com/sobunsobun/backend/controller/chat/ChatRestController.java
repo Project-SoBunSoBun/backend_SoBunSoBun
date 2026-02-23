@@ -2,16 +2,20 @@ package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatMessageService;
 import com.sobunsobun.backend.application.chat.ChatRoomService;
+import com.sobunsobun.backend.application.file.FileStorageService;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
+import com.sobunsobun.backend.domain.chat.ChatMessageType;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.*;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
+import com.sobunsobun.backend.repository.user.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,11 +23,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
@@ -48,6 +54,8 @@ public class ChatRestController {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMemberRepository chatMemberRepository;
+    private final FileStorageService fileStorageService;
+    private final UserRepository userRepository;
 
     // ====== 채팅방 관련 API ======
 
@@ -220,7 +228,7 @@ public class ChatRestController {
     @Operation(summary = "메시지 조회", description = "채팅방의 메시지 목록을 조회합니다")
     @GetMapping("/rooms/{roomId}/messages")
     public ResponseEntity<ApiResponse<PageResponse<MessageResponse>>> getMessages(
-            @PathVariable Long roomId,
+            @PathVariable("roomId") Long roomId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             Principal principal
@@ -285,6 +293,129 @@ public class ChatRestController {
         }
     }
 
+    // ====== 이미지 업로드 API ======
+
+    /**
+     * 채팅 이미지 업로드
+     *
+     * FormData 방식으로 이미지 파일을 업로드하고 채팅 메시지로 저장합니다.
+     * Content-Type: multipart/form-data
+     *
+     * @param image 이미지 파일 (jpg/png/webp, 최대 5MB)
+     * @param chatId 채팅방 ID
+     * @param message 메시지 내용 (선택)
+     * @param principal 인증 사용자
+     * @return 이미지 메시지 응답
+     */
+    @Operation(
+            summary = "채팅 이미지 업로드",
+            description = "FormData 방식으로 이미지 파일을 업로드합니다. Content-Type: multipart/form-data. 지원 형식: jpg/png/webp (최대 5MB)"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "이미지 업로드 성공",
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                mediaType = "application/json",
+                schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = ChatImageMessageResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "잘못된 요청 (파일 형식 또는 크기 초과)"
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "채팅방 멤버가 아님"
+        )
+    })
+    @PostMapping(value = "/rooms/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ChatImageMessageResponse>> uploadChatImage(
+            @PathVariable("chatId") Long chatId,
+            @Parameter(description = "이미지 파일 (jpg/png/webp, 최대 5MB)", required = true)
+            @RequestParam("image") MultipartFile image,
+            @Parameter(description = "메시지 내용 (선택)")
+            @RequestParam(value = "message", required = false) String message,
+            Principal principal
+    ) {
+        try {
+            log.info("═════════════════════════════════════════════════════════════");
+            log.info("🖼️ [REST] 채팅 이미지 업로드 API 요청");
+
+            Long userId = extractUserIdFromPrincipal(principal);
+            log.info("✅ 인증 완료 - userId: {}", userId);
+            log.info("📝 요청 정보 - chatId: {}, imageSize: {} bytes, message: {}",
+                    chatId, image != null ? image.getSize() : 0, message);
+
+            // 1. 이미지 파일 검증
+            if (image == null || image.isEmpty()) {
+                log.warn("❌ 이미지 파일이 없음");
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.badRequest("IMAGE_REQUIRED", "이미지 파일이 필요합니다"));
+            }
+
+            // 2. 권한 체크 (채팅방 멤버 확인)
+            log.debug("🔐 권한 체크 중... chatId: {}, userId: {}", chatId, userId);
+            boolean isMember = chatMemberRepository.findMember(chatId, userId).isPresent();
+            if (!isMember) {
+                log.warn("❌ 권한 없음 - userId: {}는 chatId: {} 멤버가 아님", userId, chatId);
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.forbidden("NOT_MEMBER", "채팅방 멤버가 아닙니다"));
+            }
+            log.info("✅ 권한 확인 완료 - 멤버임");
+
+            // 3. 이미지 파일 저장
+            log.debug("📤 이미지 파일 저장 중...");
+            String imageUrl = fileStorageService.saveImage(image);
+            log.info("✅ 이미지 저장 완료 - imageUrl: {}", imageUrl);
+
+            // 4. 채팅 메시지 저장 (IMAGE 타입)
+            log.debug("💬 채팅 메시지 저장 중...");
+            MessageResponse savedMessage = chatMessageService.saveMessage(
+                    chatId,
+                    userId,
+                    ChatMessageType.IMAGE,
+                    message,  // 이미지와 함께 전송된 텍스트 메시지
+                    imageUrl,
+                    null  // cardPayload는 없음
+            );
+            log.info("✅ 채팅 메시지 저장 완료 - messageId: {}", savedMessage.getId());
+
+            // 5. 사용자 정보 조회
+            User sender = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+            // 6. 응답 생성 (개선된 필드명 적용)
+            ChatImageMessageResponse response = ChatImageMessageResponse.builder()
+                    .id(savedMessage.getId())
+                    .roomId(chatId)
+                    .userId(userId)  // 신규 필드
+                    .nickname(sender.getNickname())  // senderName -> nickname
+                    .profileImage(sender.getProfileImageUrl())  // senderProfileImageUrl -> profileImage
+                    .type("IMAGE")
+                    .content(message)
+                    .imageUrl(imageUrl)
+                    .readCount(0)
+                    .createdAt(savedMessage.getCreatedAt())  // timestamp -> createdAt (ISO 8601)
+                    .readByMe(true)
+                    .build();
+
+            log.info("✅ [REST] 채팅 이미지 업로드 완료 - messageId: {}", savedMessage.getId());
+            log.info("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.ok(ApiResponse.success(response, "이미지 업로드 성공"));
+
+        } catch (Exception e) {
+            log.error("═════════════════════════════════════════════════════════════");
+            log.error("❌ [REST] 채팅 이미지 업로드 실패", e);
+            log.error("   - chatId: {}, errorMsg: {}", chatId, e.getMessage());
+            log.error("═════════════════════════════════════════════════════════════");
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.badRequest("IMAGE_UPLOAD_FAILED", e.getMessage()));
+        }
+    }
+
     // ====== 유틸리티 메서드 ======
 
     /**
@@ -331,14 +462,17 @@ public class ChatRestController {
                 .id(msg.getId())
                 .roomId(msg.getChatRoom().getId())
                 .senderId(msg.getSender().getId())
+                .userId(msg.getSender().getId())  // 신규 필드: userId
                 .senderName(msg.getSender().getNickname())
+                .nickname(msg.getSender().getNickname())  // 신규 필드: nickname
                 .senderProfileImageUrl(msg.getSender().getProfileImageUrl())
+                .profileImage(msg.getSender().getProfileImageUrl())  // 신규 필드: profileImage
                 .type(msg.getType().toString())
                 .content(msg.getContent())
                 .imageUrl(msg.getImageUrl())
                 .cardPayload(msg.getCardPayload())
                 .readCount(msg.getReadCount())
-                .createdAt(msg.getCreatedAt())
+                .createdAt(msg.getCreatedAt())  // ISO 8601 형식으로 자동 변환
                 .readByMe(readByMe)
                 .build();
     }
@@ -465,7 +599,7 @@ public class ChatRestController {
     )
     @GetMapping("/rooms/{roomId}/messages/cursor")
     public ResponseEntity<ApiResponse<List<com.sobunsobun.backend.dto.chat.ChatMessageDto>>> getChatMessages(
-            @PathVariable Long roomId,
+            @PathVariable("roomId") Long roomId,
             @RequestParam(required = false) Long lastMessageId,
             @RequestParam(defaultValue = "20") int size,
             Principal principal
