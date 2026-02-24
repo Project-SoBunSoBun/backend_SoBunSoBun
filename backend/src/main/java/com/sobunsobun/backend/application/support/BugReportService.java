@@ -83,6 +83,7 @@ public class BugReportService {
                     .typeCode(request.getTypeCode())
                     .content(request.getContent())
                     .imageUrls(imageUrlsJson)
+                    .deviceInfo(request.getDeviceInfo())
                     .status("RECEIVED")
                     .build();
 

@@ -276,17 +276,19 @@ public class SupportController {
             @RequestParam String typeCode,
             @RequestParam String content,
             @RequestParam(required = false) List<MultipartFile> screenshots,
+            @RequestParam(required = false) String deviceInfo,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
         log.info("🐛 [submitBugReport API] 버그 신고 제출 - userId: {}", principal.id());
-        log.info("🐛 [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}",
-                typeCode, content);
+        log.info("🐛 [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}, deviceInfo: {}",
+                typeCode, content, deviceInfo);
 
         // BugReportRequest 객체 생성
         BugReportRequest request = BugReportRequest.builder()
                 .typeCode(typeCode)
                 .content(content)
                 .screenshots(screenshots)
+                .deviceInfo(deviceInfo)
                 .build();
 
         User user = new User();

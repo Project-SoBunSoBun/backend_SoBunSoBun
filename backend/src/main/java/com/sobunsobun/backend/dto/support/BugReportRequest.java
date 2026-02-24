@@ -36,5 +36,11 @@ public class BugReportRequest {
      * 첨부 스크린샷 이미지 (선택, 최대 5개)
      */
     private List<MultipartFile> screenshots;
+
+    /**
+     * 디바이스 정보 (선택, 예: "iPhone 15 Pro, iOS 17.2")
+     */
+    @Size(max = 500, message = "디바이스 정보는 500자 이내여야 합니다.")
+    private String deviceInfo;
 }
 

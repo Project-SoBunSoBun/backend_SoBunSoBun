@@ -52,6 +52,12 @@ public class BugReport {
     @Column(name = "image_urls", columnDefinition = "TEXT")
     private String imageUrls;
 
+    /**
+     * 디바이스 정보 (예: "iPhone 15 Pro, iOS 17.2")
+     */
+    @Column(name = "device_info", length = 500)
+    private String deviceInfo;
+
 
     /**
      * 상태 (RECEIVED, IN_REVIEW, FIXED, CLOSED)
