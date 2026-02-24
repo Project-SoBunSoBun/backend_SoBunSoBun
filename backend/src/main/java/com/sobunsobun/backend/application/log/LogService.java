@@ -7,13 +7,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 /**
  * 로그 파일 조회 서비스
@@ -93,7 +98,10 @@ public class LogService {
         try {
             return Files.list(logDirectory)
                     .filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".log"))
+                    .filter(path -> {
+                        String name = path.toString();
+                        return name.endsWith(".log") || name.endsWith(".log.gz");
+                    })
                     .map(path -> path.getFileName().toString())
                     .sorted()
                     .collect(Collectors.toList());
@@ -117,13 +125,28 @@ public class LogService {
         String fileName = getLogFileNameByDate(logType, date);
         Path filePath = Paths.get(logPath, fileName);
 
+        // .log 파일이 없으면 .log.gz 파일 시도
+        boolean isGzip = false;
         if (!Files.exists(filePath)) {
-            log.warn("날짜별 로그 파일이 존재하지 않음 - 파일: {}", filePath);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 날짜의 로그 파일을 찾을 수 없습니다");
+            String gzFileName = fileName + ".gz";
+            Path gzFilePath = Paths.get(logPath, gzFileName);
+            if (Files.exists(gzFilePath)) {
+                filePath = gzFilePath;
+                fileName = gzFileName;
+                isGzip = true;
+            } else {
+                log.warn("날짜별 로그 파일이 존재하지 않음 - 파일: {} / {}", filePath, gzFilePath);
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 날짜의 로그 파일을 찾을 수 없습니다");
+            }
         }
 
         try {
-            List<String> allLines = Files.readAllLines(filePath);
+            List<String> allLines;
+            if (isGzip) {
+                allLines = readGzipFile(filePath);
+            } else {
+                allLines = Files.readAllLines(filePath);
+            }
             long totalLines = allLines.size();
 
             // 최근 N줄만 추출
@@ -165,6 +188,21 @@ public class LogService {
             default -> logFileName;
         };
         return baseFileName + "-" + date + "-1.log";
+    }
+
+    /**
+     * GZIP 압축 파일 읽기
+     */
+    private List<String> readGzipFile(Path gzFilePath) throws IOException {
+        List<String> lines = new ArrayList<>();
+        try (GZIPInputStream gzis = new GZIPInputStream(Files.newInputStream(gzFilePath));
+             BufferedReader reader = new BufferedReader(new InputStreamReader(gzis, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lines.add(line);
+            }
+        }
+        return lines;
     }
 }
 

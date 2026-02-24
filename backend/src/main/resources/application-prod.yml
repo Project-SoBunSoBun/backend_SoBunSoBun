@@ -57,7 +57,7 @@ logging:
     root: WARN
     com.sobunsobun.backend: INFO
   file:
-    path: /var/log/sobunsobun
+    path: logs
     name: sobunsobun
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
