@@ -83,7 +83,7 @@ public class ChatMessageService {
                             .map(m -> "u" + m.getUser().getId() + "(" + m.getStatus() + ")")
                             .toList());
                 }
-                throw new RuntimeException("User is not a member of this chat room");
+                throw new RuntimeException("채팅방에 초대되지 않은 사용자입니다");
             }
             log.debug("✅ [권한 검증 성공] userId {}는 roomId {} 멤버임 (DB 확인)", senderId, roomId);
 
