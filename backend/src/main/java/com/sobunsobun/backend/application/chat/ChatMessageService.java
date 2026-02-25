@@ -244,7 +244,28 @@ public class ChatMessageService {
                 .readCount(message.getReadCount())
                 .createdAt(message.getCreatedAt())
                 .readByMe(readByMe)
+                .settlementId(extractSettlementId(message))
+                .groupChatRoomId(message.getChatRoom().getId().intValue())
                 .build();
+    }
+
+    /**
+     * 메시지의 cardPayload에서 settlementId를 추출
+     */
+    private Integer extractSettlementId(ChatMessage message) {
+        if (message.getCardPayload() == null || message.getCardPayload().isBlank()) {
+            return null;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(message.getCardPayload());
+            if (node.has("settlementId") && !node.get("settlementId").isNull()) {
+                return node.get("settlementId").asInt();
+            }
+        } catch (Exception e) {
+            log.debug("cardPayload에서 settlementId 추출 실패: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**
@@ -323,6 +344,8 @@ public class ChatMessageService {
                                 .readCount(msg.getReadCount())
                                 .createdAt(msg.getCreatedAt())
                                 .readByMe(readByMe)
+                                .settlementId(extractSettlementId(msg))
+                                .groupChatRoomId(msg.getChatRoom().getId().intValue())
                                 .build();
                     })
                     .toList();

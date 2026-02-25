@@ -14,6 +14,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.springframework.http.converter.HttpMessageNotReadableException;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -106,6 +108,23 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    /**
+     * JSON 파싱 오류 처리
+     * 잘못된 JSON 형식의 요청이 들어온 경우
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<?>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.warn("[HttpMessageNotReadableException] 잘못된 요청 본문: {}", e.getMessage());
+
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.BAD_REQUEST.value(),
+                ErrorCode.INVALID_REQUEST.getCode(),
+                "요청 본문의 JSON 형식이 올바르지 않습니다. 올바른 JSON 형식으로 다시 시도해주세요."
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     /**

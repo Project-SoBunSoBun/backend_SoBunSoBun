@@ -778,7 +778,28 @@ public class ChatRestController {
                 .readCount(msg.getReadCount())
                 .createdAt(msg.getCreatedAt())  // ISO 8601 형식으로 자동 변환
                 .readByMe(readByMe)
+                .settlementId(extractSettlementId(msg))
+                .groupChatRoomId(msg.getChatRoom().getId().intValue())
                 .build();
+    }
+
+    /**
+     * 메시지의 cardPayload에서 settlementId를 추출
+     */
+    private Integer extractSettlementId(ChatMessage msg) {
+        if (msg.getCardPayload() == null || msg.getCardPayload().isBlank()) {
+            return null;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(msg.getCardPayload());
+            if (node.has("settlementId") && !node.get("settlementId").isNull()) {
+                return node.get("settlementId").asInt();
+            }
+        } catch (Exception e) {
+            log.debug("cardPayload에서 settlementId 추출 실패: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**

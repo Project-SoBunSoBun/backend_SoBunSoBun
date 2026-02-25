@@ -65,4 +65,14 @@ public class MessageResponse {
     private LocalDateTime createdAt;
 
     private Boolean readByMe;
+
+    /**
+     * 정산 ID
+     */
+    private Integer settlementId;
+
+    /**
+     * 단체 채팅방 ID
+     */
+    private Integer groupChatRoomId;
 }
