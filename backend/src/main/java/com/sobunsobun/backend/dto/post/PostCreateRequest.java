@@ -30,7 +30,7 @@ public class PostCreateRequest {
      * 카테고리 ('01', '02' 등)
      */
     @NotBlank(message = "카테고리는 필수입니다")
-    @Size(max = 20, message = "카테고리는 최대 20자입니다")
+    @Size(max = 40, message = "카테고리는 최대 40자입니다")
     private String categories;
 
 
@@ -72,5 +72,3 @@ public class PostCreateRequest {
      */
     private Integer maxMembers;
 }
-
-
