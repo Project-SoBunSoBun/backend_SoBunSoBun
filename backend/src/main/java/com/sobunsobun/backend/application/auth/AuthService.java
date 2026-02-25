@@ -107,10 +107,12 @@ public class AuthService {
 
                 // 재가입 가능 일시 확인
                 if (reactivatableAt != null && LocalDateTime.now().isBefore(reactivatableAt)) {
+                    long remainingDays = java.time.Duration.between(LocalDateTime.now(), reactivatableAt).toDays();
+                    String formattedDate = reactivatableAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     log.warn("재가입 제한 기간 - 사용자 ID: {}, 재가입 가능 일시: {}",
                             existingUser.getId(), reactivatableAt);
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                            "탈퇴 후 90일 이내에는 재가입할 수 없습니다. 재가입 가능 일시: " + reactivatableAt);
+                            "탈퇴한 계정입니다. " + remainingDays + "일 후(" + formattedDate + ") 재가입이 가능합니다.");
                 }
 
                 // 90일 경과: 재가입 가능하므로 신규 사용자로 처리
@@ -201,10 +203,12 @@ public class AuthService {
                     LocalDateTime reactivatableAt = existingUser.getReactivatableAt();
 
                     if (reactivatableAt != null && LocalDateTime.now().isBefore(reactivatableAt)) {
+                        long remainingDays = java.time.Duration.between(LocalDateTime.now(), reactivatableAt).toDays();
+                        String formattedDate = reactivatableAt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                         log.warn("재가입 제한 기간 - 사용자 ID: {}, 재가입 가능 일시: {}",
                                 existingUser.getId(), reactivatableAt);
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "탈퇴 후 90일 이내에는 재가입할 수 없습니다. 재가입 가능 일시: " + reactivatableAt);
+                                "탈퇴한 계정입니다. " + remainingDays + "일 후(" + formattedDate + ") 재가입이 가능합니다.");
                     }
 
                     log.info("재가입 가능 기간 경과 - 기존 사용자 ID: {}, 새 계정으로 가입 진행", existingUser.getId());

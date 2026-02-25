@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -45,6 +46,30 @@ public class WithdrawalReason {
      */
     @Column(name = "reason_detail", length = 100)
     private String reasonDetail;
+
+    /**
+     * 탈퇴 시점의 이메일
+     */
+    @Column(name = "email", length = 190)
+    private String email;
+
+    /**
+     * 탈퇴 시점의 닉네임
+     */
+    @Column(name = "nickname", length = 40)
+    private String nickname;
+
+    /**
+     * 탈퇴 시점의 매너 점수
+     */
+    @Column(name = "manner_score", precision = 3, scale = 2)
+    private BigDecimal mannerScore;
+
+    /**
+     * 탈퇴 시점의 주소
+     */
+    @Column(name = "address", length = 255)
+    private String address;
 
     /**
      * 생성 일시

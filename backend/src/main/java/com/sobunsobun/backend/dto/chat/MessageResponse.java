@@ -60,9 +60,9 @@ public class MessageResponse {
     private Integer readCount;
 
     /**
-     * 메시지 생성 시간 (ISO 8601 형식)
+     * 메시지 생성 시간 (ISO 8601 형식, 예: "2026-02-25T15:51:51+09:00")
      */
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Seoul")
     private LocalDateTime createdAt;
 
     private Boolean readByMe;

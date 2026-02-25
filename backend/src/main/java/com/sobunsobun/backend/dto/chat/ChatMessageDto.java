@@ -14,6 +14,9 @@ import java.util.UUID;
  *
  * Redis Pub/Sub으로 전달되는 JSON 데이터 형식이자,
  * WebSocket STOMP를 통해 클라이언트와 통신하는 형식입니다.
+ *
+ * STOMP 브로드캐스트 시 REST API 커서 조회 응답과 동일한 형식으로 전달됩니다.
+ * 필드명 매핑: message→content, timestamp→createdAt(ISO 8601), messageId→id
  */
 @Data
 @NoArgsConstructor
@@ -23,13 +26,6 @@ public class ChatMessageDto {
 
     /**
      * 메시지 타입 (ENTER, TALK, LEAVE, TEXT, IMAGE, SYSTEM 등)
-     *
-     * ENTER: 사용자 입장
-     * TALK: 일반 텍스트 메시지
-     * LEAVE: 사용자 퇴장
-     * TEXT: 텍스트 메시지
-     * IMAGE: 이미지 메시지
-     * SYSTEM: 시스템 메시지
      */
     @JsonProperty("type")
     private ChatMessageType type;
@@ -71,7 +67,7 @@ public class ChatMessageDto {
     private String cardPayload;
 
     /**
-     * 메시지 생성 시간 (타임스탬프)
+     * 메시지 생성 시간 (타임스탬프, Redis 내부 전달용)
      */
     @JsonProperty("timestamp")
     private Long timestamp;
@@ -81,4 +77,75 @@ public class ChatMessageDto {
      */
     @JsonProperty("messageId")
     private UUID messageId;
+
+    // ──────────────────────────────────────────────────────
+    // REST API 커서 조회 응답과 일치시키기 위한 추가 필드
+    // STOMP 브로드캐스트 시 iOS ChatMessageModel과 호환
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * 발신자 닉네임 (nickname 필드, senderName과 동일)
+     */
+    @JsonProperty("nickname")
+    private String nickname;
+
+    /**
+     * 발신자 프로필 이미지 URL
+     */
+    @JsonProperty("profileImage")
+    private String profileImage;
+
+    /**
+     * 발신자 프로필 이미지 URL (기존 호환용)
+     */
+    @JsonProperty("senderProfileImageUrl")
+    private String senderProfileImageUrl;
+
+    /**
+     * 발신자 고유 ID (senderId와 동일, userId 필드로 전달)
+     */
+    @JsonProperty("userId")
+    private Long userId;
+
+    /**
+     * 메시지 생성 시간 (ISO 8601 형식, 예: "2026-02-25T15:51:51+09:00")
+     */
+    @JsonProperty("createdAt")
+    private String createdAt;
+
+    /**
+     * 메시지 내용 (REST API와 동일한 필드명)
+     */
+    @JsonProperty("content")
+    private String content;
+
+    /**
+     * 메시지 ID (REST API와 동일한 필드명, UUID 문자열)
+     */
+    @JsonProperty("id")
+    private String id;
+
+    /**
+     * 읽음 여부
+     */
+    @JsonProperty("readByMe")
+    private Boolean readByMe;
+
+    /**
+     * 읽은 횟수
+     */
+    @JsonProperty("readCount")
+    private Integer readCount;
+
+    /**
+     * 정산 ID
+     */
+    @JsonProperty("settlementId")
+    private Integer settlementId;
+
+    /**
+     * 단체 채팅방 ID
+     */
+    @JsonProperty("groupChatRoomId")
+    private Integer groupChatRoomId;
 }
