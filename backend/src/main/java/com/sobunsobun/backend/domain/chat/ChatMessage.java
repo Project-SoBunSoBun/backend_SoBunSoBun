@@ -4,6 +4,10 @@ import com.sobunsobun.backend.domain.BaseTimeEntity;
 import com.sobunsobun.backend.domain.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "chat_message", indexes = {
@@ -19,8 +23,10 @@ import lombok.*;
 public class ChatMessage extends BaseTimeEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 36, columnDefinition = "VARCHAR(36)")
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_room_id", nullable = false)

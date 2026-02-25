@@ -858,7 +858,7 @@ public class ChatRestController {
      * 모바일 앱의 무한 스크롤 기능을 지원합니다.
      *
      * API: GET /api/v1/chat/rooms/{roomId}/messages/cursor
-     * 쿼리 파라미터: lastMessageId (커서, 처음엔 null), size (기본 20)
+     * 쿼리 파라미터: cursor (ISO 8601 형식의 마지막 조회 메시지 생성시간, 처음엔 null), size (기본 20)
      * 응답: List<MessageResponse> (오름차순, 시간순) — 6번 메시지 조회와 동일한 DTO
      */
     @Operation(
@@ -942,7 +942,7 @@ public class ChatRestController {
     @GetMapping("/rooms/{roomId}/messages/cursor")
     public ResponseEntity<ApiResponse<List<MessageResponse>>> getChatMessages(
             @PathVariable("roomId") Long roomId,
-            @RequestParam(required = false) Long lastMessageId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime cursor,
             @RequestParam(defaultValue = "20") int size,
             Principal principal
     ) {
@@ -952,14 +952,14 @@ public class ChatRestController {
 
             Long userId = extractUserIdFromPrincipal(principal);
             log.info("✅ 인증 완료 - userId: {}", userId);
-            log.info("📝 요청 정보 - roomId: {}, lastMessageId: {}, size: {}",
-                    roomId, lastMessageId, size);
+            log.info("📝 요청 정보 - roomId: {}, cursor: {}, size: {}",
+                    roomId, cursor, size);
 
             log.debug("🔄 ChatMessageService.getChatMessages() 호출 중...");
             List<MessageResponse> messages = chatMessageService.getChatMessages(
                     roomId,
                     userId,
-                    lastMessageId,
+                    cursor,
                     size
             );
             log.info("✅ 과거 메시지 조회 완료 - messageCount: {}", messages.size());

@@ -6,13 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class MessageEvent {
-    private Long messageId;
+    private UUID messageId;
     private Long roomId;
     private Long senderId;
     private String senderName;

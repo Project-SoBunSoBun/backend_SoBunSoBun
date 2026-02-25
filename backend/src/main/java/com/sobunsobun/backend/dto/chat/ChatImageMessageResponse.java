@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * 채팅 이미지 메시지 응답 DTO
@@ -26,9 +27,9 @@ public class ChatImageMessageResponse {
     /**
      * 메시지 ID
      */
-    @Schema(description = "메시지 ID", example = "123")
+    @Schema(description = "메시지 ID", example = "550e8400-e29b-41d4-a716-446655440000")
     @JsonProperty("id")
-    private Long id;
+    private UUID id;
 
     /**
      * 채팅방 ID
