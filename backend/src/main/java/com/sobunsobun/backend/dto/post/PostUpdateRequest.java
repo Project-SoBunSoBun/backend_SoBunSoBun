@@ -27,7 +27,7 @@ public class PostUpdateRequest {
     /**
      * 카테고리 (null이면 변경하지 않음)
      */
-    @Size(max = 20, message = "카테고리는 최대 20자입니다")
+    @Size(max = 40, message = "카테고리는 최대 40자입니다")
     private String categories;
 
 
@@ -74,4 +74,3 @@ public class PostUpdateRequest {
      */
     private String status;
 }
-

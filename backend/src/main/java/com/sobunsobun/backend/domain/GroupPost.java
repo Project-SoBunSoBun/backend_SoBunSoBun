@@ -39,12 +39,9 @@ public class GroupPost {
     private String title;
 
     /**
-     * 카테고리 코드 (4자리, iOS에서 관리)
-     * 대분류(2자리) + 소분류(2자리)
-     * 예: 식품-과일(0001), 생활용품-디지털/가전(0101)
-     * 주의: 기존 데이터 호환성을 위해 VARCHAR(50)으로 설정
+     * 카테고리
      */
-    @Column(name = "categories", nullable = false, length = 50)
+    @Column(name = "categories", nullable = false, length = 40)
     private String categories;
 
     /**
