@@ -90,9 +90,9 @@ public class ChatImageMessageResponse {
     /**
      * 메시지 생성 시간 (ISO 8601 형식, 기존 timestamp에서 변경)
      */
-    @Schema(description = "메시지 생성 시간 (ISO 8601)", example = "2026-02-22T16:24:01")
+    @Schema(description = "메시지 생성 시간 (ISO 8601)", example = "2026-02-22T16:24:01+09:00")
     @JsonProperty("createdAt")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Seoul")
     private LocalDateTime createdAt;
 
     /**

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -30,6 +31,26 @@ public class WithdrawalReasonResponse {
      * 탈퇴 사유 상세
      */
     private String reasonDetail;
+
+    /**
+     * 탈퇴 시점의 이메일
+     */
+    private String email;
+
+    /**
+     * 탈퇴 시점의 닉네임
+     */
+    private String nickname;
+
+    /**
+     * 탈퇴 시점의 매너 점수
+     */
+    private BigDecimal mannerScore;
+
+    /**
+     * 탈퇴 시점의 주소
+     */
+    private String address;
 
     /**
      * 탈퇴 일시

@@ -106,11 +106,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return; // 인증 실패로 처리
                 }
 
-                // 탈퇴한 사용자의 토큰은 즉시 무효화
+                // 탈퇴한 사용자의 토큰은 즉시 무효화 및 재가입 안내
                 var user = userOptional.get();
                 if (user.getStatus() == com.sobunsobun.backend.domain.UserStatus.DELETED) {
                     log.warn("❌ 탈퇴한 사용자의 토큰 접근 차단 - 사용자 ID: {}", userId);
-                    return; // 인증 실패로 처리
+
+                    java.time.LocalDateTime reactivatableAt = user.getReactivatableAt();
+                    String message;
+                    if (reactivatableAt != null && java.time.LocalDateTime.now().isBefore(reactivatableAt)) {
+                        long remainingDays = java.time.Duration.between(java.time.LocalDateTime.now(), reactivatableAt).toDays();
+                        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        message = "탈퇴한 계정입니다. " + remainingDays + "일 후(" + reactivatableAt.format(formatter) + ") 재가입이 가능합니다.";
+                    } else {
+                        message = "탈퇴한 계정입니다. 재가입이 가능합니다. 새로 로그인해주세요.";
+                    }
+
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write(
+                            "{\"success\":false,\"error\":\"WITHDRAWN_USER\",\"message\":\"" + message + "\"}"
+                    );
+                    return; // 필터 체인 진행 없이 즉시 응답
                 }
 
                 // 6. SecurityContext에 Authentication 설정

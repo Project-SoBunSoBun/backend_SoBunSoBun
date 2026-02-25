@@ -128,6 +128,11 @@ public class ChatMessageService {
             // 5. Redis Pub/Sub을 통해 메시지 발행
             log.debug("🔄 [단계5] Redis 메시지 발행 중...");
             try {
+                // createdAt을 ISO 8601 형식으로 변환 (KST, +09:00)
+                String createdAtIso = savedMessage.getCreatedAt()
+                        .atZone(java.time.ZoneId.of("Asia/Seoul"))
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
+
                 ChatMessageDto chatMessageDto = ChatMessageDto.builder()
                         .type(savedMessage.getType())
                         .roomId(roomId)
@@ -138,6 +143,18 @@ public class ChatMessageService {
                         .cardPayload(savedMessage.getCardPayload())
                         .messageId(savedMessage.getId())
                         .timestamp(System.currentTimeMillis())
+                        // REST API 커서 조회 응답과 동일한 필드 추가
+                        .id(savedMessage.getId().toString())
+                        .nickname(sender.getNickname())
+                        .profileImage(sender.getProfileImageUrl())
+                        .senderProfileImageUrl(sender.getProfileImageUrl())
+                        .userId(senderId)
+                        .content(savedMessage.getContent())
+                        .createdAt(createdAtIso)
+                        .readByMe(false)
+                        .readCount(0)
+                        .settlementId(extractSettlementId(savedMessage))
+                        .groupChatRoomId(chatRoom.getId().intValue())
                         .build();
 
                 redisPublisher.publish(roomId, chatMessageDto);

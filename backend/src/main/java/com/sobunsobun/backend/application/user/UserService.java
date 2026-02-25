@@ -501,13 +501,19 @@ public class UserService {
         LocalDateTime withdrawnAt = LocalDateTime.now();
         LocalDateTime reactivatableAt = withdrawnAt.plusDays(90); // 90일 후 재가입 가능
 
+        // 탈퇴 전 사용자 정보를 먼저 보관
+        String originalEmail = user.getEmail();
+        String originalNickname = user.getNickname();
+        java.math.BigDecimal originalMannerScore = user.getMannerScore();
+        String originalAddress = user.getAddress();
+
         user.setStatus(UserStatus.DELETED);
         user.setWithdrawnAt(withdrawnAt);
         user.setReactivatableAt(reactivatableAt);
 
         // 개인정보 익명화 (email/nickname unique 제약 충돌 방지)
         user.setEmail("withdrawn_" + userId + "@deleted.local");
-        user.setNickname("탈퇴회원_" + userId);
+        user.setNickname("회원탈퇴_" + userId);
         user.setProfileImageUrl(null);
         user.setAddress(null);
         user.setLocationVerifiedAt(null);
@@ -517,11 +523,15 @@ public class UserService {
         log.info("✅ 사용자 상태 변경 및 개인정보 익명화 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
                 userId, withdrawnAt, reactivatableAt);
 
-        // 6. 탈퇴 사유 저장
+        // 6. 탈퇴 사유 저장 (탈퇴 전 사용자 정보 포함)
         WithdrawalReason withdrawalReason = WithdrawalReason.builder()
                 .user(user)
                 .reasonCode(request.getReasonCode())
                 .reasonDetail(request.getReasonDetail())
+                .email(originalEmail)
+                .nickname(originalNickname)
+                .mannerScore(originalMannerScore)
+                .address(originalAddress)
                 .build();
 
         withdrawalReasonRepository.save(withdrawalReason);
@@ -568,6 +578,10 @@ public class UserService {
                 .id(reason.getId())
                 .reasonCode(reason.getReasonCode())
                 .reasonDetail(reason.getReasonDetail())
+                .email(reason.getEmail())
+                .nickname(reason.getNickname())
+                .mannerScore(reason.getMannerScore())
+                .address(reason.getAddress())
                 .withdrawnAt(user.getWithdrawnAt())
                 .createdAt(reason.getCreatedAt())
                 .build();
