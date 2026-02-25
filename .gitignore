@@ -72,4 +72,5 @@ replay_pid*
 *.mwb
 *.DS_Store
 *.env
+*.p8
 build/

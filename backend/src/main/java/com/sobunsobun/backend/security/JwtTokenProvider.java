@@ -127,20 +127,34 @@ public class JwtTokenProvider {
      * @return 생성된 임시 로그인 토큰
      */
     public String createLoginToken(String email, String oauthId, long ttlMillis) {
+        return createLoginToken(email, oauthId, "KAKAO", ttlMillis);
+    }
+
+    /**
+     * 임시 로그인 토큰 생성 (provider 지정 가능)
+     *
+     * @param email 사용자 이메일
+     * @param oauthId OAuth ID
+     * @param provider OAuth 제공자 (KAKAO, APPLE)
+     * @param ttlMillis 토큰 유효 시간 (밀리초)
+     * @return 생성된 임시 로그인 토큰
+     */
+    public String createLoginToken(String email, String oauthId, String provider, long ttlMillis) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + ttlMillis);
 
         String token = Jwts.builder()
                 .setSubject("login_temp")                     // 임시 토큰 식별자
                 .claim("email", email)                        // 사용자 이메일
-                .claim("oauthId", oauthId)                   // 카카오 OAuth ID
+                .claim("oauthId", oauthId)                   // OAuth ID
+                .claim("provider", provider)                  // OAuth 제공자
                 .claim("type", "login")                       // 토큰 타입
                 .setIssuedAt(now)                            // 발급 시간
                 .setExpiration(expiration)                   // 만료 시간
                 .signWith(signingKey, SignatureAlgorithm.HS256) // HMAC-SHA256 서명
                 .compact();
 
-        log.debug("임시 로그인 토큰 생성 완료 - 이메일: {}, 만료: {}", email, expiration);
+        log.debug("임시 로그인 토큰 생성 완료 - 이메일: {}, provider: {}, 만료: {}", email, provider, expiration);
 
         return token;
     }

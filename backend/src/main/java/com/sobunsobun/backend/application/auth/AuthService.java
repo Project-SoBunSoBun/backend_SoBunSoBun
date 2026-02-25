@@ -5,6 +5,7 @@ import com.sobunsobun.backend.domain.Role;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.UserStatus;
 import com.sobunsobun.backend.dto.auth.*;
+import com.sobunsobun.backend.infrastructure.oauth.AppleOAuthClient;
 import com.sobunsobun.backend.infrastructure.oauth.KakaoOAuthClient;
 import com.sobunsobun.backend.repository.AuthProviderRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
@@ -26,7 +27,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 
 /**
  * 인증/인가 비즈니스 로직 서비스
@@ -44,6 +44,7 @@ import java.util.Map;
 public class AuthService {
 
     private final KakaoOAuthClient kakaoOAuthClient;
+    private final AppleOAuthClient appleOAuthClient;
     private final UserRepository userRepository;
     private final AuthProviderRepository authProviderRepository;
     private final JwtTokenProvider jwtTokenProvider;
@@ -134,6 +135,106 @@ public class AuthService {
     }
 
     /**
+     * 1단계 (Apple): Apple 로그인 검증
+     *
+     * 플로우:
+     * 1. authorization code로 Apple 토큰 교환 (또는 직접 전달된 id_token 사용)
+     * 2. id_token 검증 및 사용자 정보 추출
+     * 3. 기존 사용자 여부 판단
+     * 4. 임시 로그인 토큰 발급 (이용약관 동의용)
+     *
+     * @param code Apple authorization code
+     * @param idToken Apple id_token (앱에서 직접 전달 시, nullable)
+     * @return 사용자 정보와 임시 로그인 토큰
+     * @throws ResponseStatusException Apple 인증 오류 시
+     */
+    public KakaoVerifyResponse verifyAppleToken(String code, String idToken) {
+        log.info("[사용자 작동] 애플 로그인 시도");
+
+        try {
+            AppleOAuthClient.AppleUserInfo appleUser;
+
+            if (idToken != null && !idToken.isBlank()) {
+                // iOS 앱에서 id_token을 직접 전달한 경우
+                log.info("Apple id_token 직접 검증 모드");
+                appleUser = appleOAuthClient.verifyIdToken(idToken);
+            } else {
+                // authorization code로 토큰 교환 후 검증
+                log.info("Apple authorization code → 토큰 교환 모드");
+                AppleOAuthClient.AppleTokenResponse tokenResponse =
+                        appleOAuthClient.exchangeCodeForTokens(code);
+
+                if (tokenResponse == null || tokenResponse.getId_token() == null) {
+                    log.error("Apple 토큰 교환 실패");
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Apple 토큰 교환 실패");
+                }
+
+                appleUser = appleOAuthClient.verifyIdToken(tokenResponse.getId_token());
+            }
+
+            // Apple 사용자 정보 추출
+            String oauthId = appleUser.getSub();
+            String email = appleUser.getEmail();
+
+            log.info("[사용자 작동] 애플 로그인 정보 확인 - 이메일: {}", email);
+
+            // 이메일 확인 (Apple은 이메일을 최초 로그인 시에만 제공할 수 있음)
+            if (email == null || email.isBlank()) {
+                log.warn("Apple 이메일 정보 없음 - sub: {}", oauthId);
+                // Apple은 재로그인 시 이메일을 제공하지 않을 수 있으므로
+                // 기존 사용자 조회를 시도
+                var existingAuth = authProviderRepository.findByProviderAndProviderUserId("APPLE", oauthId);
+                if (existingAuth.isPresent() && existingAuth.get().getUser().getStatus() != UserStatus.DELETED) {
+                    email = existingAuth.get().getUser().getEmail();
+                } else {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                            "Apple 이메일 정보를 가져올 수 없습니다. 앱에서 이메일 공유를 허용해주세요.");
+                }
+            }
+
+            // 탈퇴한 사용자 재가입 제한 확인 (90일)
+            var existingAuthProvider = authProviderRepository.findByProviderAndProviderUserId("APPLE", oauthId);
+            if (existingAuthProvider.isPresent()) {
+                User existingUser = existingAuthProvider.get().getUser();
+
+                if (existingUser.getStatus() == UserStatus.DELETED) {
+                    LocalDateTime reactivatableAt = existingUser.getReactivatableAt();
+
+                    if (reactivatableAt != null && LocalDateTime.now().isBefore(reactivatableAt)) {
+                        log.warn("재가입 제한 기간 - 사용자 ID: {}, 재가입 가능 일시: {}",
+                                existingUser.getId(), reactivatableAt);
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                "탈퇴 후 90일 이내에는 재가입할 수 없습니다. 재가입 가능 일시: " + reactivatableAt);
+                    }
+
+                    log.info("재가입 가능 기간 경과 - 기존 사용자 ID: {}, 새 계정으로 가입 진행", existingUser.getId());
+                }
+            }
+
+            // 기존 활성 사용자 여부 확인
+            boolean isNewUser = !existingAuthProvider.isPresent()
+                    || existingAuthProvider.get().getUser().getStatus() == UserStatus.DELETED;
+            log.info("사용자 상태 확인 - 신규 사용자: {}", isNewUser);
+
+            // 임시 로그인 토큰 발급 (provider 정보 포함)
+            String loginToken = jwtTokenProvider.createLoginToken(email, oauthId, "APPLE", LOGIN_TOKEN_TTL);
+            log.info("임시 로그인 토큰 발급 완료 (Apple)");
+
+            return KakaoVerifyResponse.builder()
+                    .email(email)
+                    .loginToken(loginToken)
+                    .isNewUser(isNewUser)
+                    .build();
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Apple 로그인 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Apple 로그인 처리 실패: " + e.getMessage());
+        }
+    }
+
+    /**
      * 2단계: 이용약관 동의 후 회원가입/로그인 완료
      *
      * 플로우:
@@ -161,7 +262,7 @@ public class AuthService {
                 String oauthId = env.getProperty("ADMIN_OAUTH_ID");
 
                 // 3. 사용자 등록 또는 업데이트
-                User user = findOrCreateUser(email, oauthId);
+                User user = findOrCreateUser(email, oauthId, "KAKAO");
                 log.info("[관리자 작동] 어드민 로그인 성공 - 사용자 ID: {}", user.getId());
 
                 // 4. JWT 토큰 발급
@@ -183,7 +284,7 @@ public class AuthService {
                 String oauthId = env.getProperty("ADMIN2_OAUTH_ID");
 
                 // 3. 사용자 등록 또는 업데이트
-                User user = findOrCreateUser(email, oauthId);
+                User user = findOrCreateUser(email, oauthId, "KAKAO");
                 log.info("[관리자2 작동] 어드민2 로그인 성공 - 사용자 ID: {}", user.getId());
 
                 // 4. JWT 토큰 발급
@@ -204,19 +305,23 @@ public class AuthService {
                 Claims claims = jwtTokenProvider.parse(request.getLoginToken()).getBody();
                 String email = claims.get("email", String.class);
                 String oauthId = claims.get("oauthId", String.class);
+                String provider = claims.get("provider", String.class);
+                if (provider == null || provider.isBlank()) {
+                    provider = "KAKAO"; // 하위 호환: provider 없으면 카카오
+                }
 
                 if (email == null || oauthId == null) {
                     log.debug("임시 로그인 토큰에서 정보 추출 실패");
                     throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
                 }
 
-                log.info("임시 토큰 검증 완료 - 이메일: {}", email);
+                log.info("임시 토큰 검증 완료 - 이메일: {}, provider: {}", email, provider);
 
                 // 2. 필수 약관 동의 여부 확인
                 validateTermsAgreement(request);
 
                 // 3. 사용자 등록 또는 업데이트
-                User user = findOrCreateUser(email, oauthId);
+                User user = findOrCreateUser(email, oauthId, provider);
                 log.info("[사용자 작동] 회원가입 완료 - 사용자 ID: {}, 이메일: {}", user.getId(), email);
 
                 // 4. JWT 토큰 발급
@@ -348,9 +453,9 @@ public class AuthService {
      * - 새로운 User 레코드 생성
      * - AuthProvider의 user_id를 새 User로 변경
      */
-    private User findOrCreateUser(String email, String oauthId) {
+    private User findOrCreateUser(String email, String oauthId, String provider) {
         // 1. AuthProvider로 기존 OAuth 연결 확인
-        var existingAuthProvider = authProviderRepository.findByProviderAndProviderUserId("KAKAO", oauthId);
+        var existingAuthProvider = authProviderRepository.findByProviderAndProviderUserId(provider, oauthId);
 
         if (existingAuthProvider.isPresent()) {
             User existingUser = existingAuthProvider.get().getUser();
@@ -385,13 +490,13 @@ public class AuthService {
         }
 
         // 4. 신규 사용자 - 새 계정 생성
-        return createNewUserWithAuthProvider(email, oauthId);
+        return createNewUserWithAuthProvider(email, oauthId, provider);
     }
 
     /**
-     * 새 사용자 생성 및 AuthProvider 연결 (카카오 로그인)
+     * 새 사용자 생성 및 AuthProvider 연결
      */
-    private User createNewUserWithAuthProvider(String email, String oauthId) {
+    private User createNewUserWithAuthProvider(String email, String oauthId, String provider) {
         log.info("새 사용자 생성 시작 - 이메일: {}", email);
 
         // 1. User 엔티티 생성
@@ -409,12 +514,12 @@ public class AuthService {
         // 2. AuthProvider 생성 및 연결
         AuthProvider authProvider = AuthProvider.builder()
                 .user(savedUser)
-                .provider("KAKAO")
+                .provider(provider)
                 .providerUserId(oauthId)
                 .build();
 
         authProviderRepository.save(authProvider);
-        log.info("카카오 AuthProvider 연결 완료");
+        log.info("{} AuthProvider 연결 완료", provider);
 
         return savedUser;
     }

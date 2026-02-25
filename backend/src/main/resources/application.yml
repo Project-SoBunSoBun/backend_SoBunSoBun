@@ -63,6 +63,11 @@ springdoc:
 server:
   port: 8081
 
+# Apple OAuth 설정
+# APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY_PATH, APPLE_REDIRECT_URI
+# 는 .env 파일에서 환경변수로 관리합니다.
+# Apple AuthKey.p8 파일은 src/main/resources/apple/ 디렉토리에 배치하세요.
+
 # 로깅 설정 (Log4j2)
 logging:
   config: classpath:log4j2-spring.xml

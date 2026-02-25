@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
  *
  * 담당 기능:
  * - 카카오 OAuth 로그인/회원가입
+ * - 애플 OAuth 로그인/회원가입
  * - JWT 토큰 발급 및 갱신
  * - 이용약관 동의 기반 회원가입 플로우
  */
@@ -46,6 +47,56 @@ public class AuthController {
         log.info("카카오 토큰 검증 요청");
         KakaoVerifyResponse response = authService.verifyKakaoToken(request.getAccessToken());
         log.info("카카오 토큰 검증 완료 - 이메일: {}, 신규사용자: {}",
+                response.getEmail(), response.isNewUser());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 1단계 (Apple): Apple 로그인 검증 - REST API 방식
+     *
+     * - iOS 앱에서 Apple SDK로 받은 authorization code 또는 id_token 전달
+     * - 사용자 정보 검증 후 임시 로그인 토큰 발급 (10분 만료)
+     * - JWT는 발급하지 않음 (이용약관 동의 후 발급)
+     *
+     * @param request Apple authorization code 또는 id_token
+     * @return 사용자 정보 및 임시 로그인 토큰
+     */
+    @Operation(summary = "Apple 토큰 검증",
+               description = "Apple authorization code 또는 id_token으로 사용자 정보를 검증하고 임시 로그인 토큰을 발급합니다.")
+    @PostMapping("/verify/apple-token")
+    public ResponseEntity<KakaoVerifyResponse> verifyAppleToken(
+            @RequestBody @Validated AppleLoginRequest request) {
+
+        log.info("Apple 토큰 검증 요청");
+        KakaoVerifyResponse response = authService.verifyAppleToken(request.getCode(), request.getIdToken());
+        log.info("Apple 토큰 검증 완료 - 이메일: {}, 신규사용자: {}",
+                response.getEmail(), response.isNewUser());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Apple OAuth 콜백 엔드포인트
+     *
+     * - Apple에서 POST로 authorization_code를 전달
+     * - 웹 기반 로그인 플로우에서 사용
+     * - form-data로 code, id_token 수신
+     *
+     * @param code Apple authorization code
+     * @param idToken Apple id_token
+     * @return 사용자 정보 및 임시 로그인 토큰
+     */
+    @Operation(summary = "Apple OAuth 콜백",
+               description = "Apple에서 POST로 전달하는 OAuth 콜백 엔드포인트입니다.")
+    @PostMapping("/callback/apple")
+    public ResponseEntity<KakaoVerifyResponse> appleCallback(
+            @RequestParam("code") String code,
+            @RequestParam(value = "id_token", required = false) String idToken) {
+
+        log.info("Apple OAuth 콜백 수신");
+        KakaoVerifyResponse response = authService.verifyAppleToken(code, idToken);
+        log.info("Apple OAuth 콜백 처리 완료 - 이메일: {}, 신규사용자: {}",
                 response.getEmail(), response.isNewUser());
 
         return ResponseEntity.ok(response);
