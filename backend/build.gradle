@@ -78,6 +78,10 @@ dependencies {
 	// .env file support
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
 
+	// Apple OAuth - EC Key parsing (p8 file) & JWT
+	implementation 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
+	implementation 'com.nimbusds:nimbus-jose-jwt:9.37.3'
+
     //redis
     implementation('org.springframework.boot:spring-boot-starter-data-redis') {
 		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'

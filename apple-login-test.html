@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple 로그인 테스트</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f7;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #1d1d1f; margin-top: 0; }
+        h2 { color: #333; font-size: 18px; }
+        .section {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #000;
+        }
+        .section.warning {
+            border-left-color: #ff9500;
+            background: #fff8f0;
+        }
+        .section.info {
+            border-left-color: #007aff;
+            background: #f0f7ff;
+        }
+        .section.success {
+            border-left-color: #34c759;
+            background: #f0fff4;
+        }
+        label {
+            display: block;
+            margin: 12px 0 5px 0;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 5px 5px 5px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .btn-apple {
+            background: #000;
+            color: white;
+            font-size: 16px;
+            padding: 14px 28px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-apple:hover { background: #333; }
+        .btn-primary { background: #007aff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-secondary { background: #e5e5ea; color: #333; }
+        .btn-secondary:hover { background: #d1d1d6; }
+        .btn-success { background: #34c759; color: white; }
+        .btn-success:hover { background: #2da44e; }
+        .btn-danger { background: #ff3b30; color: white; }
+        .btn-danger:hover { background: #d63027; }
+        #log {
+            background: #1d1d1f;
+            color: #34c759;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+        .step-number {
+            display: inline-block;
+            background: #000;
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+        .result-box {
+            background: #f0f7ff;
+            border: 1px solid #007aff;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 10px 0;
+            display: none;
+        }
+        .result-box.show { display: block; }
+        .result-box pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 13px;
+        }
+        code {
+            background: #e5e5ea;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        @media (max-width: 600px) {
+            .config-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍎 Apple 로그인 테스트</h1>
+    <p>로컬 환경에서 Apple Sign In 백엔드 API를 테스트합니다.</p>
+
+    <!-- 서버 설정 -->
+    <div class="section">
+        <h2>⚙️ 서버 설정</h2>
+        <div class="config-grid">
+            <div>
+                <label>백엔드 서버 URL</label>
+                <input type="text" id="serverUrl" value="http://localhost:8081">
+            </div>
+            <div>
+                <label>Apple Client ID (Services ID)</label>
+                <input type="text" id="appleClientId" value="SoBunSoBun.seongpil.dev">
+            </div>
+        </div>
+    </div>
+
+    <!-- 방법 1: Apple JS SDK -->
+    <div class="section">
+        <h2><span class="step-number">1</span>Apple JS SDK로 로그인 (권장)</h2>
+        <p>Apple 공식 JS SDK를 사용하여 로그인합니다. <br>
+           <strong>⚠️ Apple JS SDK는 HTTPS에서만 작동합니다.</strong> 로컬에서는 방법 2 또는 3을 사용하세요.</p>
+
+        <label>Redirect URI (Apple Developer에 등록된 URL)</label>
+        <input type="text" id="redirectUri" value="https://www.sobunsobun.store/auth/callback/apple">
+
+        <button class="btn-apple" onclick="appleLoginSDK()">
+            <svg width="20" height="24" viewBox="0 0 17 20" fill="white">
+                <path d="M13.545 10.239c-.023-2.513 2.05-3.72 2.143-3.78-1.167-1.707-2.984-1.94-3.63-1.967-1.544-.156-3.015.909-3.799.909-.784 0-1.994-.885-3.278-.861-1.687.025-3.243.981-4.112 2.49-1.754 3.042-.449 7.547 1.26 10.016.836 1.208 1.831 2.565 3.139 2.516 1.26-.05 1.735-.815 3.257-.815 1.522 0 1.949.815 3.277.789 1.355-.024 2.213-1.231 3.04-2.444.958-1.402 1.352-2.759 1.375-2.829-.03-.012-2.636-1.013-2.663-4.017l-.009-.007z"/>
+                <path d="M11.072 2.665c.694-.841 1.162-2.009 1.034-3.174-1 .041-2.21.666-2.927 1.506-.644.744-1.208 1.933-1.057 3.074 1.115.087 2.254-.567 2.95-1.406z"/>
+            </svg>
+            Sign in with Apple
+        </button>
+    </div>
+
+    <!-- 방법 2: 수동 Authorization URL -->
+    <div class="section info">
+        <h2><span class="step-number">2</span>수동으로 Apple 인증 URL 열기 (로컬 테스트용)</h2>
+        <p>Apple 인증 페이지를 직접 열어서 <code>authorization_code</code>를 받습니다.<br>
+           콜백은 <code>https://www.sobunsobun.store/auth/callback/apple</code>로 가므로,<br>
+           프로덕션 서버 응답에서 <code>code</code>를 복사하여 아래 방법 3에서 사용하세요.</p>
+
+        <button class="btn-primary" onclick="openAppleAuthPage()">
+            🔗 Apple 인증 페이지 열기
+        </button>
+
+        <div style="margin-top:10px; padding:12px; background:#fff; border-radius:8px; font-size:13px;">
+            <strong>💡 플로우:</strong><br>
+            1. 버튼 클릭 → Apple 로그인 페이지 열림<br>
+            2. Apple ID로 로그인<br>
+            3. 콜백 URL로 <code>code</code>와 <code>id_token</code>이 POST됨<br>
+            4. 프로덕션 서버 응답 확인 또는 code를 복사하여 아래에서 직접 테스트
+        </div>
+    </div>
+
+    <!-- 방법 3: 직접 API 호출 -->
+    <div class="section success">
+        <h2><span class="step-number">3</span>직접 API 호출 (가장 실용적)</h2>
+        <p>iOS 앱 시뮬레이터 또는 Apple 인증 페이지에서 받은 값을 직접 입력하여 테스트합니다.</p>
+
+        <label>Authorization Code (Apple에서 받은 code)</label>
+        <textarea id="authCode" placeholder="Apple 로그인 후 받은 authorization_code를 붙여넣으세요"></textarea>
+
+        <label>ID Token (Apple에서 받은 id_token, 선택사항)</label>
+        <textarea id="idToken" placeholder="(선택) Apple에서 받은 id_token을 붙여넣으세요. iOS 앱에서는 identityToken을 여기에 입력합니다."></textarea>
+
+        <button class="btn-primary" onclick="verifyAppleToken()">
+            🔐 /auth/verify/apple-token 호출
+        </button>
+        <button class="btn-secondary" onclick="callAppleCallback()">
+            📮 /auth/callback/apple 호출
+        </button>
+    </div>
+
+    <!-- 방법 4: 회원가입 완료 -->
+    <div class="section">
+        <h2><span class="step-number">4</span>회원가입 완료 (loginToken으로 JWT 발급)</h2>
+        <p>위 단계에서 받은 <code>loginToken</code>으로 회원가입을 완료합니다.</p>
+
+        <label>Login Token (위 단계 응답의 loginToken)</label>
+        <textarea id="loginToken" placeholder="위 단계 응답에서 복사된 loginToken이 자동 입력됩니다"></textarea>
+
+        <div style="margin: 10px 0;">
+            <label style="display:inline">
+                <input type="checkbox" id="serviceTerms" checked> 서비스 이용약관 동의 (필수)
+            </label><br>
+            <label style="display:inline">
+                <input type="checkbox" id="privacyPolicy" checked> 개인정보 처리방침 동의 (필수)
+            </label><br>
+            <label style="display:inline">
+                <input type="checkbox" id="marketingOptional"> 마케팅 수신 동의 (선택)
+            </label>
+        </div>
+
+        <button class="btn-success" onclick="completeSignup()">
+            ✅ /auth/complete-signup 호출
+        </button>
+    </div>
+
+    <!-- 결과 -->
+    <div class="section">
+        <h2>📋 응답 결과</h2>
+        <div id="resultBox" class="result-box">
+            <pre id="resultContent"></pre>
+        </div>
+        <button class="btn-danger" onclick="clearLog()">🗑️ 로그 초기화</button>
+    </div>
+
+    <!-- 로그 -->
+    <div class="section">
+        <h2>📟 콘솔 로그</h2>
+        <div id="log">Apple 로그인 테스트 준비 완료\n</div>
+    </div>
+</div>
+
+<!-- Apple JS SDK 안내 -->
+<div class="container">
+    <div class="section warning">
+        <h2>⚠️ 로컬 테스트 시 주의사항</h2>
+        <ul style="line-height: 2;">
+            <li><strong>Apple JS SDK</strong>는 <code>HTTPS</code>에서만 작동합니다. 로컬에서는 방법 2, 3을 사용하세요.</li>
+            <li><strong>Authorization Code</strong>는 <strong>1회용</strong>이며, <strong>5분 내</strong>에 사용해야 합니다.</li>
+            <li><strong>id_token</strong>만으로도 검증 가능합니다 (iOS 앱에서 <code>identityToken</code> 전달 시).</li>
+            <li><strong>이메일</strong>은 최초 로그인 시에만 Apple이 제공합니다. 재로그인 시 이메일이 없을 수 있습니다.</li>
+            <li>iOS 시뮬레이터에서 Apple 로그인 → Xcode 콘솔에서 <code>identityToken</code> 출력 → 위 id_token에 붙여넣기</li>
+        </ul>
+    </div>
+
+    <div class="section info">
+        <h2>📱 iOS 앱에서 테스트하는 방법</h2>
+        <ol style="line-height: 2;">
+            <li>Xcode에서 iOS 앱 실행 (시뮬레이터 또는 실기기)</li>
+            <li>Apple 로그인 버튼 탭</li>
+            <li>로그인 완료 시 <code>ASAuthorization</code> 콜백에서:</li>
+            <li style="margin-left: 20px;"><code>credential.identityToken</code> → UTF-8 문자열로 변환</li>
+            <li style="margin-left: 20px;"><code>credential.authorizationCode</code> → UTF-8 문자열로 변환</li>
+            <li>해당 값을 <code>POST /auth/verify/apple-token</code>에 JSON으로 전송:<br>
+                <code>{ "code": "authorizationCode값", "idToken": "identityToken값" }</code>
+            </li>
+            <li>응답의 <code>loginToken</code>으로 <code>POST /auth/complete-signup</code> 호출</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>🧪 cURL 테스트 명령어</h2>
+        <pre style="background:#1d1d1f; color:#34c759; padding:16px; border-radius:8px; overflow-x:auto; font-size:13px;">
+# 1단계: Apple 토큰 검증
+curl -X POST http://localhost:8081/auth/verify/apple-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "YOUR_AUTHORIZATION_CODE",
+    "idToken": "YOUR_ID_TOKEN"
+  }'
+
+# 2단계: 회원가입 완료
+curl -X POST http://localhost:8081/auth/complete-signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "loginToken": "RECEIVED_LOGIN_TOKEN",
+    "serviceTermsAgreed": true,
+    "privacyPolicyAgreed": true,
+    "marketingOptionalAgreed": false
+  }'</pre>
+    </div>
+</div>
+
+<script>
+    function log(msg) {
+        const logEl = document.getElementById('log');
+        const time = new Date().toLocaleTimeString('ko-KR');
+        logEl.textContent += `[${time}] ${msg}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function showResult(data) {
+        const box = document.getElementById('resultBox');
+        const content = document.getElementById('resultContent');
+        box.classList.add('show');
+        content.textContent = JSON.stringify(data, null, 2);
+    }
+
+    function clearLog() {
+        document.getElementById('log').textContent = '';
+        document.getElementById('resultBox').classList.remove('show');
+        log('로그 초기화 완료');
+    }
+
+    function getServerUrl() {
+        return document.getElementById('serverUrl').value.replace(/\/$/, '');
+    }
+
+    // ========== 방법 1: Apple JS SDK ==========
+    function appleLoginSDK() {
+        log('⚠️ Apple JS SDK는 HTTPS에서만 작동합니다.');
+        log('로컬 HTTP 환경에서는 방법 2 또는 3을 사용하세요.');
+
+        const clientId = document.getElementById('appleClientId').value;
+        const redirectUri = document.getElementById('redirectUri').value;
+
+        // Apple JS SDK 로드 시도
+        if (typeof AppleID === 'undefined') {
+            log('Apple JS SDK 로드 중...');
+            const script = document.createElement('script');
+            script.src = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js';
+            script.onload = () => {
+                log('Apple JS SDK 로드 완료');
+                initAppleSDK(clientId, redirectUri);
+            };
+            script.onerror = () => {
+                log('❌ Apple JS SDK 로드 실패 (HTTPS 필요)');
+            };
+            document.head.appendChild(script);
+        } else {
+            initAppleSDK(clientId, redirectUri);
+        }
+    }
+
+    function initAppleSDK(clientId, redirectUri) {
+        try {
+            AppleID.auth.init({
+                clientId: clientId,
+                scope: 'name email',
+                redirectURI: redirectUri,
+                usePopup: true
+            });
+            log('Apple SDK 초기화 완료, 로그인 팝업 실행...');
+            AppleID.auth.signIn().then(response => {
+                log('✅ Apple 로그인 성공!');
+                log('authorization.code: ' + response.authorization.code);
+                log('authorization.id_token: ' + response.authorization.id_token?.substring(0, 50) + '...');
+
+                document.getElementById('authCode').value = response.authorization.code;
+                document.getElementById('idToken').value = response.authorization.id_token || '';
+
+                showResult(response);
+            }).catch(err => {
+                log('❌ Apple 로그인 실패: ' + err);
+            });
+        } catch (e) {
+            log('❌ Apple SDK 초기화 실패: ' + e.message);
+        }
+    }
+
+    // ========== 방법 2: 수동 Authorization URL ==========
+    function openAppleAuthPage() {
+        const clientId = document.getElementById('appleClientId').value;
+        const redirectUri = document.getElementById('redirectUri').value;
+        const state = 'test_' + Date.now();
+
+        const url = 'https://appleid.apple.com/auth/authorize'
+            + '?client_id=' + encodeURIComponent(clientId)
+            + '&redirect_uri=' + encodeURIComponent(redirectUri)
+            + '&response_type=code id_token'
+            + '&scope=name email'
+            + '&response_mode=form_post'
+            + '&state=' + state;
+
+        log('Apple 인증 페이지 열기...');
+        log('state: ' + state);
+        log('redirect_uri: ' + redirectUri);
+        log('URL: ' + url.substring(0, 100) + '...');
+
+        window.open(url, '_blank', 'width=500,height=700');
+    }
+
+    // ========== 방법 3: 직접 API 호출 ==========
+    async function verifyAppleToken() {
+        const serverUrl = getServerUrl();
+        const code = document.getElementById('authCode').value.trim();
+        const idToken = document.getElementById('idToken').value.trim();
+
+        if (!code && !idToken) {
+            log('❌ authorization code 또는 id_token을 입력하세요.');
+            return;
+        }
+
+        const body = { code: code || 'dummy' };
+        if (idToken) body.idToken = idToken;
+
+        log('📤 POST ' + serverUrl + '/auth/verify/apple-token');
+        log('요청 body: ' + JSON.stringify(body).substring(0, 200) + '...');
+
+        try {
+            const res = await fetch(serverUrl + '/auth/verify/apple-token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json();
+            log('📥 응답 (' + res.status + '): ' + JSON.stringify(data));
+
+            if (res.ok && data.loginToken) {
+                document.getElementById('loginToken').value = data.loginToken;
+                log('✅ loginToken 자동 입력 완료 → 4단계로 진행하세요');
+            }
+
+            showResult(data);
+        } catch (e) {
+            log('❌ 요청 실패: ' + e.message);
+        }
+    }
+
+    async function callAppleCallback() {
+        const serverUrl = getServerUrl();
+        const code = document.getElementById('authCode').value.trim();
+        const idToken = document.getElementById('idToken').value.trim();
+
+        if (!code) {
+            log('❌ authorization code를 입력하세요.');
+            return;
+        }
+
+        const formData = new URLSearchParams();
+        formData.append('code', code);
+        if (idToken) formData.append('id_token', idToken);
+
+        log('📤 POST ' + serverUrl + '/auth/callback/apple (form-data)');
+
+        try {
+            const res = await fetch(serverUrl + '/auth/callback/apple', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+
+            const data = await res.json();
+            log('📥 응답 (' + res.status + '): ' + JSON.stringify(data));
+
+            if (res.ok && data.loginToken) {
+                document.getElementById('loginToken').value = data.loginToken;
+                log('✅ loginToken 자동 입력 완료 → 4단계로 진행하세요');
+            }
+
+            showResult(data);
+        } catch (e) {
+            log('❌ 요청 실패: ' + e.message);
+        }
+    }
+
+    // ========== 방법 4: 회원가입 완료 ==========
+    async function completeSignup() {
+        const serverUrl = getServerUrl();
+        const loginToken = document.getElementById('loginToken').value.trim();
+
+        if (!loginToken) {
+            log('❌ loginToken을 입력하세요. (위 단계를 먼저 진행)');
+            return;
+        }
+
+        const body = {
+            loginToken: loginToken,
+            serviceTermsAgreed: document.getElementById('serviceTerms').checked,
+            privacyPolicyAgreed: document.getElementById('privacyPolicy').checked,
+            marketingOptionalAgreed: document.getElementById('marketingOptional').checked
+        };
+
+        log('📤 POST ' + serverUrl + '/auth/complete-signup');
+
+        try {
+            const res = await fetch(serverUrl + '/auth/complete-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            const data = await res.json();
+            log('📥 응답 (' + res.status + '): ' + JSON.stringify(data).substring(0, 300) + '...');
+
+            if (res.ok) {
+                log('✅ 회원가입/로그인 완료!');
+                log('   accessToken: ' + data.accessToken?.substring(0, 30) + '...');
+                log('   userId: ' + data.user?.id);
+                log('   email: ' + data.user?.email);
+            }
+
+            showResult(data);
+        } catch (e) {
+            log('❌ 요청 실패: ' + e.message);
+        }
+    }
+
+    log('🍎 Apple 로그인 테스트 페이지 로드 완료');
+    log('서버 URL: ' + getServerUrl());
+</script>
+
+</body>
+</html>
