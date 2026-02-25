@@ -64,6 +64,7 @@ public class SecurityConfig {
         // 테스트용 HTML 파일
         "/chat.html",
         "/chatTest.html",
+        "/apple-login-test.html",
 
         // WebSocket (STOMP) - HTTP 레벨에서 인증 건너뜀
         // STOMP 레벨에서 JWT 검증 (WebSocketAuthInterceptor)
