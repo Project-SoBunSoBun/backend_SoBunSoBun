@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -181,7 +182,7 @@ public class ChatMessageService {
      * 마지막으로 읽은 메시지 ID를 저장
      */
     @Transactional(rollbackFor = Exception.class)
-    public void markAsRead(Long roomId, Long userId, Long lastReadMessageId) {
+    public void markAsRead(Long roomId, Long userId, UUID lastReadMessageId) {
         try {
             log.info("📖 [읽음 처리 시작] roomId: {}, userId: {}, lastReadMessageId: {}",
                     roomId, userId, lastReadMessageId);
@@ -194,17 +195,30 @@ public class ChatMessageService {
                     });
             log.debug("✅ [읽음처리-1 성공] 멤버 조회됨: currentLastReadId={}", member.getLastReadMessageId());
 
-            // 이전 값이 더 크면 업데이트 안 함 (더 최신을 읽었을 경우)
-            if (member.getLastReadMessageId() != null && member.getLastReadMessageId() >= lastReadMessageId) {
-                log.debug("⏭️ [읽음처리] 업데이트 스킵: 더 최신 메시지를 이미 읽음 - " +
-                        "currentLastReadId: {}, newLastReadId: {}",
-                        member.getLastReadMessageId(), lastReadMessageId);
-                return;
+            // 새로 읽은 메시지의 createdAt을 조회하여 비교
+            ChatMessage newReadMessage = chatMessageRepository.findById(lastReadMessageId)
+                    .orElseThrow(() -> {
+                        log.error("❌ [읽음처리] 메시지를 찾을 수 없음: messageId={}", lastReadMessageId);
+                        return new RuntimeException("Message not found: " + lastReadMessageId);
+                    });
+
+            // 이전에 읽은 메시지가 있으면 createdAt 기반으로 비교
+            if (member.getLastReadMessageId() != null) {
+                ChatMessage previousReadMessage = chatMessageRepository.findById(member.getLastReadMessageId())
+                        .orElse(null);
+                if (previousReadMessage != null &&
+                        !previousReadMessage.getCreatedAt().isBefore(newReadMessage.getCreatedAt())) {
+                    log.debug("⏭️ [읽음처리] 업데이트 스킵: 더 최신 메시지를 이미 읽음 - " +
+                            "currentLastReadId: {}, newLastReadId: {}",
+                            member.getLastReadMessageId(), lastReadMessageId);
+                    return;
+                }
             }
 
             log.debug("💾 [읽음처리-2] 마지막 읽은 메시지 ID 업데이트 중... {} -> {}",
                     member.getLastReadMessageId(), lastReadMessageId);
             member.setLastReadMessageId(lastReadMessageId);
+            member.setLastReadAt(newReadMessage.getCreatedAt());
 
             log.debug("💾 [읽음처리-2] DB에 저장 중...");
             chatMemberRepository.save(member);
@@ -228,8 +242,8 @@ public class ChatMessageService {
         ).orElse(null);
 
         boolean readByMe = member != null &&
-                member.getLastReadMessageId() != null &&
-                member.getLastReadMessageId() >= message.getId();
+                member.getLastReadAt() != null &&
+                !member.getLastReadAt().isBefore(message.getCreatedAt());
 
         return MessageResponse.builder()
                 .id(message.getId())
@@ -275,14 +289,14 @@ public class ChatMessageService {
      *
      * 처리 순서:
      * ① 요청한 사용자가 채팅방의 멤버인지 검증 (Authorization)
-     * ② ChatMessageRepository.findMessagesByRoomIdAndMessageIdLessThanOrderByIdDesc() 호출
-     * ③ lastMessageId가 null이면 가장 최신 메시지부터 시작
+     * ② ChatMessageRepository.findMessagesByRoomIdBeforeCursorOrderByCreatedAtDesc() 호출
+     * ③ cursor가 null이면 가장 최신 메시지부터 시작
      * ④ 조회된 메시지들을 MessageResponse로 변환 (6번 메시지 조회와 동일한 DTO)
      * ⑤ 클라이언트가 시간순으로 보기 쉽게 오름차순으로 정렬하여 반환
      *
      * @param roomId 채팅방 ID
      * @param userId 요청 사용자 ID
-     * @param lastMessageId 마지막으로 조회한 메시지 ID (커서, null 가능)
+     * @param cursor 마지막으로 조회한 메시지의 생성 시간 (커서, null 가능)
      * @param size 조회할 메시지 개수 (기본 20)
      * @return 과거 메시지 리스트 (오름차순, 시간순)
      * @throws IllegalArgumentException 사용자가 채팅방의 멤버가 아닐 때
@@ -291,12 +305,12 @@ public class ChatMessageService {
     public List<MessageResponse> getChatMessages(
             Long roomId,
             Long userId,
-            Long lastMessageId,
+            java.time.LocalDateTime cursor,
             int size
     ) {
         try {
-            log.info("📜 [과거 메시지 조회 시작] roomId: {}, userId: {}, lastMessageId: {}, size: {}",
-                    roomId, userId, lastMessageId, size);
+            log.info("📜 [과거 메시지 조회 시작] roomId: {}, userId: {}, cursor: {}, size: {}",
+                    roomId, userId, cursor, size);
 
             // ① 요청한 사용자가 채팅방의 멤버인지 검증 (Authorization)
             log.debug("🔐 [단계1] 사용자 권한 검증 중... roomId: {}, userId: {}", roomId, userId);
@@ -309,14 +323,14 @@ public class ChatMessageService {
             log.debug("✅ [단계1] 권한 검증 성공");
 
             // ② ChatMessageRepository 쿼리 호출
-            log.debug("🔍 [단계2] 과거 메시지 조회 중... roomId: {}, lastMessageId: {}, size: {}",
-                    roomId, lastMessageId, size);
+            log.debug("🔍 [단계2] 과거 메시지 조회 중... roomId: {}, cursor: {}, size: {}",
+                    roomId, cursor, size);
 
             org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(0, size);
 
-            List<ChatMessage> messages = chatMessageRepository.findMessagesByRoomIdAndMessageIdLessThanOrderByIdDesc(
+            List<ChatMessage> messages = chatMessageRepository.findMessagesByRoomIdBeforeCursorOrderByCreatedAtDesc(
                     roomId,
-                    lastMessageId,
+                    cursor,
                     pageable
             );
             log.info("✅ [단계2] 메시지 조회 완료: messageCount={}", messages.size());

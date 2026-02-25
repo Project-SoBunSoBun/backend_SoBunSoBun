@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 public class ReadEvent {
     private Long roomId;
     private Long userId;
-    private Long lastReadMessageId;
+    private UUID lastReadMessageId;
     private Long unreadCount;
     private LocalDateTime timestamp;
 }

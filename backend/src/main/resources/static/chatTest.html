@@ -363,8 +363,8 @@
                 }
             });
 
-            // (선택) 입장 메시지 발송
-            sendEnterMessage(currentRoomId, currentSenderId);
+            // (선택) 입장 메시지 발송 - 비활성화 (DB에 저장하지 않음)
+            // sendEnterMessage(currentRoomId, currentSenderId);
         };
 
         stompClient.onStompError = function (frame) {

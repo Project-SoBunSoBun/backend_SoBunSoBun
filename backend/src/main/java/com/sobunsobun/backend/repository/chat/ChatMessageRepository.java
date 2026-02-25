@@ -11,9 +11,10 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
 
     @Query("""
         SELECT m FROM ChatMessage m
@@ -52,25 +53,25 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     Optional<ChatMessage> findLatestMessageByRoomId(@Param("roomId") Long roomId);
 
     /**
-     * 커서 기반 페이징: 특정 메시지 ID보다 작은(과거의) 메시지들을 조회
+     * 커서 기반 페이징: 특정 메시지의 createdAt보다 이전(과거)의 메시지들을 조회
      *
      * 무한 스크롤(Infinite Scroll) 구현을 위한 메서드
-     * lastMessageId가 null이면 가장 최신 메시지부터 시작
+     * cursor가 null이면 가장 최신 메시지부터 시작
      *
      * @param roomId 채팅방 ID
-     * @param lastMessageId 마지막으로 조회한 메시지 ID (커서)
-     * @param size 조회할 메시지 개수
+     * @param cursor 마지막으로 조회한 메시지의 생성 시간 (커서)
+     * @param pageable 페이징 정보
      * @return 과거 메시지 리스트 (내림차순, 가장 최신순)
      */
     @Query("""
         SELECT m FROM ChatMessage m
         WHERE m.chatRoom.id = :roomId
-        AND (:lastMessageId IS NULL OR m.id < :lastMessageId)
-        ORDER BY m.id DESC
+        AND (:cursor IS NULL OR m.createdAt < :cursor)
+        ORDER BY m.createdAt DESC
     """)
-    List<ChatMessage> findMessagesByRoomIdAndMessageIdLessThanOrderByIdDesc(
+    List<ChatMessage> findMessagesByRoomIdBeforeCursorOrderByCreatedAtDesc(
             @Param("roomId") Long roomId,
-            @Param("lastMessageId") Long lastMessageId,
+            @Param("cursor") LocalDateTime cursor,
             Pageable pageable
     );
 

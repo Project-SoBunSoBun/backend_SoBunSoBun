@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 /**
  * 클라이언트(iOS)와 주고받을 채팅 메시지 DTO
  *
@@ -78,5 +80,5 @@ public class ChatMessageDto {
      * 메시지 ID (DB에서 저장된 후 반환)
      */
     @JsonProperty("messageId")
-    private Long messageId;
+    private UUID messageId;
 }
