@@ -497,15 +497,23 @@ public class UserService {
             }
         }
 
-        // 5. 사용자 상태 변경 및 탈퇴 일시 저장 + 개인정보 익명화
+        // 5. 탈퇴 사유 저장 (개인정보 익명화 전에 먼저 저장해야 원본 정보가 보존됨)
+        WithdrawalReason withdrawalReason = WithdrawalReason.builder()
+                .user(user)
+                .reasonCode(request.getReasonCode())
+                .reasonDetail(request.getReasonDetail())
+                .email(user.getEmail())
+                .nickname(user.getNickname())
+                .mannerScore(user.getMannerScore())
+                .address(user.getAddress())
+                .build();
+
+        withdrawalReasonRepository.saveAndFlush(withdrawalReason);
+        log.info("✅ 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
+
+        // 6. 사용자 상태 변경 및 탈퇴 일시 저장 + 개인정보 익명화
         LocalDateTime withdrawnAt = LocalDateTime.now();
         LocalDateTime reactivatableAt = withdrawnAt.plusDays(90); // 90일 후 재가입 가능
-
-        // 탈퇴 전 사용자 정보를 먼저 보관
-        String originalEmail = user.getEmail();
-        String originalNickname = user.getNickname();
-        java.math.BigDecimal originalMannerScore = user.getMannerScore();
-        String originalAddress = user.getAddress();
 
         user.setStatus(UserStatus.DELETED);
         user.setWithdrawnAt(withdrawnAt);
@@ -523,19 +531,6 @@ public class UserService {
         log.info("✅ 사용자 상태 변경 및 개인정보 익명화 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
                 userId, withdrawnAt, reactivatableAt);
 
-        // 6. 탈퇴 사유 저장 (탈퇴 전 사용자 정보 포함)
-        WithdrawalReason withdrawalReason = WithdrawalReason.builder()
-                .user(user)
-                .reasonCode(request.getReasonCode())
-                .reasonDetail(request.getReasonDetail())
-                .email(originalEmail)
-                .nickname(originalNickname)
-                .mannerScore(originalMannerScore)
-                .address(originalAddress)
-                .build();
-
-        withdrawalReasonRepository.save(withdrawalReason);
-        log.info("✅ 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
 
         // 7. 응답 반환
         return WithdrawResponse.builder()
