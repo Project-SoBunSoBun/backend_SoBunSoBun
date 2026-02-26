@@ -68,14 +68,14 @@ public class AuthenticationException extends BusinessException {
     }
 
     /**
-     * Apple 계정 연결 해제 실패 (Apple 서버 오류)
+     * Apple Revoke API 호출 실패
      */
     public static AuthenticationException appleRevokeFailed(String message) {
         return new AuthenticationException(ErrorCode.APPLE_REVOKE_FAILED, message);
     }
 
     /**
-     * Apple refresh_token 없음 (id_token 직접 전달 방식으로 로그인한 경우)
+     * Apple refresh_token 없음 (id_token 전용 로그인)
      */
     public static AuthenticationException appleRefreshTokenNotFound() {
         return new AuthenticationException(ErrorCode.APPLE_REFRESH_TOKEN_NOT_FOUND);

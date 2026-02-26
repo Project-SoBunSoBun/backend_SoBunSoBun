@@ -21,7 +21,7 @@ public enum ErrorCode {
     KAKAO_LOGIN_FAILED("AUTH_005", "카카오 로그인 실패", HttpStatus.UNAUTHORIZED),
     EMAIL_CONSENT_REQUIRED("AUTH_006", "이메일 동의가 필요합니다.", HttpStatus.UNAUTHORIZED),
     APPLE_REVOKE_FAILED("AUTH_007", "Apple 계정 연결 해제에 실패했습니다.", HttpStatus.BAD_GATEWAY),
-    APPLE_REFRESH_TOKEN_NOT_FOUND("AUTH_008", "Apple refresh_token이 없습니다. Apple 앱에서 직접 계정 연결 해제를 진행해주세요.", HttpStatus.BAD_REQUEST),
+    APPLE_REFRESH_TOKEN_NOT_FOUND("AUTH_008", "저장된 Apple refresh_token이 없습니다. Apple 앱에서 직접 연결 해제를 진행해주세요.", HttpStatus.BAD_REQUEST),
 
     // 사용자 관련 (2000~2099)
     USER_NOT_FOUND("USER_001", "사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

@@ -42,8 +42,8 @@ public class AuthProvider {
     private String providerUserId;
 
     /**
-     * OAuth 제공자의 refresh token
-     * Apple Revoke API 호출 시 필요 (authorization_code 교환 경로에서만 저장됨)
+     * Apple refresh_token (Apple Revoke API 호출에 필요)
+     * authorization_code 교환 경로에서만 저장됨
      */
     @Column(name = "refresh_token", length = 1024)
     private String refreshToken;
