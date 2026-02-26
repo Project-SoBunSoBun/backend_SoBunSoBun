@@ -2,11 +2,14 @@ package com.sobunsobun.backend.controller.auth;
 
 import com.sobunsobun.backend.application.auth.AuthService;
 import com.sobunsobun.backend.dto.auth.*;
+import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -130,6 +133,33 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+
+    /**
+     * Apple 계정 연결 해제 (Revoke)
+     *
+     * - Authorization 헤더에 Bearer 액세스 토큰 필수
+     * - DB에서 Apple refresh_token 조회 후 Apple /auth/revoke API 호출
+     * - authorization_code 교환 경로(웹/서버사이드)로 로그인한 경우에만 가능
+     * - iOS 앱 id_token 직접 전달 방식은 Apple 앱에서 직접 연결 해제 필요
+     *
+     * @param principal 인증된 사용자 정보 (JWT에서 추출)
+     * @return 204 No Content (성공 시 본문 없음)
+     */
+    @Operation(summary = "Apple 계정 연결 해제",
+               description = "Apple ID 연결을 해제합니다. " +
+                       "DB에 저장된 Apple refresh_token으로 /auth/revoke API를 호출합니다. " +
+                       "Authorization: Bearer {accessToken} 헤더가 필요합니다.")
+    @PostMapping("/revoke/apple")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> revokeAppleAccount(
+            @AuthenticationPrincipal JwtUserPrincipal principal) {
+
+        log.info("Apple 계정 연결 해제 요청 - 사용자 ID: {}", principal.id());
+        authService.revokeAppleAccount(principal.id());
+        log.info("Apple 계정 연결 해제 완료 - 사용자 ID: {}", principal.id());
+
+        return ResponseEntity.noContent().build();
+    }
 
     /**
      * JWT 리프레시 토큰으로 액세스 토큰 갱신

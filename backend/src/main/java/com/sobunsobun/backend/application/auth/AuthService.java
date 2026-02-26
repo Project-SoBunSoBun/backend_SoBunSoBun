@@ -155,9 +155,10 @@ public class AuthService {
 
         try {
             AppleOAuthClient.AppleUserInfo appleUser;
+            String appleRefreshToken = null;
 
             if (idToken != null && !idToken.isBlank()) {
-                // iOS 앱에서 id_token을 직접 전달한 경우
+                // iOS 앱에서 id_token을 직접 전달한 경우 (refresh_token 미제공)
                 log.info("Apple id_token 직접 검증 모드");
                 appleUser = appleOAuthClient.verifyIdToken(idToken);
             } else {
@@ -172,6 +173,9 @@ public class AuthService {
                 }
 
                 appleUser = appleOAuthClient.verifyIdToken(tokenResponse.getId_token());
+                // authorization_code 교환 경로에서만 refresh_token 획득 가능
+                appleRefreshToken = tokenResponse.getRefresh_token();
+                log.info("Apple refresh_token 획득 완료 - refreshToken 존재: {}", appleRefreshToken != null);
             }
 
             // Apple 사용자 정보 추출
@@ -220,8 +224,9 @@ public class AuthService {
                     || existingAuthProvider.get().getUser().getStatus() == UserStatus.DELETED;
             log.info("사용자 상태 확인 - 신규 사용자: {}", isNewUser);
 
-            // 임시 로그인 토큰 발급 (provider 정보 포함)
-            String loginToken = jwtTokenProvider.createLoginToken(email, oauthId, "APPLE", LOGIN_TOKEN_TTL);
+            // 임시 로그인 토큰 발급 (provider + appleRefreshToken 포함)
+            String loginToken = jwtTokenProvider.createLoginToken(
+                    email, oauthId, "APPLE", appleRefreshToken, LOGIN_TOKEN_TTL);
             log.info("임시 로그인 토큰 발급 완료 (Apple)");
 
             return KakaoVerifyResponse.builder()
@@ -328,7 +333,20 @@ public class AuthService {
                 User user = findOrCreateUser(email, oauthId, provider);
                 log.info("[사용자 작동] 회원가입 완료 - 사용자 ID: {}, 이메일: {}", user.getId(), email);
 
-                // 4. JWT 토큰 발급
+                // 4. Apple provider인 경우 refresh_token을 AuthProvider에 저장
+                if ("APPLE".equals(provider)) {
+                    String appleRefreshToken = claims.get("appleRefreshToken", String.class);
+                    if (appleRefreshToken != null && !appleRefreshToken.isBlank()) {
+                        authProviderRepository.findByUserIdAndProvider(user.getId(), "APPLE")
+                                .ifPresent(ap -> {
+                                    ap.setRefreshToken(appleRefreshToken);
+                                    authProviderRepository.save(ap);
+                                    log.info("Apple refresh_token AuthProvider 저장 완료 - 사용자 ID: {}", user.getId());
+                                });
+                    }
+                }
+
+                // 5. JWT 토큰 발급
                 return generateJwtTokenResponse(user);
 
             } catch (JwtException e) {
@@ -345,6 +363,57 @@ public class AuthService {
         }
     }
 
+
+    /**
+     * Apple 계정 연결 해제 (Revoke)
+     *
+     * 플로우:
+     * 1. AuthProvider에서 사용자의 Apple refresh_token 조회
+     * 2. Apple /auth/revoke API 호출
+     * 3. 성공 시 AuthProvider의 refresh_token 무효화
+     *
+     * Apple refresh_token은 authorization_code 교환 경로(웹/서버사이드 플로우)에서만
+     * 저장됩니다. iOS 앱의 id_token 직접 전달 경로는 refresh_token이 없습니다.
+     *
+     * @param userId 현재 인증된 사용자 ID
+     * @throws ResponseStatusException Apple 연결 정보 없음, refresh_token 없음, Apple API 오류 시
+     */
+    @Transactional
+    public void revokeAppleAccount(Long userId) {
+        log.info("[사용자 작동] Apple 계정 연결 해제 요청 - 사용자 ID: {}", userId);
+
+        // 1. 사용자의 Apple AuthProvider 조회
+        AuthProvider appleProvider = authProviderRepository.findByUserIdAndProvider(userId, "APPLE")
+                .orElseThrow(() -> {
+                    log.warn("Apple AuthProvider 없음 - 사용자 ID: {}", userId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Apple 연결 정보를 찾을 수 없습니다. Apple로 로그인한 계정이 아니거나 이미 연결이 해제되었습니다.");
+                });
+
+        // 2. refresh_token 존재 확인
+        String refreshToken = appleProvider.getRefreshToken();
+        if (refreshToken == null || refreshToken.isBlank()) {
+            log.warn("Apple refresh_token 없음 - 사용자 ID: {}. id_token 직접 전달 방식으로 로그인된 계정입니다.", userId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Apple refresh_token이 없습니다. Apple 앱에서 직접 계정 연결 해제를 진행해주세요.");
+        }
+
+        // 3. Apple Revoke API 호출
+        try {
+            appleOAuthClient.revokeToken(refreshToken);
+            log.info("Apple Revoke API 호출 성공 - 사용자 ID: {}", userId);
+        } catch (Exception e) {
+            log.error("Apple Revoke API 호출 실패 - 사용자 ID: {}, 오류: {}", userId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Apple 계정 연결 해제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        }
+
+        // 4. AuthProvider의 refresh_token 무효화
+        appleProvider.setRefreshToken(null);
+        authProviderRepository.save(appleProvider);
+
+        log.info("[사용자 작동] Apple 계정 연결 해제 완료 - 사용자 ID: {}", userId);
+    }
 
     /**
      * JWT 리프레시 토큰으로 액세스 토큰 갱신

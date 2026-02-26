@@ -160,6 +160,47 @@ public class JwtTokenProvider {
     }
 
     /**
+     * 임시 로그인 토큰 생성 (Apple refresh_token 포함)
+     *
+     * authorization_code 교환으로 얻은 Apple refresh_token을 포함합니다.
+     * 이후 completeSignupWithTerms에서 AuthProvider에 저장하는 데 사용됩니다.
+     *
+     * @param email 사용자 이메일
+     * @param oauthId Apple OAuth ID (sub)
+     * @param provider OAuth 제공자 ("APPLE")
+     * @param appleRefreshToken Apple refresh_token (null이면 클레임 미포함)
+     * @param ttlMillis 토큰 유효 시간 (밀리초)
+     * @return 생성된 임시 로그인 토큰
+     */
+    public String createLoginToken(String email, String oauthId, String provider,
+                                   String appleRefreshToken, long ttlMillis) {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + ttlMillis);
+
+        var builder = Jwts.builder()
+                .setSubject("login_temp")
+                .claim("email", email)
+                .claim("oauthId", oauthId)
+                .claim("provider", provider)
+                .claim("type", "login")
+                .setIssuedAt(now)
+                .setExpiration(expiration);
+
+        if (appleRefreshToken != null && !appleRefreshToken.isBlank()) {
+            builder.claim("appleRefreshToken", appleRefreshToken);
+        }
+
+        String token = builder
+                .signWith(signingKey, SignatureAlgorithm.HS256)
+                .compact();
+
+        log.debug("임시 로그인 토큰 생성 완료 (Apple) - 이메일: {}, refreshToken 포함: {}, 만료: {}",
+                email, appleRefreshToken != null, expiration);
+
+        return token;
+    }
+
+    /**
      * JWT 토큰 파싱 및 검증
      *
      * 토큰의 서명, 만료 시간, 형식을 검증하고 클레임을 추출합니다.
