@@ -4,6 +4,7 @@ import com.sobunsobun.backend.domain.chat.ChatMessage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -74,6 +75,17 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             @Param("cursor") LocalDateTime cursor,
             Pageable pageable
     );
+
+    /**
+     * 메시지 readCount 1 증가 (읽음 처리 시 호출)
+     *
+     * Dirty Checking 대신 단일 벌크 UPDATE로 처리하여 race condition 방지.
+     *
+     * @param id 메시지 UUID
+     */
+    @Modifying
+    @Query("UPDATE ChatMessage m SET m.readCount = m.readCount + 1 WHERE m.id = :id")
+    void incrementReadCount(@Param("id") UUID id);
 
     /**
      * 특정 사용자가 보낸 모든 메시지 삭제 (회원탈퇴용)

@@ -402,6 +402,100 @@ public class ChatMessageService {
     }
 
     /**
+     * 특정 메시지 읽음 처리 (PATCH /api/messages/{id}/read)
+     *
+     * 처리 순서:
+     * 1. 메시지 조회 및 채팅방 멤버 권한 확인
+     * 2. readCount +1 (벌크 UPDATE - race condition 안전)
+     * 3. ChatMember.lastReadAt 업데이트 → readByMe 기준점 갱신
+     * 4. 최신 상태로 메시지 재조회 후 반환
+     *
+     * @param messageId 읽음 처리할 메시지 UUID
+     * @param userId    요청 사용자 ID (JWT에서 추출)
+     * @return 업데이트된 메시지 응답 (readByMe=true, 갱신된 readCount)
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public MessageResponse readMessage(UUID messageId, Long userId) {
+        log.info("👁 [읽음 처리 시작] messageId: {}, userId: {}", messageId, userId);
+
+        // 1. 메시지 조회
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> {
+                    log.error("❌ 메시지를 찾을 수 없음 - messageId: {}", messageId);
+                    return new IllegalArgumentException("존재하지 않는 메시지입니다.");
+                });
+
+        Long roomId = message.getChatRoom().getId();
+
+        // 2. 채팅방 멤버 확인
+        if (!chatMemberRepository.isActiveMember(roomId, userId)) {
+            log.error("❌ [읽음 처리 실패] 채팅방 접근 권한 없음 - roomId: {}, userId: {}", roomId, userId);
+            throw new IllegalArgumentException("채팅방에 접근 권한이 없습니다.");
+        }
+
+        // 3. readCount 증가 (벌크 UPDATE - dirty checking 대신 원자적 처리)
+        chatMessageRepository.incrementReadCount(messageId);
+        log.debug("✅ readCount 증가 완료 - messageId: {}", messageId);
+
+        // 4. ChatMember.lastReadAt 업데이트 → 이 메시지 이전 메시지 모두 readByMe=true
+        chatMemberRepository.updateLastReadAtByRoomIdAndUserId(roomId, userId, message.getCreatedAt());
+        log.debug("✅ lastReadAt 업데이트 완료 - roomId: {}, userId: {}", roomId, userId);
+
+        // 5. 최신 readCount를 반영하기 위해 재조회
+        ChatMessage updated = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("메시지 조회 실패"));
+
+        log.info("✅ [읽음 처리 완료] messageId: {}, readCount: {}", messageId, updated.getReadCount());
+
+        return buildMessageResponse(updated, userId, true);
+    }
+
+    /**
+     * MessageResponse 빌더 (내부 공통 사용)
+     *
+     * @param message   ChatMessage 엔티티
+     * @param userId    요청 사용자 ID
+     * @param readByMe  명시적 readByMe 값 (null이면 lastReadAt 기준으로 계산)
+     */
+    private MessageResponse buildMessageResponse(ChatMessage message, Long userId, Boolean readByMe) {
+        boolean isReadByMe;
+        if (readByMe != null) {
+            isReadByMe = readByMe;
+        } else {
+            ChatMember member = chatMemberRepository.findMember(
+                    message.getChatRoom().getId(), userId
+            ).orElse(null);
+            isReadByMe = member != null
+                    && member.getLastReadAt() != null
+                    && !member.getLastReadAt().isBefore(message.getCreatedAt());
+        }
+
+        String senderName = message.getSender() != null ? message.getSender().getNickname() : null;
+        String profileImage = message.getSender() != null ? message.getSender().getProfileImageUrl() : null;
+        Long senderId = message.getSender() != null ? message.getSender().getId() : null;
+
+        return MessageResponse.builder()
+                .id(message.getId())
+                .roomId(message.getChatRoom().getId())
+                .senderId(senderId)
+                .userId(senderId)
+                .senderName(senderName)
+                .nickname(senderName)
+                .senderProfileImageUrl(profileImage)
+                .profileImage(profileImage)
+                .type(message.getType().toString())
+                .content(message.getContent())
+                .imageUrl(message.getImageUrl())
+                .cardPayload(message.getCardPayload())
+                .readCount(message.getReadCount())
+                .createdAt(message.getCreatedAt())
+                .readByMe(isReadByMe)
+                .settlementId(extractSettlementId(message))
+                .groupChatRoomId(message.getChatRoom().getId().intValue())
+                .build();
+    }
+
+    /**
      * 시스템 메시지 저장 및 발행 (ENTER / LEAVE)
      *
      * 멤버십 검증을 건너뜁니다.
