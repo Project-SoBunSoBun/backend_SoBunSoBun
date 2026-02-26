@@ -74,3 +74,4 @@ replay_pid*
 *.env
 *.p8
 build/
+CLAUDE.md
