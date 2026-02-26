@@ -79,9 +79,14 @@ public class UserProfileResponse {
     @Builder
     public static class MannerTagDto {
         /**
-         * 태그 ID
+         * 태그 ID (MannerTag.id 값)
          */
         private Integer tagId;
+
+        /**
+         * 태그 라벨 (e.g., "시간 약속을 잘 지켜요")
+         */
+        private String label;
 
         /**
          * 받은 횟수
