@@ -72,6 +72,10 @@ public enum ErrorCode {
     CHAT_INVALID_ROOM_TYPE("CHAT_010", "그룹 채팅방에서만 초대할 수 있습니다.", HttpStatus.BAD_REQUEST),
     CHAT_INVITE_NOT_PENDING("CHAT_011", "이미 처리된 초대입니다.", HttpStatus.CONFLICT),
     CHAT_INVITE_ACCESS_DENIED("CHAT_012", "초대에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    CHAT_NOT_OWNER("CHAT_013", "채팅방 방장만 수행할 수 있습니다.", HttpStatus.FORBIDDEN),
+    CHAT_CANNOT_KICK_OWNER("CHAT_014", "방장은 본인을 강퇴할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    CHAT_TARGET_NOT_MEMBER("CHAT_015", "대상 사용자가 채팅방 멤버가 아닙니다.", HttpStatus.NOT_FOUND),
+    CHAT_MEMBER_ALREADY_LEFT("CHAT_016", "이미 퇴장한 멤버입니다.", HttpStatus.CONFLICT),
 
     // 비즈니스 로직 (9000~9099)
     BUSINESS_RULE_VIOLATION("BIZ_001", "비즈니스 규칙 위반", HttpStatus.BAD_REQUEST),
