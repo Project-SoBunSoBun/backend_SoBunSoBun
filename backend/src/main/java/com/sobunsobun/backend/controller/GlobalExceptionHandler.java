@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.controller;
 
 import com.sobunsobun.backend.support.exception.BusinessException;
+import com.sobunsobun.backend.support.exception.ChatException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
 import com.sobunsobun.backend.support.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,23 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * 채팅 예외 처리
+     */
+    @ExceptionHandler(ChatException.class)
+    public ResponseEntity<ApiResponse<?>> handleChatException(ChatException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        log.warn("[ChatException] Code: {}, Message: {}", errorCode.getCode(), e.getMessage());
+
+        ApiResponse<?> response = ApiResponse.error(
+                errorCode.getStatusCode(),
+                errorCode.getCode(),
+                e.getMessage()
+        );
+
+        return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
+    }
 
     /**
      * 비즈니스 예외 처리
