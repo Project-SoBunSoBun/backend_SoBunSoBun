@@ -4,6 +4,7 @@ import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
+import com.sobunsobun.backend.domain.chat.ChatMessageType;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.domain.chat.ChatRoomType;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
@@ -41,6 +42,7 @@ public class ChatRoomService {
     private final UserRepository userRepository;
     private final GroupPostRepository groupPostRepository;
     private final ChatRedisService chatRedisService;
+    private final ChatMessageService chatMessageService;
 
     /**
      * 채팅방 목록 조회
@@ -484,6 +486,14 @@ public class ChatRoomService {
                             .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId + ")"));
                     ChatMember newMember = room.addMember(user);
                     chatMemberRepository.saveAndFlush(newMember);
+
+                    // ENTER 시스템 메시지 발행
+                    chatMessageService.publishSystemMessage(
+                            room.getId(),
+                            user,
+                            ChatMessageType.ENTER,
+                            user.getNickname() + "님이 입장했습니다."
+                    );
                 }
 
                 int memberCount = (int) chatMemberRepository.findActiveMembersByRoomId(room.getId()).size();
@@ -628,6 +638,14 @@ public class ChatRoomService {
             ChatMember newMember = chatRoom.addMember(targetUser);
             chatMemberRepository.saveAndFlush(newMember);
 
+            // ENTER 시스템 메시지 발행
+            chatMessageService.publishSystemMessage(
+                    roomId,
+                    targetUser,
+                    ChatMessageType.ENTER,
+                    targetUser.getNickname() + "님이 입장했습니다."
+            );
+
             log.info("✅ [단체 채팅 멤버 초대 완료] roomId: {}, targetUser: {}", roomId, targetUser.getNickname());
 
         } catch (IllegalArgumentException e) {
@@ -660,8 +678,20 @@ public class ChatRoomService {
                 throw new IllegalArgumentException("채팅방 멤버가 아닙니다");
             }
 
+            // 퇴장 전에 유저 정보 미리 조회 (제거 후에는 멤버 조회 불가)
+            User leavingUser = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId + ")"));
+
             chatRoom.removeMember(userId);
             chatRoomRepository.save(chatRoom);
+
+            // LEAVE 시스템 메시지 발행 (제거 이후이므로 publishSystemMessage의 멤버 검증 건너뜀)
+            chatMessageService.publishSystemMessage(
+                    roomId,
+                    leavingUser,
+                    ChatMessageType.LEAVE,
+                    leavingUser.getNickname() + "님이 퇴장했습니다."
+            );
 
             log.info("✅ [단체 채팅 퇴장 완료] roomId: {}, userId: {}", roomId, userId);
 
