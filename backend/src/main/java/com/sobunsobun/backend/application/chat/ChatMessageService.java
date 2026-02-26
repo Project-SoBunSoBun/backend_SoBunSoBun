@@ -402,6 +402,85 @@ public class ChatMessageService {
     }
 
     /**
+     * 시스템 메시지 저장 및 발행 (ENTER / LEAVE)
+     *
+     * 멤버십 검증을 건너뜁니다.
+     * - ENTER: 방에 추가된 직후 호출 (이미 멤버 상태)
+     * - LEAVE: 방에서 제거된 직후 호출 (더 이상 멤버가 아닌 상태)
+     * 두 경우 모두 일반 saveMessage()의 isMember 체크를 통과시킬 수 없으므로
+     * 별도 메서드로 분리합니다.
+     *
+     * @param roomId    채팅방 ID
+     * @param user      메시지 발신자 (입장/퇴장 당사자)
+     * @param type      ENTER 또는 LEAVE
+     * @param content   표시할 시스템 메시지 텍스트 (e.g. "홍길동님이 입장했습니다.")
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void publishSystemMessage(Long roomId, User user, ChatMessageType type, String content) {
+        try {
+            log.info("📢 [시스템 메시지 발행] roomId: {}, userId: {}, type: {}", roomId, user.getId(), type);
+
+            ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
+                    .orElseThrow(() -> new RuntimeException("Chat room not found: " + roomId));
+
+            // 메시지 저장
+            ChatMessage message = ChatMessage.builder()
+                    .chatRoom(chatRoom)
+                    .sender(user)
+                    .type(type)
+                    .content(content)
+                    .readCount(0)
+                    .build();
+
+            ChatMessage savedMessage = chatMessageRepository.save(message);
+
+            // 채팅방 메타데이터 업데이트
+            chatRoom.setLastMessageAt(savedMessage.getCreatedAt());
+            chatRoom.setLastMessagePreview(content);
+            chatRoom.setLastMessageSenderId(user.getId());
+            chatRoomRepository.save(chatRoom);
+
+            // Redis Pub/Sub 발행
+            try {
+                String createdAtIso = savedMessage.getCreatedAt()
+                        .atZone(java.time.ZoneId.of("Asia/Seoul"))
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"));
+
+                ChatMessageDto dto = ChatMessageDto.builder()
+                        .type(type)
+                        .roomId(roomId)
+                        .senderId(user.getId())
+                        .senderName(user.getNickname())
+                        .nickname(user.getNickname())
+                        .profileImage(user.getProfileImageUrl())
+                        .senderProfileImageUrl(user.getProfileImageUrl())
+                        .userId(user.getId())
+                        .message(content)
+                        .content(content)
+                        .messageId(savedMessage.getId())
+                        .id(savedMessage.getId().toString())
+                        .createdAt(createdAtIso)
+                        .timestamp(System.currentTimeMillis())
+                        .readByMe(false)
+                        .readCount(0)
+                        .groupChatRoomId(roomId.intValue())
+                        .build();
+
+                redisPublisher.publish(roomId, dto);
+                log.info("✅ [시스템 메시지 발행 완료] roomId: {}, type: {}, messageId: {}",
+                        roomId, type, savedMessage.getId());
+            } catch (Exception e) {
+                log.warn("⚠️ [시스템 메시지 Redis 발행 실패] DB 저장은 완료됨: {}", e.getMessage());
+            }
+
+        } catch (Exception e) {
+            log.error("❌ [시스템 메시지 발행 오류] roomId: {}, userId: {}, type: {}, error: {}",
+                    roomId, user.getId(), type, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
      * 미리보기 텍스트 생성 (너무 길면 잘라냠)
      */
     private String truncateContent(String content) {
