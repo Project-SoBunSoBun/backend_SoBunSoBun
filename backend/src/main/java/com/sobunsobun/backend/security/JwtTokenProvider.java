@@ -160,17 +160,16 @@ public class JwtTokenProvider {
     }
 
     /**
-     * 임시 로그인 토큰 생성 (Apple refresh_token 포함)
+     * 임시 로그인 토큰 생성 (Apple refresh_token 포함 버전)
      *
-     * authorization_code 교환으로 얻은 Apple refresh_token을 포함합니다.
-     * 이후 completeSignupWithTerms에서 AuthProvider에 저장하는 데 사용됩니다.
+     * code 교환으로 얻은 Apple refresh_token을 클레임에 포함합니다.
+     * completeSignupWithTerms에서 AuthProvider에 저장하는 데 사용됩니다.
      *
-     * @param email 사용자 이메일
-     * @param oauthId Apple OAuth ID (sub)
-     * @param provider OAuth 제공자 ("APPLE")
+     * @param email           사용자 이메일
+     * @param oauthId         Apple OAuth ID (sub)
+     * @param provider        "APPLE"
      * @param appleRefreshToken Apple refresh_token (null이면 클레임 미포함)
-     * @param ttlMillis 토큰 유효 시간 (밀리초)
-     * @return 생성된 임시 로그인 토큰
+     * @param ttlMillis       토큰 유효 시간 (밀리초)
      */
     public String createLoginToken(String email, String oauthId, String provider,
                                    String appleRefreshToken, long ttlMillis) {
@@ -190,14 +189,10 @@ public class JwtTokenProvider {
             builder.claim("appleRefreshToken", appleRefreshToken);
         }
 
-        String token = builder
-                .signWith(signingKey, SignatureAlgorithm.HS256)
-                .compact();
+        log.debug("임시 로그인 토큰 생성 완료 - 이메일: {}, provider: {}, refreshToken 포함: {}, 만료: {}",
+                email, provider, appleRefreshToken != null, expiration);
 
-        log.debug("임시 로그인 토큰 생성 완료 (Apple) - 이메일: {}, refreshToken 포함: {}, 만료: {}",
-                email, appleRefreshToken != null, expiration);
-
-        return token;
+        return builder.signWith(signingKey, SignatureAlgorithm.HS256).compact();
     }
 
     /**

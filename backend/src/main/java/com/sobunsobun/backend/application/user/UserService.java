@@ -7,6 +7,8 @@ import com.sobunsobun.backend.domain.WithdrawalReason;
 import com.sobunsobun.backend.dto.account.WithdrawRequest;
 import com.sobunsobun.backend.dto.account.WithdrawResponse;
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.infrastructure.oauth.AppleOAuthClient;
+import com.sobunsobun.backend.repository.AuthProviderRepository;
 import com.sobunsobun.backend.repository.WithdrawalReasonRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.repository.GroupPostRepository;
@@ -51,6 +53,8 @@ import java.util.List;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final AuthProviderRepository authProviderRepository;
+    private final AppleOAuthClient appleOAuthClient;
     private final WithdrawalReasonRepository withdrawalReasonRepository;
     private final GroupPostRepository groupPostRepository;
     private final CommentRepository commentRepository;
@@ -486,7 +490,23 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "데이터 삭제 중 오류가 발생했습니다.");
         }
 
-        // 4. 프로필 이미지 파일 삭제
+        // 4. Apple 계정 연결 해제 (Apple 정책 요구사항)
+        authProviderRepository.findByUserIdAndProvider(userId, "APPLE").ifPresent(appleProvider -> {
+            String refreshToken = appleProvider.getRefreshToken();
+            if (refreshToken != null && !refreshToken.isBlank()) {
+                try {
+                    appleOAuthClient.revokeToken(refreshToken);
+                    appleProvider.setRefreshToken(null);
+                    authProviderRepository.save(appleProvider);
+                    log.info("✅ Apple Revoke 완료 - 사용자 ID: {}", userId);
+                } catch (Exception e) {
+                    // Revoke 실패는 탈퇴 자체를 막지 않음
+                    log.warn("⚠️ Apple Revoke 실패 (탈퇴 계속 진행) - 사용자 ID: {}, 오류: {}", userId, e.getMessage());
+                }
+            }
+        });
+
+        // 6. 프로필 이미지 파일 삭제
         String profileImageUrl = user.getProfileImageUrl();
         if (profileImageUrl != null && !profileImageUrl.isBlank()) {
             try {
@@ -497,7 +517,7 @@ public class UserService {
             }
         }
 
-        // 5. 탈퇴 사유 저장 (개인정보 익명화 전에 먼저 저장해야 원본 정보가 보존됨)
+        // 7. 탈퇴 사유 저장 (개인정보 익명화 전에 먼저 저장해야 원본 정보가 보존됨)
         WithdrawalReason withdrawalReason = WithdrawalReason.builder()
                 .user(user)
                 .reasonCode(request.getReasonCode())
@@ -511,7 +531,7 @@ public class UserService {
         withdrawalReasonRepository.saveAndFlush(withdrawalReason);
         log.info("✅ 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
 
-        // 6. 사용자 상태 변경 및 탈퇴 일시 저장 + 개인정보 익명화
+        // 8. 사용자 상태 변경 및 탈퇴 일시 저장 + 개인정보 익명화
         LocalDateTime withdrawnAt = LocalDateTime.now();
         LocalDateTime reactivatableAt = withdrawnAt.plusDays(90); // 90일 후 재가입 가능
 
@@ -532,7 +552,7 @@ public class UserService {
                 userId, withdrawnAt, reactivatableAt);
 
 
-        // 7. 응답 반환
+        // 9. 응답 반환
         return WithdrawResponse.builder()
                 .message("회원탈퇴가 완료되었습니다. 관련 데이터가 모두 삭제되었습니다.")
                 .withdrawnAt(withdrawnAt)

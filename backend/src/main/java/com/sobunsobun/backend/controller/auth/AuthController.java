@@ -135,33 +135,6 @@ public class AuthController {
 
 
     /**
-     * Apple 계정 연결 해제 (Revoke)
-     *
-     * - Authorization 헤더에 Bearer 액세스 토큰 필수
-     * - DB에서 Apple refresh_token 조회 후 Apple /auth/revoke API 호출
-     * - authorization_code 교환 경로(웹/서버사이드)로 로그인한 경우에만 가능
-     * - iOS 앱 id_token 직접 전달 방식은 Apple 앱에서 직접 연결 해제 필요
-     *
-     * @param principal 인증된 사용자 정보 (JWT에서 추출)
-     * @return 204 No Content (성공 시 본문 없음)
-     */
-    @Operation(summary = "Apple 계정 연결 해제",
-               description = "Apple ID 연결을 해제합니다. " +
-                       "DB에 저장된 Apple refresh_token으로 /auth/revoke API를 호출합니다. " +
-                       "Authorization: Bearer {accessToken} 헤더가 필요합니다.")
-    @PostMapping("/revoke/apple")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> revokeAppleAccount(
-            @AuthenticationPrincipal JwtUserPrincipal principal) {
-
-        log.info("Apple 계정 연결 해제 요청 - 사용자 ID: {}", principal.id());
-        authService.revokeAppleAccount(principal.id());
-        log.info("Apple 계정 연결 해제 완료 - 사용자 ID: {}", principal.id());
-
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
      * JWT 리프레시 토큰으로 액세스 토큰 갱신
      *
      * - 리프레시 토큰 검증 (만료, 서명 확인)
@@ -182,5 +155,28 @@ public class AuthController {
         log.info("액세스 토큰 갱신 완료");
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Apple 계정 연결 해제 (Revoke)
+     *
+     * DB에 저장된 Apple refresh_token으로 https://appleid.apple.com/auth/revoke 를 호출합니다.
+     * Apple 정책: 앱에서 계정 삭제(탈퇴) 또는 연결 해제 시 반드시 호출해야 합니다.
+     *
+     * Authorization: Bearer {accessToken} 헤더 필수
+     */
+    @Operation(summary = "Apple 계정 연결 해제",
+               description = "저장된 Apple refresh_token으로 appleid.apple.com/auth/revoke 를 호출합니다. " +
+                       "Authorization: Bearer {accessToken} 헤더가 필요합니다.")
+    @PostMapping("/revoke/apple")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> revokeApple(
+            @AuthenticationPrincipal JwtUserPrincipal principal) {
+
+        log.info("Apple 계정 연결 해제 요청 - 사용자 ID: {}", principal.id());
+        authService.revokeAppleAccount(principal.id());
+        log.info("Apple 계정 연결 해제 완료 - 사용자 ID: {}", principal.id());
+
+        return ResponseEntity.noContent().build();
     }
 }

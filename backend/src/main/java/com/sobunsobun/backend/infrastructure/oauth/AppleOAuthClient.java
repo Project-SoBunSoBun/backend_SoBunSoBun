@@ -56,7 +56,7 @@ public class AppleOAuthClient {
 
     private static final String APPLE_AUTH_URL = "https://appleid.apple.com";
     private static final String APPLE_TOKEN_URL = APPLE_AUTH_URL + "/auth/token";
-    private static final String APPLE_KEYS_URL = APPLE_AUTH_URL + "/auth/keys";
+    private static final String APPLE_KEYS_URL  = APPLE_AUTH_URL + "/auth/keys";
     private static final String APPLE_REVOKE_URL = APPLE_AUTH_URL + "/auth/revoke";
 
     private final WebClient webClient = WebClient.builder().build();
@@ -247,42 +247,47 @@ public class AppleOAuthClient {
     /**
      * Apple 계정 연결 해제 (Revoke)
      *
-     * Apple의 /auth/revoke 엔드포인트에 refresh_token을 전송하여
-     * 앱의 Apple ID 연결을 해제합니다.
+     * https://appleid.apple.com/auth/revoke 에 POST 요청을 보내
+     * 앱과 Apple ID의 연결을 끊습니다.
      *
-     * - 성공 시: HTTP 200 (빈 응답 본문)
-     * - 실패 시: HTTP 4xx/5xx → RuntimeException 발생
+     * 요청 파라미터 (application/x-www-form-urlencoded):
+     *   - client_id        : Apple Service ID
+     *   - client_secret    : ES256 서명된 JWT
+     *   - token            : Apple refresh_token
+     *   - token_type_hint  : "refresh_token"
      *
-     * @param refreshToken AuthProvider에 저장된 Apple refresh_token
-     * @throws RuntimeException Apple 서버 오류(400/401 등) 시
+     * 성공: HTTP 200 (빈 본문)
+     * 실패: HTTP 400/401 → RuntimeException throw
+     *
+     * @param refreshToken DB에 저장된 Apple refresh_token
      */
     public void revokeToken(String refreshToken) {
         String clientSecret = generateClientSecret();
 
-        log.info("Apple Revoke 요청 - client_id: {}", clientId);
+        log.info("Apple Revoke 요청 시작 - URL: {}", APPLE_REVOKE_URL);
 
         webClient.post()
                 .uri(APPLE_REVOKE_URL)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters.fromFormData("client_id", clientId)
-                        .with("client_secret", clientSecret)
-                        .with("token", refreshToken)
-                        .with("token_type_hint", "refresh_token"))
+                .body(BodyInserters.fromFormData("client_id",       clientId)
+                        .with("client_secret",    clientSecret)
+                        .with("token",            refreshToken)
+                        .with("token_type_hint",  "refresh_token"))
                 .retrieve()
                 .onStatus(
                         status -> status.is4xxClientError() || status.is5xxServerError(),
                         response -> response.bodyToMono(String.class)
                                 .map(body -> {
-                                    log.error("Apple Revoke API 오류 응답 - status: {}, body: {}",
-                                            response.statusCode(), body);
+                                    log.error("Apple Revoke 실패 - status: {}, body: {}",
+                                            response.statusCode().value(), body);
                                     return new RuntimeException(
-                                            "Apple Revoke 요청 실패 (HTTP " + response.statusCode().value() + "): " + body);
+                                            "Apple Revoke 실패 (HTTP " + response.statusCode().value() + "): " + body);
                                 })
                 )
                 .bodyToMono(Void.class)
                 .block();
 
-        log.info("Apple Revoke 완료 - client_id: {}", clientId);
+        log.info("Apple Revoke 완료");
     }
 
     // ========== Inner DTOs ==========
