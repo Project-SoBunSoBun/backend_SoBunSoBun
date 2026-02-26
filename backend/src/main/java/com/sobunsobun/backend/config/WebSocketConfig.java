@@ -62,7 +62,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 내장 메시지 브로커 설정
-        config.enableSimpleBroker("/topic", "/queue")
+        // /sub: 채팅 목록 실시간 업데이트 개인 채널 (/sub/users/{userId}/chat-list)
+        config.enableSimpleBroker("/topic", "/queue", "/sub")
                 .setTaskScheduler(taskScheduler())
                 .setHeartbeatValue(new long[]{30000, 30000});
 

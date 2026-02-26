@@ -2,6 +2,7 @@ package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.*;
+import com.sobunsobun.backend.dto.chat.ChatListUpdateNotification;
 import com.sobunsobun.backend.dto.chat.ChatMessageDto;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
@@ -12,6 +13,7 @@ import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class ChatMessageService {
     private final UserRepository userRepository;
     private final RedisPublisher redisPublisher;  // Redis Pub/Sub을 위한 Publisher
     private final ChatRedisService chatRedisService;  // Redis 상태 관리 서비스
+    private final SimpMessagingTemplate messagingTemplate;  // WebSocket 채팅 목록 알림 발송
 
     /**
      * 메시지 저장
@@ -179,6 +182,15 @@ public class ChatMessageService {
             } catch (Exception e) {
                 log.warn("⚠️ [단계6 경고] 안 읽은 메시지 카운트 업데이트 실패: {}", e.getMessage());
                 // 카운트 업데이트 실패는 비즈니스 로직에 영향을 주지 않음
+            }
+
+            // 7. 채팅 목록 실시간 업데이트 발송 (/sub/users/{userId}/chat-rooms)
+            log.debug("📡 [단계7] 채팅 목록 업데이트 WebSocket 발송 중...");
+            try {
+                broadcastChatListUpdate(chatRoom, savedMessage);
+                log.info("✅ [단계7 성공] 채팅 목록 업데이트 발송 완료");
+            } catch (Exception e) {
+                log.warn("⚠️ [단계7 경고] 채팅 목록 업데이트 발송 실패 (메시지 저장은 완료됨): {}", e.getMessage());
             }
 
             log.info("✅ [메시지 저장 및 발행 완료] roomId: {}, messageId: {}, sender: {}",
@@ -567,10 +579,88 @@ public class ChatMessageService {
                 log.warn("⚠️ [시스템 메시지 Redis 발행 실패] DB 저장은 완료됨: {}", e.getMessage());
             }
 
+            // 채팅 목록 실시간 업데이트 발송
+            try {
+                broadcastChatListUpdate(chatRoom, savedMessage);
+            } catch (Exception e) {
+                log.warn("⚠️ [시스템 메시지 채팅 목록 업데이트 실패]: {}", e.getMessage());
+            }
+
         } catch (Exception e) {
             log.error("❌ [시스템 메시지 발행 오류] roomId: {}, userId: {}, type: {}, error: {}",
                     roomId, user.getId(), type, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * 채팅 목록 실시간 업데이트를 ACTIVE 멤버 전원에게 WebSocket으로 발송
+     *
+     * 구독 경로: /sub/users/{userId}/chat-rooms
+     * 페이로드 타입: CHAT_LIST_UPDATE (flat JSON)
+     *
+     * 처리 로직:
+     * - ACTIVE 멤버만 대상 (LEFT/REVOKED 제외)
+     * - ONE_TO_ONE: 각 멤버 기준으로 상대방 정보(이름, 프로필) 설정
+     * - GROUP: 방 이름 사용, profileImageUrl = null
+     * - unreadCount: Redis Hash에서 조회 (Cache Miss 시 DB Write-through)
+     * - lastMessageAt: ISO-8601 KST 문자열
+     */
+    private void broadcastChatListUpdate(ChatRoom chatRoom, ChatMessage savedMessage) {
+        List<ChatMember> activeMembers = chatRoom.getMembers().stream()
+                .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                .toList();
+
+        // lastMessageAt ISO-8601 KST 변환 (공통)
+        String lastMessageAtIso = chatRoom.getLastMessageAt() != null
+                ? chatRoom.getLastMessageAt()
+                        .atZone(java.time.ZoneId.of("Asia/Seoul"))
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"))
+                : null;
+
+        for (ChatMember member : activeMembers) {
+            Long memberId = member.getUser().getId();
+
+            // 멤버별 roomName, profileImageUrl 결정
+            String roomName;
+            String profileImageUrl;
+
+            if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
+                // 1:1: 이 멤버 기준으로 상대방 정보 사용
+                ChatMember other = activeMembers.stream()
+                        .filter(m -> !m.getUser().getId().equals(memberId))
+                        .findFirst()
+                        .orElse(null);
+                if (other != null) {
+                    roomName       = other.getUser().getNickname();
+                    profileImageUrl = other.getUser().getProfileImageUrl();
+                } else {
+                    roomName       = chatRoom.getName();
+                    profileImageUrl = null;
+                }
+            } else {
+                // GROUP: 방 이름 사용 (GroupPost에 이미지 필드 없음)
+                roomName       = chatRoom.getName();
+                profileImageUrl = null;
+            }
+
+            // Redis Hash에서 unread count 조회 (Cache Miss → DB Write-through)
+            Long unreadCount = chatRedisService.getUnreadCount(chatRoom.getId(), memberId);
+
+            ChatListUpdateNotification notification = ChatListUpdateNotification.builder()
+                    .type("CHAT_LIST_UPDATE")
+                    .roomId(chatRoom.getId())
+                    .roomName(roomName)
+                    .profileImageUrl(profileImageUrl)
+                    .lastMessage(chatRoom.getLastMessagePreview())
+                    .lastMessageAt(lastMessageAtIso)
+                    .unreadCount(unreadCount.intValue())
+                    .roomType(chatRoom.getRoomType().name())
+                    .build();
+
+            messagingTemplate.convertAndSend("/sub/users/" + memberId + "/chat-rooms", notification);
+            log.debug("📡 [채팅 목록 업데이트 발송] userId: {}, roomId: {}, unreadCount: {}",
+                    memberId, chatRoom.getId(), unreadCount);
         }
     }
 
