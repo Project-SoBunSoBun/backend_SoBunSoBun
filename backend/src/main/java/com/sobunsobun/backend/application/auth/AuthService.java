@@ -158,11 +158,27 @@ public class AuthService {
             String appleRefreshToken = null;
 
             if (idToken != null && !idToken.isBlank()) {
-                // iOS 앱에서 id_token을 직접 전달한 경우 (refresh_token 미제공)
+                // iOS 앱에서 id_token을 직접 전달한 경우: id_token으로 신원 확인
                 log.info("Apple id_token 직접 검증 모드");
                 appleUser = appleOAuthClient.verifyIdToken(idToken);
+
+                // code도 함께 제공된 경우, refresh_token 획득을 위해 code 교환 시도
+                // (단회성 code이므로 실패해도 로그인 자체는 계속 진행)
+                if (code != null && !code.isBlank()) {
+                    try {
+                        AppleOAuthClient.AppleTokenResponse tokenResponse =
+                                appleOAuthClient.exchangeCodeForTokens(code);
+                        if (tokenResponse != null) {
+                            appleRefreshToken = tokenResponse.getRefresh_token();
+                            log.info("Apple refresh_token 획득 완료 (code 병행 교환) - refreshToken 존재: {}",
+                                    appleRefreshToken != null);
+                        }
+                    } catch (Exception e) {
+                        log.warn("Apple code 교환 중 refresh_token 획득 실패 (로그인 계속 진행): {}", e.getMessage());
+                    }
+                }
             } else {
-                // authorization code로 토큰 교환 후 검증
+                // idToken 없이 authorization code만 전달된 경우: code 교환 후 검증
                 log.info("Apple authorization code → 토큰 교환 모드");
                 AppleOAuthClient.AppleTokenResponse tokenResponse =
                         appleOAuthClient.exchangeCodeForTokens(code);
@@ -173,7 +189,6 @@ public class AuthService {
                 }
 
                 appleUser = appleOAuthClient.verifyIdToken(tokenResponse.getId_token());
-                // authorization_code 교환 경로에서만 refresh_token 획득 가능
                 appleRefreshToken = tokenResponse.getRefresh_token();
                 log.info("Apple refresh_token 획득 완료 - refreshToken 존재: {}", appleRefreshToken != null);
             }
