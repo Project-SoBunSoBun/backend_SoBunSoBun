@@ -6,6 +6,7 @@ import com.sobunsobun.backend.dto.mypage.ProfileUpdateRequestDto;
 import com.sobunsobun.backend.dto.mypage.ProfileUpdateResponse;
 import com.sobunsobun.backend.dto.user.UserProfileResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
+import com.sobunsobun.backend.repository.UserTagStatsRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,6 +32,7 @@ public class MyProfileService {
 
     private final UserRepository userRepository;
     private final GroupPostRepository groupPostRepository;
+    private final UserTagStatsRepository userTagStatsRepository;
 
     /**
      * 사용자 프로필 조회
@@ -48,20 +49,16 @@ public class MyProfileService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
                 });
 
-        // 더미 매너 태그 데이터
-        List<MyProfileResponse.MannerTagDto> mannerTags = new ArrayList<>();
-        mannerTags.add(MyProfileResponse.MannerTagDto.builder()
-                .tagId(1)
-                .count(4)
-                .build());
-        mannerTags.add(MyProfileResponse.MannerTagDto.builder()
-                .tagId(3)
-                .count(2)
-                .build());
-        mannerTags.add(MyProfileResponse.MannerTagDto.builder()
-                .tagId(5)
-                .count(1)
-                .build());
+        List<MyProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
+                .findTop5ByReceiverIdOrderByCountDesc(userId)
+                .stream()
+                .
+                map(stats -> MyProfileResponse.MannerTagDto.builder()
+                        .tagId(stats.getTagCode().getId())
+                        .label(stats.getTagCode().getLabel())
+                        .count(stats.getCount())
+                        .build())
+                .toList();
 
         MyProfileResponse profile = MyProfileResponse.builder()
                 .userId(user.getId())
@@ -95,22 +92,16 @@ public class MyProfileService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
                 });
 
-        // 더미 매너 태그 데이터
-        List<UserProfileResponse.MannerTagDto> mannerTags = new ArrayList<>();
-        mannerTags.add(UserProfileResponse.MannerTagDto.builder()
-                .tagId(1)
-                .count(4)
-                .build());
-        mannerTags.add(UserProfileResponse.MannerTagDto.builder()
-                .tagId(3)
-                .count(2)
-                .build());
-        mannerTags.add(UserProfileResponse.MannerTagDto.builder()
-                .tagId(5)
-                .count(1)
-                .build());
+        List<UserProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
+                .findTop5ByReceiverIdOrderByCountDesc(userId)
+                .stream()
+                .map(stats -> UserProfileResponse.MannerTagDto.builder()
+                        .tagId(stats.getTagCode().getId())
+                        .label(stats.getTagCode().getLabel())
+                        .count(stats.getCount())
+                        .build())
+                .toList();
 
-        // 사용자가 작성한 게시글 조회
         var posts = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId());
         List<UserProfileResponse.PostItemDto> postItems = posts.stream()
                 .map(post -> UserProfileResponse.PostItemDto.builder()
@@ -167,22 +158,16 @@ public class MyProfileService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
                 });
 
-        // 더미 매너 태그 데이터
-        List<UserProfileResponse.MannerTagDto> mannerTags = new ArrayList<>();
-        mannerTags.add(UserProfileResponse.MannerTagDto.builder()
-                .tagId(1)
-                .count(4)
-                .build());
-        mannerTags.add(UserProfileResponse.MannerTagDto.builder()
-                .tagId(3)
-                .count(2)
-                .build());
-        mannerTags.add(UserProfileResponse.MannerTagDto.builder()
-                .tagId(5)
-                .count(1)
-                .build());
+        List<UserProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
+                .findTop5ByReceiverIdOrderByCountDesc(user.getId())
+                .stream()
+                .map(stats -> UserProfileResponse.MannerTagDto.builder()
+                        .tagId(stats.getTagCode().getId())
+                        .label(stats.getTagCode().getLabel())
+                        .count(stats.getCount())
+                        .build())
+                .toList();
 
-        // 사용자가 작성한 게시글 조회
         var posts = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId());
         List<UserProfileResponse.PostItemDto> postItems = posts.stream()
                 .map(post -> UserProfileResponse.PostItemDto.builder()
@@ -271,4 +256,3 @@ public class MyProfileService {
 //        return response;
 //    }
 }
-
