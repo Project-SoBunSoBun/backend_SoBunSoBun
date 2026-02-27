@@ -77,6 +77,15 @@ public enum ErrorCode {
     CHAT_TARGET_NOT_MEMBER("CHAT_015", "대상 사용자가 채팅방 멤버가 아닙니다.", HttpStatus.NOT_FOUND),
     CHAT_MEMBER_ALREADY_LEFT("CHAT_016", "이미 퇴장한 멤버입니다.", HttpStatus.CONFLICT),
 
+    // 차단 관련 (BLOCK_001~BLOCK_003)
+    BLOCK_SELF_NOT_ALLOWED("BLOCK_001", "자기 자신을 차단할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    ALREADY_BLOCKED("BLOCK_002", "이미 차단된 사용자입니다.", HttpStatus.CONFLICT),
+    BLOCK_NOT_FOUND("BLOCK_003", "차단 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
+    // 유저 신고 관련 (REPORT_001~REPORT_002)
+    REPORT_SELF_NOT_ALLOWED("REPORT_001", "자기 자신을 신고할 수 없습니다.", HttpStatus.BAD_REQUEST),
+    REPORT_TARGET_NOT_FOUND("REPORT_002", "신고 대상 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+
     // 비즈니스 로직 (9000~9099)
     BUSINESS_RULE_VIOLATION("BIZ_001", "비즈니스 규칙 위반", HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION("BIZ_002", "데이터 무결성 위반", HttpStatus.CONFLICT),
