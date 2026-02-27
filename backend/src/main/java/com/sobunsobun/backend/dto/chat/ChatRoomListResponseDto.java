@@ -41,6 +41,15 @@ public class ChatRoomListResponseDto {
     private String roomName;
 
     /**
+     * 프로필 이미지 URL
+     *
+     * 1:1 채팅: 상대방의 프로필 이미지
+     * 그룹 채팅: GroupPost 이미지 (없을 경우 null)
+     */
+    @JsonProperty("profileImageUrl")
+    private String profileImageUrl;
+
+    /**
      * 채팅방 타입
      *
      * ONE_TO_ONE: 1:1 개인 채팅
@@ -75,7 +84,8 @@ public class ChatRoomListResponseDto {
     /**
      * 안 읽은 메시지 개수
      *
-     * Redis의 room:{roomId}:user:{userId}:unread에서 조회한 값
+     * Redis Hash "unread:counts:{userId}" / field "{roomId}" 에서 조회
+     * Cache Miss 시 DB(ChatMember.lastReadAt 기준) Write-through 캐싱
      * 0이면 읽은 메시지만 있음
      */
     @JsonProperty("unreadCount")

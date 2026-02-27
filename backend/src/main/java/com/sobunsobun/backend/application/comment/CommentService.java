@@ -6,6 +6,7 @@ import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.comment.CommentResponse;
 import com.sobunsobun.backend.dto.comment.CreateCommentRequest;
 import com.sobunsobun.backend.dto.comment.UpdateCommentRequest;
+import com.sobunsobun.backend.repository.BlockedUserRepository;
 import com.sobunsobun.backend.repository.CommentRepository;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.support.exception.CommentException;
@@ -15,7 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +33,7 @@ import java.util.stream.Collectors;
 public class CommentService {
     private final CommentRepository commentRepository;
     private final GroupPostRepository postRepository;
+    private final BlockedUserRepository blockedUserRepository;
 
     /**
      * 댓글 생성
@@ -88,27 +93,34 @@ public class CommentService {
 
     /**
      * 게시글의 모든 활성 댓글 조회
-     * 부모 댓글 → 대댓글 구조로 반환
-     * 최신순 정렬 (부모 댓글 기준)
+     * 부모 댓글 → 대댓글 구조로 반환. 오래된순 정렬.
+     * viewerId가 null이면 비로그인 상태 → 차단 필터 미적용
      *
      * @param postId 게시글 ID
+     * @param viewerId 조회자 ID (nullable)
      * @return 댓글 목록 (트리 구조)
      * @throws PostException 게시글을 찾을 수 없는 경우
      */
-    public List<CommentResponse> getCommentsByPostId(Long postId) {
-        log.debug("게시글의 댓글 조회 - postId: {}", postId);
+    public List<CommentResponse> getCommentsByPostId(Long postId, Long viewerId) {
+        log.debug("게시글의 댓글 조회 - postId: {}, viewerId: {}", postId, viewerId);
 
-        // 게시글 존재 여부 확인
         if (!postRepository.existsById(postId)) {
             throw PostException.notFound();
         }
 
-        // 활성 부모 댓글 조회 (최신순)
-        List<Comment> parentComments = commentRepository.findActiveParentCommentsByPostId(postId);
+        // 차단 유저 ID Set (대댓글 필터링에 사용)
+        Set<Long> blockedIds = (viewerId != null)
+                ? new HashSet<>(blockedUserRepository.findBlockedIdsByBlockerId(viewerId))
+                : Collections.emptySet();
 
-        // 부모 댓글과 대댓글을 함께 DTO로 변환
+        // 부모 댓글 조회: 로그인 시 차단 유저 제외
+        List<Comment> parentComments = (viewerId != null)
+                ? commentRepository.findActiveParentCommentsByPostIdExcludingBlocked(postId, viewerId)
+                : commentRepository.findActiveParentCommentsByPostId(postId);
+
+        // 대댓글도 blockedIds 기준으로 필터링하여 DTO 변환
         return parentComments.stream()
-            .map(CommentResponse::fromWithChildren)
+            .map(parent -> CommentResponse.fromWithChildren(parent, blockedIds))
             .collect(Collectors.toList());
     }
 

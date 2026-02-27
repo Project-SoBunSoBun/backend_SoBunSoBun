@@ -75,3 +75,4 @@ replay_pid*
 *.p8
 build/
 CLAUDE.md
+*.md

@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.repository;
 
+import com.sobunsobun.backend.domain.BlockedUser;
 import com.sobunsobun.backend.domain.Comment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -42,6 +43,18 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
            "AND c.deleted = false " +
            "ORDER BY c.createdAt ASC")
     List<Comment> findActiveChildCommentsByParentId(@Param("parentCommentId") Long parentCommentId);
+
+    /**
+     * 게시글의 활성 부모 댓글 조회 (차단 유저 제외)
+     */
+    @Query("SELECT c FROM Comment c " +
+           "WHERE c.post.id = :postId " +
+           "AND c.parentComment IS NULL " +
+           "AND c.deleted = false " +
+           "AND c.user.id NOT IN (SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
+           "ORDER BY c.createdAt ASC")
+    List<Comment> findActiveParentCommentsByPostIdExcludingBlocked(@Param("postId") Long postId,
+                                                                   @Param("viewerId") Long viewerId);
 
     /**
      * 게시글의 댓글 개수 조회 (활성 댓글만, 대댓글 포함)

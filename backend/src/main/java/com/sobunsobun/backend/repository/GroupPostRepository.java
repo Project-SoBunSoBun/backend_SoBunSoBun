@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.repository;
 
+import com.sobunsobun.backend.domain.BlockedUser;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.PostStatus;
 import org.springframework.data.domain.Page;
@@ -74,6 +75,56 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
      */
     List<GroupPost> findByStatusAndDeadlineAtBefore(PostStatus status, LocalDateTime dateTime);
 
+    // ── 차단 유저 제외 쿼리 ─────────────────────────────────────────────────
+
+    /**
+     * 전체 게시글 조회 (차단 유저 제외, 최신순)
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.owner.id NOT IN " +
+           "(SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
+           "ORDER BY p.createdAt DESC")
+    Page<GroupPost> findAllExcludingBlocked(@Param("viewerId") Long viewerId, Pageable pageable);
+
+    /**
+     * 상태별 게시글 조회 (차단 유저 제외, 마감일 오름차순)
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.status = :status AND p.owner.id NOT IN " +
+           "(SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
+           "ORDER BY p.deadlineAt ASC")
+    Page<GroupPost> findByStatusExcludingBlocked(@Param("viewerId") Long viewerId,
+                                                 @Param("status") PostStatus status,
+                                                 Pageable pageable);
+
+    /**
+     * 단일 카테고리 게시글 조회 (차단 유저 제외, 최신순)
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.categories LIKE CONCAT('%', :categories, '%') " +
+           "AND p.status = :status AND p.owner.id NOT IN " +
+           "(SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
+           "ORDER BY p.createdAt DESC")
+    Page<GroupPost> findByCategoriesAndStatusExcludingBlocked(@Param("viewerId") Long viewerId,
+                                                              @Param("categories") String categories,
+                                                              @Param("status") PostStatus status,
+                                                              Pageable pageable);
+
+    /**
+     * 여러 카테고리 게시글 조회 (차단 유저 제외, Native Query)
+     */
+    @Query(value = "SELECT * FROM group_post WHERE status = :status " +
+                   "AND categories REGEXP :categoryPattern " +
+                   "AND owner_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = :viewerId) " +
+                   "ORDER BY created_at DESC",
+           countQuery = "SELECT COUNT(*) FROM group_post WHERE status = :status " +
+                        "AND categories REGEXP :categoryPattern " +
+                        "AND owner_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = :viewerId)",
+           nativeQuery = true)
+    Page<GroupPost> findByCategoriesInAndStatusExcludingBlocked(@Param("viewerId") Long viewerId,
+                                                                @Param("categoryPattern") String categoryPattern,
+                                                                @Param("status") String status,
+                                                                Pageable pageable);
+
+    // ────────────────────────────────────────────────────────────────────────
+
     /**
      * 특정 날짜 이후의 OPEN 상태 게시글 조회 (추천 검색어 수집용)
      * 생성일 기준 최신순 정렬
@@ -91,6 +142,16 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
      * TODO: 참여 정보를 저장하는 엔티티/테이블 필요
      */
     // long countByParticipantsId(Long userId);
+
+    /**
+     * 사용자가 댓글을 단 게시글 조회 (페이징)
+     * 중복 없이 게시글 단위로 반환 (한 게시글에 여러 댓글을 달아도 1번만 포함)
+     */
+    @Query(value = "SELECT p FROM GroupPost p WHERE p.id IN " +
+                   "(SELECT c.post.id FROM Comment c WHERE c.user.id = :userId AND c.deleted = false)",
+           countQuery = "SELECT COUNT(DISTINCT p.id) FROM GroupPost p WHERE p.id IN " +
+                        "(SELECT c.post.id FROM Comment c WHERE c.user.id = :userId AND c.deleted = false)")
+    Page<GroupPost> findPostsCommentedByUser(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * 특정 사용자의 모든 게시글 삭제 (회원탈퇴용)

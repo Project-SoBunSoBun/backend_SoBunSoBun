@@ -91,11 +91,13 @@ public class ChatRoomService {
                             log.debug("  🔍 [방{}] 안 읽은 메시지 개수 조회 중...", roomId);
                             Long unreadCount = chatRedisService.getUnreadCount(roomId, userId);
 
-                            // ④ 1:1 채팅인 경우 상대방 이름으로 roomName 설정
+                            // ④ 1:1 채팅인 경우 상대방 이름/프로필로 설정, GROUP은 방 이름 사용
                             String roomName = chatRoom.getName();
+                            String profileImageUrl = null;
                             if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
-                                log.debug("  🔄 [방{}] 1:1 채팅 - 상대방 이름으로 roomName 설정 중...", roomId);
+                                log.debug("  🔄 [방{}] 1:1 채팅 - 상대방 정보로 설정 중...", roomId);
                                 roomName = getPrivateChatRoomName(chatRoom, userId);
+                                profileImageUrl = getPrivateChatProfileImage(chatRoom, userId);
                             }
 
                             log.debug("  ✅ [방{}] DTO 변환 완료: roomName={}, unreadCount={}",
@@ -104,6 +106,7 @@ public class ChatRoomService {
                             return ChatRoomListResponseDto.builder()
                                     .roomId(roomId)
                                     .roomName(roomName)
+                                    .profileImageUrl(profileImageUrl)
                                     .roomType(chatRoom.getRoomType().toString())
                                     .memberCount(chatRoom.getMembers().size())
                                     .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
@@ -167,6 +170,26 @@ public class ChatRoomService {
         } catch (Exception e) {
             log.warn("⚠️ 상대방 이름 조회 실패, 기본값 사용: {}", chatRoom.getName());
             return chatRoom.getName();
+        }
+    }
+
+    /**
+     * 1:1 채팅방에서 상대방 프로필 이미지 조회
+     *
+     * @param chatRoom 채팅방 엔티티
+     * @param userId 현재 사용자 ID
+     * @return 상대방 프로필 이미지 URL (없으면 null)
+     */
+    private String getPrivateChatProfileImage(ChatRoom chatRoom, Long userId) {
+        try {
+            return chatRoom.getMembers().stream()
+                    .filter(member -> !member.getUser().getId().equals(userId))
+                    .findFirst()
+                    .map(member -> member.getUser().getProfileImageUrl())
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("⚠️ 상대방 프로필 이미지 조회 실패: roomId={}", chatRoom.getId());
+            return null;
         }
     }
 
