@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -87,6 +88,76 @@ public class CommentResponse {
             .createdAt(comment.getCreatedAt())
             .updatedAt(comment.getUpdatedAt())
             .build();
+    }
+
+    /**
+     * 부모 댓글 기준 대댓글 포함하여 변환 (차단 유저 제외)
+     * blockedUserIds에 포함된 작성자의 대댓글은 응답에서 제외됩니다.
+     */
+    public static CommentResponse fromWithChildren(Comment comment, Set<Long> blockedUserIds) {
+        if (comment.getParentComment() != null) {
+            return CommentResponse.builder()
+                .id(comment.getId())
+                .postId(comment.getPost().getId())
+                .userId(comment.getUser().getId())
+                .userNickname(comment.getUser().getNickname())
+                .userProfileImageUrl(
+                    comment.getUser().getProfileImageUrl() != null && !comment.getUser().getProfileImageUrl().isEmpty()
+                        ? comment.getUser().getProfileImageUrl()
+                        : null
+                )
+                .userAddress(comment.getUser().getAddress())
+                .content(comment.getContent())
+                .parentCommentId(comment.getParentComment().getId())
+                .childComments(new ArrayList<>())
+                .deleted(comment.getDeleted())
+                .edited(comment.getEdited())
+                .createdAt(comment.getCreatedAt())
+                .updatedAt(comment.getUpdatedAt())
+                .build();
+        } else {
+            return CommentResponse.builder()
+                .id(comment.getId())
+                .postId(comment.getPost().getId())
+                .userId(comment.getUser().getId())
+                .userNickname(comment.getUser().getNickname())
+                .userProfileImageUrl(
+                    comment.getUser().getProfileImageUrl() != null && !comment.getUser().getProfileImageUrl().isEmpty()
+                        ? comment.getUser().getProfileImageUrl()
+                        : null
+                )
+                .userAddress(comment.getUser().getAddress())
+                .content(comment.getContent())
+                .parentCommentId(null)
+                .childComments(comment.getChildComments().stream()
+                    .filter(Comment::isActive)
+                    .filter(child -> !blockedUserIds.contains(child.getUser().getId()))
+                    .map(child -> CommentResponse.builder()
+                        .id(child.getId())
+                        .postId(child.getPost().getId())
+                        .userId(child.getUser().getId())
+                        .userNickname(child.getUser().getNickname())
+                        .userProfileImageUrl(
+                            child.getUser().getProfileImageUrl() != null && !child.getUser().getProfileImageUrl().isEmpty()
+                                ? child.getUser().getProfileImageUrl()
+                                : null
+                        )
+                        .userAddress(child.getUser().getAddress())
+                        .content(child.getContent())
+                        .parentCommentId(comment.getId())
+                        .childComments(new ArrayList<>())
+                        .deleted(child.getDeleted())
+                        .edited(child.getEdited())
+                        .createdAt(child.getCreatedAt())
+                        .updatedAt(child.getUpdatedAt())
+                        .build())
+                    .collect(Collectors.toList()))
+                .deleted(comment.getDeleted())
+                .edited(comment.getEdited())
+                .createdAt(comment.getCreatedAt())
+                .updatedAt(comment.getUpdatedAt())
+                .build();
+        }
     }
 
     /**

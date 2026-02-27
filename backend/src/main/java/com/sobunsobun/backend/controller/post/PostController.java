@@ -98,16 +98,18 @@ public class PostController {
     @GetMapping
     @Operation(
             summary = "전체 게시글 목록 조회",
-            description = "전체 게시글 목록을 페이징하여 조회합니다 (최신순)"
+            description = "전체 게시글 목록을 페이징하여 조회합니다 (최신순). 로그인 시 차단 유저 게시글 자동 제외."
     )
     public ResponseEntity<PostListResponse> getAllPosts(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        log.info("전체 게시글 목록 조회 요청 - 페이지: {}, 크기: {}", page, size);
-        PostListResponse response = postService.getAllPosts(page, size);
+        Long viewerId = (principal != null) ? principal.id() : null;
+        log.info("전체 게시글 목록 조회 요청 - viewerId: {}, 페이지: {}, 크기: {}", viewerId, page, size);
+        PostListResponse response = postService.getAllPosts(viewerId, page, size);
         log.info("응답 데이터 - 게시글 수: {}, 전체: {}, 페이지: {}/{}",
                  response.getPosts() == null ? 0 : response.getPosts().size(),
                  response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements(),
@@ -130,6 +132,7 @@ public class PostController {
             description = "게시글 상태별로 목록을 조회합니다 (OPEN, CLOSED, CANCELLED)"
     )
     public ResponseEntity<PostListResponse> getPostsByStatus(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "게시글 상태 (OPEN, CLOSED, CANCELLED)", required = true)
             @PathVariable String status,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
@@ -137,8 +140,9 @@ public class PostController {
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        log.info("상태별 게시글 목록 조회 요청 - 상태: {}, 페이지: {}, 크기: {}", status, page, size);
-        PostListResponse response = postService.getPostsByStatus(status, page, size);
+        Long viewerId = (principal != null) ? principal.id() : null;
+        log.info("상태별 게시글 목록 조회 요청 - viewerId: {}, 상태: {}, 페이지: {}, 크기: {}", viewerId, status, page, size);
+        PostListResponse response = postService.getPostsByStatus(viewerId, status, page, size);
         return ResponseEntity.ok(response);
     }
 
@@ -156,6 +160,7 @@ public class PostController {
             description = "카테고리별 모집 중인 게시글 목록을 조회합니다"
     )
     public ResponseEntity<PostListResponse> getPostsByCategories(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "카테고리 코드 (4자리)", required = true, example = "0001")
             @PathVariable String categories,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
@@ -163,40 +168,31 @@ public class PostController {
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        log.info("카테고리별 게시글 목록 조회 요청 - 카테고리: {}, 페이지: {}, 크기: {}", categories, page, size);
+        Long viewerId = (principal != null) ? principal.id() : null;
+        log.info("카테고리별 게시글 목록 조회 요청 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categories, page, size);
 
         // URL 디코딩
         String decoded = URLDecoder.decode(categories, StandardCharsets.UTF_8);
 
-        // 클라이언트(예: iOS)가 배열 표현을 보낼 수 있음: ["0001","0002"] 또는 ["0001", "0002"]
-        // 또는 CSV 형태 "0001,0002" 또는 단일 값 "0001"
         try {
-            // JSON-like array 처리
             if (decoded.startsWith("[") && decoded.endsWith("]")) {
                 String inner = decoded.substring(1, decoded.length() - 1);
                 List<String> categoryList = Arrays.stream(inner.split(","))
-                        .map(s -> s.trim().replaceAll("^\"|\"$", "")) // 양쪽 큰따옴표 제거
+                        .map(s -> s.trim().replaceAll("^\"|\"$", ""))
                         .filter(s -> !s.isEmpty())
                         .collect(Collectors.toList());
-
-                // 여러 카테고리 처리 서비스 호출
-                PostListResponse response = postService.getPostsByMultipleCategories(categoryList, page, size);
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(postService.getPostsByMultipleCategories(viewerId, categoryList, page, size));
             }
 
-            // CSV 처리 (쉼표 포함)
             if (decoded.contains(",")) {
                 List<String> categoryList = Arrays.stream(decoded.split(","))
                         .map(String::trim)
                         .filter(s -> !s.isEmpty())
                         .collect(Collectors.toList());
-
-                PostListResponse response = postService.getPostsByMultipleCategories(categoryList, page, size);
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(postService.getPostsByMultipleCategories(viewerId, categoryList, page, size));
             }
 
-            // 단일 카테고리
-            PostListResponse response = postService.getPostsByCategories(decoded, page, size);
+            PostListResponse response = postService.getPostsByCategories(viewerId, decoded, page, size);
             log.info("단일 카테고리 응답 - 게시글 수: {}, 전체: {}",
                      response.getPosts() == null ? 0 : response.getPosts().size(),
                      response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements());
@@ -222,6 +218,7 @@ public class PostController {
             description = "여러 카테고리 코드를 배열로 받아 해당하는 모집 중인 게시글을 배열로 반환합니다"
     )
     public ResponseEntity<List<PostResponse>> getPostsByMultipleCategories(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "카테고리 코드 배열", required = true,
                        example = "[\"0001\", \"0003\", \"0102\", \"0105\", \"0106\"]")
             @RequestBody List<String> categoriesList,
@@ -230,9 +227,9 @@ public class PostController {
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        log.info("여러 카테고리 게시글 목록 조회 요청 - 카테고리: {}, 페이지: {}, 크기: {}", categoriesList, page, size);
-        PostListResponse response = postService.getPostsByMultipleCategories(categoriesList, page, size);
-        // 순수 배열로 반환 (페이징 정보 제외)
+        Long viewerId = (principal != null) ? principal.id() : null;
+        log.info("여러 카테고리 게시글 목록 조회 요청 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categoriesList, page, size);
+        PostListResponse response = postService.getPostsByMultipleCategories(viewerId, categoriesList, page, size);
         return ResponseEntity.ok(response.getPosts());
     }
 

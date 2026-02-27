@@ -113,16 +113,20 @@ public class PostService {
 
     /**
      * 전체 게시글 목록 조회 (페이징, 최신순)
+     * viewerId가 null이면 비로그인 상태 → 차단 필터 없이 전체 반환
      *
+     * @param viewerId 조회자 ID (nullable)
      * @param page 페이지 번호 (0부터 시작)
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getAllPosts(int page, int size) {
-        log.info("전체 게시글 목록 조회 - 페이지: {}, 크기: {}", page, size);
+    public PostListResponse getAllPosts(Long viewerId, int page, int size) {
+        log.info("전체 게시글 목록 조회 - viewerId: {}, 페이지: {}, 크기: {}", viewerId, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<GroupPost> postPage = postRepository.findAll(pageable);
+        Page<GroupPost> postPage = (viewerId != null)
+                ? postRepository.findAllExcludingBlocked(viewerId, pageable)
+                : postRepository.findAll(pageable);
 
         log.info("DB 조회 결과 - 전체 게시글 수: {}, 현재 페이지 게시글 수: {}, 총 페이지: {}",
                  postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
@@ -133,18 +137,21 @@ public class PostService {
     /**
      * 상태별 게시글 목록 조회 (마감일 오름차순)
      *
+     * @param viewerId 조회자 ID (nullable)
      * @param status 게시글 상태 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)
      * @param page 페이지 번호
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getPostsByStatus(String status, int page, int size) {
-        log.info("상태별 게시글 목록 조회 - 상태: {}, 페이지: {}, 크기: {}", status, page, size);
+    public PostListResponse getPostsByStatus(Long viewerId, String status, int page, int size) {
+        log.info("상태별 게시글 목록 조회 - viewerId: {}, 상태: {}, 페이지: {}, 크기: {}", viewerId, status, page, size);
 
         try {
             PostStatus postStatus = PostStatus.valueOf(status.toUpperCase());
             Pageable pageable = PageRequest.of(page, size);
-            Page<GroupPost> postPage = postRepository.findByStatusOrderByDeadlineAtAsc(postStatus, pageable);
+            Page<GroupPost> postPage = (viewerId != null)
+                    ? postRepository.findByStatusExcludingBlocked(viewerId, postStatus, pageable)
+                    : postRepository.findByStatusOrderByDeadlineAtAsc(postStatus, pageable);
 
             return convertToListResponse(postPage);
         } catch (IllegalArgumentException e) {
@@ -156,17 +163,19 @@ public class PostService {
     /**
      * 카테고리별 게시글 목록 조회 (모집 중만)
      *
+     * @param viewerId 조회자 ID (nullable)
      * @param categories 카테고리 코드
      * @param page 페이지 번호
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getPostsByCategories(String categories, int page, int size) {
-        log.info("카테고리별 게시글 목록 조회 - 카테고리: {}, 페이지: {}, 크기: {}", categories, page, size);
+    public PostListResponse getPostsByCategories(Long viewerId, String categories, int page, int size) {
+        log.info("카테고리별 게시글 목록 조회 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categories, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<GroupPost> postPage = postRepository.findByCategoriesAndStatusOrderByCreatedAtDesc(
-                categories, PostStatus.OPEN, pageable);
+        Page<GroupPost> postPage = (viewerId != null)
+                ? postRepository.findByCategoriesAndStatusExcludingBlocked(viewerId, categories, PostStatus.OPEN, pageable)
+                : postRepository.findByCategoriesAndStatusOrderByCreatedAtDesc(categories, PostStatus.OPEN, pageable);
 
         log.info("DB 조회 결과 - 카테고리: {}, 전체: {}, 현재 페이지: {}, 총 페이지: {}",
                  categories, postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
@@ -177,21 +186,23 @@ public class PostService {
     /**
      * 여러 카테고리로 게시글 목록 조회 (모집 중만)
      *
+     * @param viewerId 조회자 ID (nullable)
      * @param categoriesList 카테고리 코드 리스트
      * @param page 페이지 번호
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getPostsByMultipleCategories(List<String> categoriesList, int page, int size) {
-        log.info("여러 카테고리 게시글 목록 조회 - 카테고리: {}, 페이지: {}, 크기: {}", categoriesList, page, size);
+    public PostListResponse getPostsByMultipleCategories(Long viewerId, List<String> categoriesList, int page, int size) {
+        log.info("여러 카테고리 게시글 목록 조회 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categoriesList, page, size);
 
         // REGEXP 패턴 생성: "0001|0002|0003" 형태
         String categoryPattern = String.join("|", categoriesList);
         log.info("생성된 REGEXP 패턴: {}", categoryPattern);
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<GroupPost> postPage = postRepository.findByCategoriesInAndStatus(
-                categoryPattern, PostStatus.OPEN.name(), pageable);
+        Page<GroupPost> postPage = (viewerId != null)
+                ? postRepository.findByCategoriesInAndStatusExcludingBlocked(viewerId, categoryPattern, PostStatus.OPEN.name(), pageable)
+                : postRepository.findByCategoriesInAndStatus(categoryPattern, PostStatus.OPEN.name(), pageable);
 
         log.info("DB 조회 결과 - 카테고리 패턴: {}, 전체: {}, 현재 페이지: {}, 총 페이지: {}",
                  categoryPattern, postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());

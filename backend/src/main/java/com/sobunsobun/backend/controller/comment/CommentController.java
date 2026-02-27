@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -108,11 +109,13 @@ public class CommentController {
         @ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     })
     public ResponseEntity<List<CommentResponse>> getComments(
-        @PathVariable @Parameter(description = "게시글 ID") Long postId) {
+        @PathVariable @Parameter(description = "게시글 ID") Long postId,
+        @AuthenticationPrincipal JwtUserPrincipal principal) {
 
-        log.info("댓글 목록 조회 - postId: {}", postId);
+        Long viewerId = (principal != null) ? principal.id() : null;
+        log.info("댓글 목록 조회 - postId: {}, viewerId: {}", postId, viewerId);
 
-        List<CommentResponse> comments = commentService.getCommentsByPostId(postId);
+        List<CommentResponse> comments = commentService.getCommentsByPostId(postId, viewerId);
         return ResponseEntity.ok(comments);
     }
 
