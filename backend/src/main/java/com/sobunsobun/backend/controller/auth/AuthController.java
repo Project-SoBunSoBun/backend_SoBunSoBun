@@ -168,7 +168,7 @@ public class AuthController {
     @Operation(summary = "Apple 계정 연결 해제",
                description = "저장된 Apple refresh_token으로 appleid.apple.com/auth/revoke 를 호출합니다. " +
                        "Authorization: Bearer {accessToken} 헤더가 필요합니다.")
-    @PostMapping("/revoke/apple")
+    @DeleteMapping("/revoke/apple")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> revokeApple(
             @AuthenticationPrincipal JwtUserPrincipal principal) {
