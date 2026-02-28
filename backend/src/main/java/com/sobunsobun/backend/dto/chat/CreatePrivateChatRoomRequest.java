@@ -18,4 +18,7 @@ public class CreatePrivateChatRoomRequest {
 
     @Schema(description = "상대방 사용자 ID", example = "2", required = true)
     private Long otherUserId;
+
+    @Schema(description = "연결할 공동구매 게시글 ID (게시글에서 채팅 시작 시)", example = "5")
+    private Long groupPostId;
 }

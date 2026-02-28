@@ -90,4 +90,13 @@ public class ChatRoomListResponseDto {
      */
     @JsonProperty("unreadCount")
     private Long unreadCount;
+
+    /**
+     * 연결된 공동구매 게시글 ID
+     *
+     * 1:1 채팅: 게시글에서 시작된 경우 해당 게시글 ID, 그 외 null
+     * 단체 채팅: 항상 연결된 게시글 ID
+     */
+    @JsonProperty("groupPostId")
+    private Long groupPostId;
 }

@@ -112,6 +112,7 @@ public class ChatRoomService {
                                     .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
                                     .lastMessageTime(latestMessage.map(ChatMessage::getCreatedAt).orElse(null))
                                     .unreadCount(unreadCount)
+                                    .groupPostId(chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null)
                                     .build();
 
                         } catch (Exception e) {
@@ -196,14 +197,14 @@ public class ChatRoomService {
     /**
      * 개인 채팅방 생성 또는 조회
      */
-    public ChatRoom getOrCreatePrivateChatRoom(Long userId1, Long userId2) {
+    public ChatRoom getOrCreatePrivateChatRoom(Long userId1, Long userId2, Long groupPostId) {
         try {
             log.info("═════════════════════════════════════════════════════════════");
-            log.info("🔒 [개인 채팅방 생성/조회 시작] userId1: {}, userId2: {}", userId1, userId2);
+            log.info("🔒 [개인 채팅방 생성/조회 시작] userId1: {}, userId2: {}, groupPostId: {}", userId1, userId2, groupPostId);
 
             // 기존 채팅방 조회
             log.debug("🔍 [단계1] 기존 개인 채팅방 조회 중...");
-            Optional<ChatRoom> existingRoom = chatRoomRepository.findPrivateChatRoom(userId1, userId2);
+            Optional<ChatRoom> existingRoom = chatRoomRepository.findPrivateChatRoom(userId1, userId2, groupPostId);
             if (existingRoom.isPresent()) {
                 log.info("✅ [단계1 완료] 기존 개인 채팅방 발견 - roomId: {}", existingRoom.get().getId());
                 log.info("═════════════════════════════════════════════════════════════");
@@ -228,11 +229,23 @@ public class ChatRoomService {
                     });
             log.info("✅ [단계3 완료] User2 조회됨: {}", user2.getNickname());
 
+            GroupPost groupPost = null;
+            if (groupPostId != null) {
+                log.debug("🔍 [단계3-1] 게시글 조회 중... groupPostId: {}", groupPostId);
+                groupPost = groupPostRepository.findById(groupPostId)
+                        .orElseThrow(() -> {
+                            log.error("❌ [단계3-1 실패] 게시글을 찾을 수 없음: groupPostId={}", groupPostId);
+                            return new IllegalArgumentException("존재하지 않는 게시글입니다 (groupPostId: " + groupPostId + ")");
+                        });
+                log.info("✅ [단계3-1 완료] 게시글 조회됨: {}", groupPost.getTitle());
+            }
+
             log.debug("🔨 [단계4] ChatRoom 엔티티 생성 중...");
             ChatRoom chatRoom = ChatRoom.builder()
                     .name(user2.getNickname())  // 개인 채팅방은 상대방 이름으로 표시
                     .roomType(ChatRoomType.ONE_TO_ONE)
                     .owner(user1)
+                    .groupPost(groupPost)
                     .messageCount(0L)
                     .build();
             log.info("✅ [단계4 완료] ChatRoom 엔티티 생성됨");
@@ -347,11 +360,12 @@ public class ChatRoomService {
     @Transactional
     public com.sobunsobun.backend.dto.chat.CreateOneToOneRoomResponse createOrGetOneToOneRoom(
             Long myId,
-            Long targetId
+            Long targetId,
+            Long groupPostId
     ) {
         try {
             log.info("═════════════════════════════════════════════════════════════");
-            log.info("🔒 [1:1 채팅방 생성/조회 시작] myId: {}, targetId: {}", myId, targetId);
+            log.info("🔒 [1:1 채팅방 생성/조회 시작] myId: {}, targetId: {}, groupPostId: {}", myId, targetId, groupPostId);
 
             // 자신과의 채팅 방지
             if (myId.equals(targetId)) {
@@ -360,8 +374,8 @@ public class ChatRoomService {
             }
 
             // ① ChatMemberRepository를 통해 기존 1:1 채팅방 확인
-            log.debug("🔍 [단계1] 기존 1:1 채팅방 확인 중... myId: {}, targetId: {}", myId, targetId);
-            var existingRoom = chatMemberRepository.findOneToOneChatRoom(myId, targetId);
+            log.debug("🔍 [단계1] 기존 1:1 채팅방 확인 중... myId: {}, targetId: {}, groupPostId: {}", myId, targetId, groupPostId);
+            var existingRoom = chatMemberRepository.findOneToOneChatRoom(myId, targetId, groupPostId);
 
             if (existingRoom.isPresent()) {
                 log.info("✅ [단계1] 기존 1:1 채팅방 발견 - roomId: {}", existingRoom.get().getId());
@@ -401,12 +415,24 @@ public class ChatRoomService {
                     });
             log.info("✅ [단계3] 상대방 사용자 조회됨: {}", targetUser.getNickname());
 
+            GroupPost groupPost = null;
+            if (groupPostId != null) {
+                log.debug("🔍 [단계3-1] 게시글 조회 중... groupPostId: {}", groupPostId);
+                groupPost = groupPostRepository.findById(groupPostId)
+                        .orElseThrow(() -> {
+                            log.error("❌ [단계3-1 실패] 게시글을 찾을 수 없음: groupPostId={}", groupPostId);
+                            return new IllegalArgumentException("존재하지 않는 게시글입니다 (groupPostId: " + groupPostId + ")");
+                        });
+                log.info("✅ [단계3-1 완료] 게시글 조회됨: {}", groupPost.getTitle());
+            }
+
             // ③ 새로운 ChatRoom 생성 (ONE_TO_ONE 타입)
             log.debug("🔨 [단계4] ChatRoom 엔티티 생성 중...");
             ChatRoom newRoom = ChatRoom.builder()
                     .name(targetUser.getNickname())  // 1:1 채팅방은 상대방 이름으로 표시
                     .roomType(ChatRoomType.ONE_TO_ONE)
                     .owner(myUser)
+                    .groupPost(groupPost)
                     .messageCount(0L)
                     .build();
             log.info("✅ [단계4] ChatRoom 엔티티 생성됨");
@@ -797,6 +823,11 @@ public class ChatRoomService {
                                 .build())
                         .collect(Collectors.toList());
                 builder.members(memberList);
+
+                if (chatRoom.getGroupPost() != null) {
+                    builder.groupPostId(chatRoom.getGroupPost().getId());
+                    builder.groupPostTitle(chatRoom.getGroupPost().getTitle());
+                }
 
             } else {
                 // ⑥-B 단체 채팅: members 목록, groupPost 정보
