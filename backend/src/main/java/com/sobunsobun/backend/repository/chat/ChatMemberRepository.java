@@ -130,10 +130,12 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
         AND m1.status = 'ACTIVE'
         AND m2.status = 'ACTIVE'
         AND m1.chatRoom.roomType = 'ONE_TO_ONE'
+        AND ((:groupPostId IS NULL AND m1.chatRoom.groupPost IS NULL) OR m1.chatRoom.groupPost.id = :groupPostId)
     """)
     Optional<ChatRoom> findOneToOneChatRoom(
             @Param("user1Id") Long user1Id,
-            @Param("user2Id") Long user2Id
+            @Param("user2Id") Long user2Id,
+            @Param("groupPostId") Long groupPostId
     );
 
     /**

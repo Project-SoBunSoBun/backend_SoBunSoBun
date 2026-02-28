@@ -112,13 +112,14 @@ public class ChatRestController {
             log.info("📝 요청 정보 - otherUserId: {}", request.getOtherUserId());
 
             log.debug("🔄 ChatRoomService.getOrCreatePrivateChatRoom() 호출 중...");
-            ChatRoom chatRoom = chatRoomService.getOrCreatePrivateChatRoom(userId, request.getOtherUserId());
+            ChatRoom chatRoom = chatRoomService.getOrCreatePrivateChatRoom(userId, request.getOtherUserId(), request.getGroupPostId());
             log.info("✅ 채팅방 반환됨 - roomId: {}", chatRoom.getId());
 
             CreateChatRoomResponse response = CreateChatRoomResponse.builder()
                     .roomId(chatRoom.getId())
                     .roomName(chatRoom.getName())
                     .roomType(chatRoom.getRoomType().toString())
+                    .groupPostId(chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null)
                     .message("✅ 개인 채팅방 생성/조회 성공")
                     .build();
 

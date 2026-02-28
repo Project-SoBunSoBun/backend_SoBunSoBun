@@ -70,11 +70,11 @@ public class ChatRoomDetailResponse {
 
     // ====== 단체 채팅(GROUP) 전용 필드 ======
 
-    @Schema(description = "[단체] 연결된 공동구매 게시글 ID")
+    @Schema(description = "연결된 공동구매 게시글 ID (1:1 채팅: 게시글에서 시작된 경우, 단체 채팅: 항상 존재)")
     @JsonProperty("groupPostId")
     private Long groupPostId;
 
-    @Schema(description = "[단체] 연결된 공동구매 게시글 제목")
+    @Schema(description = "연결된 공동구매 게시글 제목")
     @JsonProperty("groupPostTitle")
     private String groupPostTitle;
 

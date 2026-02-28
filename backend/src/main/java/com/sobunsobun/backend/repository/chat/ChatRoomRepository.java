@@ -42,10 +42,12 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             SELECT m.chatRoom.id FROM ChatMember m
             WHERE m.user.id = :userId2 AND m.status = 'ACTIVE'
         )
+        AND ((:groupPostId IS NULL AND r.groupPost IS NULL) OR r.groupPost.id = :groupPostId)
     """)
     Optional<ChatRoom> findPrivateChatRoom(
             @Param("userId1") Long userId1,
-            @Param("userId2") Long userId2
+            @Param("userId2") Long userId2,
+            @Param("groupPostId") Long groupPostId
     );
 
     /**
