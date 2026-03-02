@@ -55,9 +55,24 @@ public class PostListResponse {
         private int totalPages;
 
         /**
+         * 첫 번째 페이지 여부
+         */
+        private boolean first;
+
+        /**
          * 마지막 페이지 여부
          */
-        private boolean isLast;
+        private boolean last;
+
+        /**
+         * 다음 페이지 존재 여부
+         */
+        private boolean hasNext;
+
+        /**
+         * 이전 페이지 존재 여부
+         */
+        private boolean hasPrevious;
     }
 }
 

@@ -370,7 +370,10 @@ public class PostService {
                         .pageSize(postPage.getSize())
                         .totalElements(postPage.getTotalElements())
                         .totalPages(postPage.getTotalPages())
-                        .isLast(postPage.isLast())
+                        .first(postPage.isFirst())
+                        .last(postPage.isLast())
+                        .hasNext(postPage.hasNext())
+                        .hasPrevious(postPage.hasPrevious())
                         .build())
                 .build();
     }
