@@ -119,10 +119,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
         log.error("[DataIntegrityViolationException] {}", e.getMessage(), e);
 
+        String message = (e.getMessage() != null && e.getMessage().toLowerCase().contains("email"))
+                ? "이미 등록된 이메일입니다."
+                : ErrorCode.DATA_INTEGRITY_VIOLATION.getMessage();
+
         ApiResponse<?> response = ApiResponse.error(
                 HttpStatus.CONFLICT.value(),
                 ErrorCode.DATA_INTEGRITY_VIOLATION.getCode(),
-                ErrorCode.DATA_INTEGRITY_VIOLATION.getMessage()
+                message
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);

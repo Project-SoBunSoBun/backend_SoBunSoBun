@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.core.env.Environment;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -372,6 +373,9 @@ public class AuthService {
                 if (e instanceof ResponseStatusException) {
                     throw e;
                 }
+                if (e instanceof DataIntegrityViolationException) {
+                    throw (DataIntegrityViolationException) e;
+                }
                 log.error("회원가입 완료 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
@@ -571,6 +575,12 @@ public class AuthService {
      */
     private User createNewUserWithAuthProvider(String email, String oauthId, String provider) {
         log.info("새 사용자 생성 시작 - 이메일: {}", email);
+
+        // 이메일 중복 사전 검증
+        if (userRepository.existsByEmail(email)) {
+            log.warn("이메일 중복 감지 - 이메일: {}", email);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 등록된 이메일입니다.");
+        }
 
         // 1. User 엔티티 생성
         User newUser = User.builder()
