@@ -117,7 +117,10 @@ public class ProfileService {
                         .pageSize(page.getSize())
                         .totalElements(page.getTotalElements())
                         .totalPages(page.getTotalPages())
-                        .isLast(page.isLast())
+                        .first(page.isFirst())
+                        .last(page.isLast())
+                        .hasNext(page.hasNext())
+                        .hasPrevious(page.hasPrevious())
                         .build())
                 .build();
     }
@@ -133,7 +136,10 @@ public class ProfileService {
                         .pageSize(page.getSize())
                         .totalElements(page.getTotalElements())
                         .totalPages(page.getTotalPages())
-                        .isLast(page.isLast())
+                        .first(page.isFirst())
+                        .last(page.isLast())
+                        .hasNext(page.hasNext())
+                        .hasPrevious(page.hasPrevious())
                         .build())
                 .build();
     }
