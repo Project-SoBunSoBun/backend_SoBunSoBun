@@ -17,4 +17,21 @@ public interface MannerReviewRepository extends JpaRepository<MannerReview, Long
     boolean existsBySenderIdAndReceiverIdAndGroupPostIdAndTagCode(
         Long senderId, Long receiverId, Long groupPostId, MannerTag tagCode
     );
+
+    /**
+     * 특정 거래에서 해당 사용자가 리뷰를 하나라도 남겼는지 확인
+     *
+     * @param senderId    리뷰 작성자 ID
+     * @param groupPostId 거래 게시글 ID
+     */
+    boolean existsBySenderIdAndGroupPostId(Long senderId, Long groupPostId);
+
+    /**
+     * 특정 거래에서 특정 사용자가 특정 상대에게 리뷰를 남겼는지 확인
+     *
+     * @param senderId    리뷰 작성자 ID
+     * @param receiverId  피평가자 ID
+     * @param groupPostId 거래 게시글 ID
+     */
+    boolean existsBySenderIdAndReceiverIdAndGroupPostId(Long senderId, Long receiverId, Long groupPostId);
 }

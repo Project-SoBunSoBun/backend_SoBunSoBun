@@ -82,6 +82,14 @@ public class ChatRoomDetailResponse {
     @JsonProperty("members")
     private List<MemberInfo> members;
 
+    @Schema(description = "정산 완료 여부 (groupPost가 없으면 null)", example = "false")
+    @JsonProperty("isSettled")
+    private Boolean isSettled;
+
+    @Schema(description = "현재 사용자의 리뷰 완료 여부 (groupPost가 없으면 null)", example = "false")
+    @JsonProperty("isReviewed")
+    private Boolean isReviewed;
+
     // ====== 멤버 정보 내부 DTO ======
 
     @Data
@@ -106,5 +114,9 @@ public class ChatRoomDetailResponse {
         @Schema(description = "방장 여부", example = "false")
         @JsonProperty("isOwner")
         private Boolean isOwner;
+
+        @Schema(description = "현재 사용자가 이 멤버에게 리뷰를 완료했는지 (자신은 null, groupPost 없으면 null)", example = "false")
+        @JsonProperty("isReviewed")
+        private Boolean isReviewed;
     }
 }
