@@ -222,7 +222,7 @@ public class PostService {
         log.info("내 게시글 목록 조회 - 사용자 ID: {}, 페이지: {}, 크기: {}", userId, page, size);
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<GroupPost> postPage = postRepository.findByOwnerIdOrderByCreatedAtDesc(userId, pageable);
+        Page<GroupPost> postPage = postRepository.findByOwnerIdAndStatusNotOrderByCreatedAtDesc(userId, PostStatus.CANCELLED, pageable);
 
         return convertToListResponse(postPage);
     }

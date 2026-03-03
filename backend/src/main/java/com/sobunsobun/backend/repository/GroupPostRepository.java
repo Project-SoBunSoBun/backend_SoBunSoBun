@@ -40,6 +40,11 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     Page<GroupPost> findByOwnerIdOrderByCreatedAtDesc(Long ownerId, Pageable pageable);
 
     /**
+     * 작성자별 게시글 조회 - 특정 상태 제외 (Pageable)
+     */
+    Page<GroupPost> findByOwnerIdAndStatusNotOrderByCreatedAtDesc(Long ownerId, PostStatus status, Pageable pageable);
+
+    /**
      * 작성자별 게시글 조회 (List - 프로필 조회용)
      * 사용자가 작성한 모든 게시글을 최신순으로 반환
      */
