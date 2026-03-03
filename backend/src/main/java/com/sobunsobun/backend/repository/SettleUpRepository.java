@@ -110,4 +110,14 @@ public interface SettleUpRepository extends JpaRepository<SettleUp, Long> {
      * 특정 게시글의 모든 정산 삭제 (게시글 삭제 시)
      */
     void deleteByGroupPostId(Long groupPostId);
+
+    /**
+     * 특정 공동구매 게시글에 특정 상태의 정산이 존재하는지 확인
+     */
+    boolean existsByGroupPostIdAndStatus(Long groupPostId, Integer status);
+
+    /**
+     * 특정 사용자가 특정 공동구매 게시글에서 정산을 완료했는지 확인
+     */
+    boolean existsByGroupPostIdAndSettledByIdAndStatus(Long groupPostId, Long settledById, Integer status);
 }

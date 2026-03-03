@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.domain.SettleUpStatus;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
@@ -14,6 +15,8 @@ import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomResponse;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.GroupPostRepository;
+import com.sobunsobun.backend.repository.MannerReviewRepository;
+import com.sobunsobun.backend.repository.SettleUpRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -43,6 +46,8 @@ public class ChatRoomService {
     private final GroupPostRepository groupPostRepository;
     private final ChatRedisService chatRedisService;
     private final ChatMessageService chatMessageService;
+    private final SettleUpRepository settleUpRepository;
+    private final MannerReviewRepository mannerReviewRepository;
 
     /**
      * 채팅방 목록 조회
@@ -785,7 +790,32 @@ public class ChatRoomService {
             // ④ 마지막 메시지
             Optional<ChatMessage> latestMessage = chatMessageRepository.findLatestMessageByRoomId(roomId);
 
-            // ⑤ 공통 빌더
+            // ⑤ 정산 완료 여부 / 리뷰 완료 여부
+            Boolean isSettled = null;
+            Boolean isReviewed = null;
+            if (chatRoom.getGroupPost() != null) {
+                Long groupPostId = chatRoom.getGroupPost().getId();
+
+                List<Long> activeMemberIds = chatRoom.getMembers().stream()
+                        .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                        .map(m -> m.getUser().getId())
+                        .collect(Collectors.toList());
+
+                // 모든 활성 멤버가 정산을 완료해야 true
+                isSettled = activeMemberIds.stream()
+                        .allMatch(memberId -> settleUpRepository
+                                .existsByGroupPostIdAndSettledByIdAndStatus(groupPostId, memberId, SettleUpStatus.SETTLED));
+
+                // 현재 사용자가 다른 모든 활성 멤버에게 리뷰를 남겨야 true
+                List<Long> otherMemberIds = activeMemberIds.stream()
+                        .filter(id -> !id.equals(userId))
+                        .collect(Collectors.toList());
+                isReviewed = otherMemberIds.isEmpty() || otherMemberIds.stream()
+                        .allMatch(receiverId -> mannerReviewRepository
+                                .existsBySenderIdAndReceiverIdAndGroupPostId(userId, receiverId, groupPostId));
+            }
+
+            // ⑥ 공통 빌더
             ChatRoomDetailResponse.ChatRoomDetailResponseBuilder builder = ChatRoomDetailResponse.builder()
                     .roomId(chatRoom.getId())
                     .roomName(chatRoom.getName())
@@ -799,10 +829,12 @@ public class ChatRoomService {
                     .unreadCount(unreadCount)
                     .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
                     .lastMessageAt(chatRoom.getLastMessageAt())
-                    .createdAt(chatRoom.getCreatedAt());
+                    .createdAt(chatRoom.getCreatedAt())
+                    .isSettled(isSettled)
+                    .isReviewed(isReviewed);
 
             if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
-                // ⑥-A 개인 채팅: roomName을 상대방 이름으로 설정
+                // ⑦-A 개인 채팅: roomName을 상대방 이름으로 설정
                 ChatMember otherMember = chatRoom.getMembers().stream()
                         .filter(m -> !m.getUser().getId().equals(userId) && m.getStatus() == ChatMemberStatus.ACTIVE)
                         .findFirst()
@@ -815,12 +847,22 @@ public class ChatRoomService {
                 // 멤버 목록 포함
                 List<ChatRoomDetailResponse.MemberInfo> memberList = chatRoom.getMembers().stream()
                         .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
-                        .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
-                                .userId(m.getUser().getId())
-                                .nickname(m.getUser().getNickname())
-                                .profileImage(m.getUser().getProfileImageUrl())
-                                .isOwner(chatRoom.isOwner(m.getUser().getId()))
-                                .build())
+                        .map(m -> {
+                            Long memberId = m.getUser().getId();
+                            Boolean memberIsReviewed = null;
+                            if (chatRoom.getGroupPost() != null && !memberId.equals(userId)) {
+                                memberIsReviewed = mannerReviewRepository
+                                        .existsBySenderIdAndReceiverIdAndGroupPostId(
+                                                userId, memberId, chatRoom.getGroupPost().getId());
+                            }
+                            return ChatRoomDetailResponse.MemberInfo.builder()
+                                    .userId(memberId)
+                                    .nickname(m.getUser().getNickname())
+                                    .profileImage(m.getUser().getProfileImageUrl())
+                                    .isOwner(chatRoom.isOwner(memberId))
+                                    .isReviewed(memberIsReviewed)
+                                    .build();
+                        })
                         .collect(Collectors.toList());
                 builder.members(memberList);
 
@@ -830,15 +872,25 @@ public class ChatRoomService {
                 }
 
             } else {
-                // ⑥-B 단체 채팅: members 목록, groupPost 정보
+                // ⑦-B 단체 채팅: members 목록, groupPost 정보
                 List<ChatRoomDetailResponse.MemberInfo> memberList = chatRoom.getMembers().stream()
                         .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
-                        .map(m -> ChatRoomDetailResponse.MemberInfo.builder()
-                                .userId(m.getUser().getId())
-                                .nickname(m.getUser().getNickname())
-                                .profileImage(m.getUser().getProfileImageUrl())
-                                .isOwner(chatRoom.isOwner(m.getUser().getId()))
-                                .build())
+                        .map(m -> {
+                            Long memberId = m.getUser().getId();
+                            Boolean memberIsReviewed = null;
+                            if (chatRoom.getGroupPost() != null && !memberId.equals(userId)) {
+                                memberIsReviewed = mannerReviewRepository
+                                        .existsBySenderIdAndReceiverIdAndGroupPostId(
+                                                userId, memberId, chatRoom.getGroupPost().getId());
+                            }
+                            return ChatRoomDetailResponse.MemberInfo.builder()
+                                    .userId(memberId)
+                                    .nickname(m.getUser().getNickname())
+                                    .profileImage(m.getUser().getProfileImageUrl())
+                                    .isOwner(chatRoom.isOwner(memberId))
+                                    .isReviewed(memberIsReviewed)
+                                    .build();
+                        })
                         .collect(Collectors.toList());
 
                 builder.members(memberList);
