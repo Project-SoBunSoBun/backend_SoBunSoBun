@@ -47,6 +47,22 @@ public class ChatInviteController {
     }
 
     /**
+     * 초대 수락
+     *
+     * PATCH /api/chat/invites/{inviteId}/accept
+     * - invitee(수신자)만 수락 가능
+     */
+    @PatchMapping("/invites/{inviteId}/accept")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ChatInviteResponse>> acceptInvite(
+            @PathVariable Long inviteId,
+            @AuthenticationPrincipal JwtUserPrincipal principal
+    ) {
+        ChatInviteResponse response = chatInviteService.acceptInvite(inviteId, principal.id());
+        return ResponseEntity.ok(ApiResponse.success(response, "초대를 수락했습니다."));
+    }
+
+    /**
      * 초대 취소 또는 거절
      *
      * PATCH /api/chat/invites/{inviteId}/cancel

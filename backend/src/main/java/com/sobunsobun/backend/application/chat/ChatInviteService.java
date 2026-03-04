@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatInvite;
+import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
@@ -39,6 +40,7 @@ public class ChatInviteService {
     private final ChatMemberRepository chatMemberRepository;
     private final ChatInviteRepository chatInviteRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatMessageService chatMessageService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
@@ -100,6 +102,63 @@ public class ChatInviteService {
         saveInviteCardMessage(chatRoom, inviter, savedInvite, expiresAt);
 
         return ChatInviteResponse.from(savedInvite);
+    }
+
+    /**
+     * 초대 수락
+     *
+     * invitee(수신자)만 수락 가능. 수락 시 채팅방 멤버로 추가되고 ENTER 시스템 메시지 발행.
+     *
+     * @param inviteId    대상 초대 ID
+     * @param requesterId 요청자 ID (현재 로그인 유저, invitee여야 함)
+     * @return 수락된 초대 정보
+     */
+    public ChatInviteResponse acceptInvite(Long inviteId, Long requesterId) {
+        // 1. 초대 조회
+        ChatInvite invite = chatInviteRepository.findById(inviteId)
+                .orElseThrow(() -> new ChatException(ErrorCode.CHAT_INVITE_NOT_FOUND));
+
+        // 2. PENDING 상태인지 확인
+        if (invite.getStatus() != ChatInviteStatus.PENDING) {
+            throw new ChatException(ErrorCode.CHAT_INVITE_NOT_PENDING);
+        }
+
+        // 3. 만료 여부 확인
+        if (invite.isExpired()) {
+            throw new ChatException(ErrorCode.CHAT_INVITE_EXPIRED);
+        }
+
+        // 4. 요청자가 invitee인지 확인
+        if (!invite.getInvitee().getId().equals(requesterId)) {
+            throw new ChatException(ErrorCode.CHAT_INVITE_ACCESS_DENIED);
+        }
+
+        // 5. 초대 수락 (status → ACCEPTED)
+        invite.accept();
+
+        // 6. 채팅방 멤버로 추가 (이미 멤버면 스킵)
+        Long roomId = invite.getChatRoom().getId();
+        if (!chatMemberRepository.isActiveMember(roomId, requesterId)) {
+            ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
+                    .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+            User invitee = invite.getInvitee();
+
+            ChatMember newMember = chatRoom.addMember(invitee);
+            chatMemberRepository.saveAndFlush(newMember);
+
+            // ENTER 시스템 메시지 발행
+            chatMessageService.publishSystemMessage(
+                    roomId,
+                    invitee,
+                    ChatMessageType.ENTER,
+                    invitee.getNickname() + "님이 입장했습니다."
+            );
+        }
+
+        log.info("[ChatInvite] 초대 수락 완료 - inviteId: {}, roomId: {}, inviteeId: {}",
+                inviteId, roomId, requesterId);
+
+        return ChatInviteResponse.from(invite);
     }
 
     /**
