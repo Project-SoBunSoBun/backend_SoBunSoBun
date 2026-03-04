@@ -1,7 +1,7 @@
 package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.GroupPost;
-import com.sobunsobun.backend.domain.SettleUpStatus;
+import com.sobunsobun.backend.domain.SettlementStatus;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
@@ -16,7 +16,7 @@ import com.sobunsobun.backend.dto.chat.CreateChatRoomResponse;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.MannerReviewRepository;
-import com.sobunsobun.backend.repository.SettleUpRepository;
+import com.sobunsobun.backend.repository.SettlementRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -46,7 +46,7 @@ public class ChatRoomService {
     private final GroupPostRepository groupPostRepository;
     private final ChatRedisService chatRedisService;
     private final ChatMessageService chatMessageService;
-    private final SettleUpRepository settleUpRepository;
+    private final SettlementRepository settlementRepository;
     private final MannerReviewRepository mannerReviewRepository;
 
     /**
@@ -801,10 +801,9 @@ public class ChatRoomService {
                         .map(m -> m.getUser().getId())
                         .collect(Collectors.toList());
 
-                // 모든 활성 멤버가 정산을 완료해야 true
-                isSettled = activeMemberIds.stream()
-                        .allMatch(memberId -> settleUpRepository
-                                .existsByGroupPostIdAndSettledByIdAndStatus(groupPostId, memberId, SettleUpStatus.SETTLED));
+                // 게시글의 정산이 COMPLETED 상태이면 true
+                isSettled = settlementRepository
+                        .existsByGroupPostIdAndStatus(groupPostId, SettlementStatus.COMPLETED);
 
                 // 현재 사용자가 다른 모든 활성 멤버에게 리뷰를 남겨야 true
                 List<Long> otherMemberIds = activeMemberIds.stream()

@@ -58,6 +58,9 @@ public enum ErrorCode {
     // 정산 관련 (7000~7099)
     SETTLEUP_NOT_FOUND("SETTLEUP_001", "정산 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INVALID_SETTLEUP_STATUS("SETTLEUP_002", "유효하지 않은 정산 상태입니다.", HttpStatus.BAD_REQUEST),
+    SETTLEUP_AMOUNT_MISMATCH("SETTLEUP_003", "참여자별 금액 합계가 총 정산 금액과 일치하지 않습니다.", HttpStatus.UNPROCESSABLE_ENTITY),
+    SETTLEUP_ACCESS_DENIED("SETTLEUP_004", "정산 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    SETTLEUP_ALREADY_COMPLETED("SETTLEUP_005", "이미 완료된 정산입니다.", HttpStatus.CONFLICT),
 
     // 채팅 관련 (8000~8099)
     CHAT_ROOM_NOT_FOUND("CHAT_001", "채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
