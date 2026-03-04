@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.application.post;
 
+import com.sobunsobun.backend.application.settleup.SettlementService;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.User;
@@ -37,6 +38,7 @@ public class PostService {
 
     private final GroupPostRepository postRepository;
     private final UserRepository userRepository;
+    private final SettlementService settlementService;
 
     /**
      * 게시글 생성
@@ -89,6 +91,9 @@ public class PostService {
         // 4. 저장
         GroupPost savedPost = postRepository.save(post);
         log.info("[사용자 작동] 게시글 생성 완료 - 게시글 ID: {}, 사용자 ID: {}", savedPost.getId(), userId);
+
+        // 5. 정산 자동 생성 (같은 트랜잭션 안에서 PENDING 상태로 생성)
+        settlementService.createForPost(savedPost);
 
         return convertToResponse(savedPost);
     }

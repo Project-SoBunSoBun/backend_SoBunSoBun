@@ -17,7 +17,6 @@ import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.UserDeviceRepository;
 import com.sobunsobun.backend.repository.PostReportRepository;
 import com.sobunsobun.backend.repository.CommentReportRepository;
-import com.sobunsobun.backend.repository.SettleUpRepository;
 import com.sobunsobun.backend.repository.BugReportRepository;
 import com.sobunsobun.backend.repository.InquiryRepository;
 import com.sobunsobun.backend.repository.NotificationRepository;
@@ -62,7 +61,6 @@ public class UserService {
     private final UserDeviceRepository userDeviceRepository;
     private final PostReportRepository postReportRepository;
     private final CommentReportRepository commentReportRepository;
-    private final SettleUpRepository settleUpRepository;
     private final BugReportRepository bugReportRepository;
     private final InquiryRepository inquiryRepository;
     private final NotificationRepository notificationRepository;
@@ -456,19 +454,14 @@ public class UserService {
                 Long postId = post.getId();
                 // 게시글에 달린 신고 삭제
                 postReportRepository.deleteByPostId(postId);
-                // 게시글에 달린 정산 삭제
-                settleUpRepository.deleteByGroupPostId(postId);
+                // 게시글에 달린 정산은 settlement 테이블 FK ON DELETE CASCADE로 자동 삭제
                 // 게시글을 저장한 내역 삭제
                 savedPostRepository.deleteByPostId(postId);
                 // 게시글에 달린 댓글의 신고 삭제 후 댓글 삭제
                 commentRepository.deleteByPostId(postId);
             }
 
-            // 3-10. 사용자가 만든 정산 삭제 (다른 사람 게시글에 생성한 정산)
-            log.debug("정산 삭제 중...");
-            settleUpRepository.deleteBySettledById(userId);
-
-            // 3-11. 저장한 게시글 삭제 (다른 사람 게시글 저장)
+            // 3-10. 저장한 게시글 삭제 (다른 사람 게시글 저장)
             log.debug("저장한 게시글 삭제 중...");
             savedPostRepository.deleteByUserId(userId);
 
