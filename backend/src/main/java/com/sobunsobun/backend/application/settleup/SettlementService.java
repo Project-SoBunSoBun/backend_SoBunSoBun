@@ -80,7 +80,7 @@ public class SettlementService {
         Pageable pageable = PageRequest.of(page, size);
 
         Page<Settlement> settlements;
-        if (status != null && !status.isBlank()) {
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
             SettlementStatus statusEnum = parseStatus(status);
             settlements = settlementRepository.findByGroupPostOwnerIdAndStatus(userId, statusEnum, pageable);
         } else {
@@ -202,7 +202,7 @@ public class SettlementService {
             return SettlementStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new SettlementException(ErrorCode.INVALID_SETTLEUP_STATUS,
-                    "status는 PENDING 또는 COMPLETED 여야 합니다.");
+                    "status는 ALL, PENDING, COMPLETED 중 하나여야 합니다.");
         }
     }
 }

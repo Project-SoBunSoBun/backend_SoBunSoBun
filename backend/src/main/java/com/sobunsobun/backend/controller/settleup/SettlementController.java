@@ -48,13 +48,13 @@ public class SettlementController extends BaseController {
     }
 
     @Operation(summary = "내 정산 목록 조회",
-               description = "status: PENDING(미완료), COMPLETED(완료), 미입력 시 전체",
+               description = "status: ALL(전체), PENDING(미완료), COMPLETED(완료), 미입력 시 전체",
                security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Page<SettlementSummaryResponse>>> getMySettlements(
             @AuthenticationPrincipal JwtUserPrincipal principal,
-            @Parameter(description = "상태 필터 (PENDING / COMPLETED)")
+            @Parameter(description = "상태 필터 (ALL / PENDING / COMPLETED)")
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
