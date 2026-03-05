@@ -34,6 +34,13 @@ public class SettlementSummaryResponse {
     @Schema(description = "참여자 수", example = "3")
     private int participantCount;
 
+    @Schema(description = "만남 장소명", example = "강남역 2번 출구")
+    private String locationName;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Seoul")
+    @Schema(description = "만남 일시")
+    private LocalDateTime meetAt;
+
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Seoul")
     @Schema(description = "생성 일시")
     private LocalDateTime createdAt;
@@ -50,6 +57,8 @@ public class SettlementSummaryResponse {
                 .status(settlement.getStatus().name())
                 .totalAmount(settlement.getTotalAmount())
                 .participantCount(settlement.getParticipants().size())
+                .locationName(settlement.getGroupPost().getLocationName())
+                .meetAt(settlement.getGroupPost().getMeetAt())
                 .createdAt(settlement.getCreatedAt())
                 .updatedAt(settlement.getUpdatedAt())
                 .build();
