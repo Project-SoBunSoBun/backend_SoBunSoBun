@@ -17,6 +17,8 @@ import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.MannerReviewRepository;
 import com.sobunsobun.backend.repository.SettlementRepository;
+import com.sobunsobun.backend.support.exception.ChatException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -730,6 +732,16 @@ public class ChatRoomService {
 
             if (!chatRoom.isMember(userId)) {
                 throw new IllegalArgumentException("채팅방 멤버가 아닙니다");
+            }
+
+            // 정산 진행 중(PENDING) 퇴장 차단
+            if (chatRoom.getGroupPost() != null) {
+                boolean settlementPending = settlementRepository.existsByGroupPostIdAndStatus(
+                        chatRoom.getGroupPost().getId(), SettlementStatus.PENDING);
+                if (settlementPending) {
+                    log.warn("[퇴장 차단] 정산 진행 중 - roomId: {}, userId: {}", roomId, userId);
+                    throw new ChatException(ErrorCode.CHAT_SETTLEMENT_IN_PROGRESS);
+                }
             }
 
             // 퇴장 전에 유저 정보 미리 조회 (제거 후에는 멤버 조회 불가)

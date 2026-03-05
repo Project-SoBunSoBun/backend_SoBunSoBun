@@ -62,4 +62,17 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
         AND r.roomType = 'GROUP'
     """)
     Optional<ChatRoom> findByGroupPostId(@Param("groupPostId") Long groupPostId);
+
+    /**
+     * 게시글 ID로 단체 채팅방 조회 + ACTIVE 멤버 fetch
+     * 정산 참여자 검증에 사용
+     */
+    @Query("""
+        SELECT DISTINCT r FROM ChatRoom r
+        LEFT JOIN FETCH r.members m
+        LEFT JOIN FETCH m.user
+        WHERE r.groupPost.id = :groupPostId
+        AND r.roomType = 'GROUP'
+    """)
+    Optional<ChatRoom> findByGroupPostIdWithMembers(@Param("groupPostId") Long groupPostId);
 }

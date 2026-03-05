@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.application.chat;
 
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.domain.SettlementStatus;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
@@ -8,6 +9,7 @@ import com.sobunsobun.backend.domain.chat.ChatMessageType;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.KickMemberResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
+import com.sobunsobun.backend.repository.SettlementRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -28,6 +30,7 @@ public class ChatMemberService {
     private final ChatMemberRepository chatMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final GroupPostRepository groupPostRepository;
+    private final SettlementRepository settlementRepository;
 
     /**
      * 방장이 특정 멤버를 강퇴시킵니다.
@@ -60,6 +63,16 @@ public class ChatMemberService {
         // 5. 대상이 ACTIVE 상태인지 확인
         if (targetMember.getStatus() != ChatMemberStatus.ACTIVE) {
             throw new ChatException(ErrorCode.CHAT_MEMBER_ALREADY_LEFT);
+        }
+
+        // 정산 진행 중(PENDING) 강퇴 차단
+        if (chatRoom.getGroupPost() != null) {
+            boolean settlementPending = settlementRepository.existsByGroupPostIdAndStatus(
+                    chatRoom.getGroupPost().getId(), SettlementStatus.PENDING);
+            if (settlementPending) {
+                log.warn("[강퇴 차단] 정산 진행 중 - roomId: {}, targetUserId: {}", roomId, targetUserId);
+                throw new ChatException(ErrorCode.CHAT_SETTLEMENT_IN_PROGRESS);
+            }
         }
 
         // 6. chat_member.status를 REVOKED로 변경 (JPA dirty checking으로 자동 저장)
