@@ -119,7 +119,7 @@ public class MannerReviewService {
                 userTagStatsRepository.upsertCount(receiverId, tag.name());
 
                 savedTagCodes.add(tag.name());
-                log.debug("매너 태그 저장 완료 - tag: {}, receiverId: {}", tag, receiverId);
+                log.debug("매너 태그 저장 완료@ - tag: {}, receiverId: {}", tag, receiverId);
             }
 
             result.put(receiverId, savedTagCodes);
