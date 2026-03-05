@@ -61,6 +61,7 @@ public enum ErrorCode {
     SETTLEUP_AMOUNT_MISMATCH("SETTLEUP_003", "참여자별 금액 합계가 총 정산 금액과 일치하지 않습니다.", HttpStatus.UNPROCESSABLE_ENTITY),
     SETTLEUP_ACCESS_DENIED("SETTLEUP_004", "정산 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     SETTLEUP_ALREADY_COMPLETED("SETTLEUP_005", "이미 완료된 정산입니다.", HttpStatus.CONFLICT),
+    SETTLEUP_PARTICIPANT_MISMATCH("SETTLEUP_006", "정산 참여자가 채팅방 활성 멤버와 일치하지 않습니다.", HttpStatus.UNPROCESSABLE_ENTITY),
 
     // 채팅 관련 (8000~8099)
     CHAT_ROOM_NOT_FOUND("CHAT_001", "채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
@@ -79,6 +80,7 @@ public enum ErrorCode {
     CHAT_CANNOT_KICK_OWNER("CHAT_014", "방장은 본인을 강퇴할 수 없습니다.", HttpStatus.BAD_REQUEST),
     CHAT_TARGET_NOT_MEMBER("CHAT_015", "대상 사용자가 채팅방 멤버가 아닙니다.", HttpStatus.NOT_FOUND),
     CHAT_MEMBER_ALREADY_LEFT("CHAT_016", "이미 퇴장한 멤버입니다.", HttpStatus.CONFLICT),
+    CHAT_SETTLEMENT_IN_PROGRESS("CHAT_017", "정산이 진행 중인 채팅방은 퇴장할 수 없습니다.", HttpStatus.FORBIDDEN),
 
     // 차단 관련 (BLOCK_001~BLOCK_003)
     BLOCK_SELF_NOT_ALLOWED("BLOCK_001", "자기 자신을 차단할 수 없습니다.", HttpStatus.BAD_REQUEST),
