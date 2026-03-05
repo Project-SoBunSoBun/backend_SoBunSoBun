@@ -17,16 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 매너 평가 서비스
  *
  * [트랜잭션 설계]
- * submitMannerReview() 하나의 @Transactional 안에서:
- *   1. MannerReview(로그) 저장
+ * submitMannerReviews() 하나의 @Transactional 안에서:
+ *   1. 각 평가 대상(receiver)마다 MannerReview(로그) 저장
  *   2. UserTagStats(통계) UPSERT
- * 두 작업이 묶여 있어, 로그는 저장됐는데 통계가 누락되는 상황이 방지됩니다.
+ * 모든 대상이 하나의 트랜잭션으로 묶여 일관성을 보장합니다.
  *
  * [통계 동기화 전략 - Best Practice]
  * Dirty Checking 방식 (find → count++ → save) 대신
@@ -47,71 +49,83 @@ public class MannerReviewService {
     private final GroupPostRepository groupPostRepository;
 
     /**
-     * 매너 평가 제출
+     * 매너 평가 제출 (여러 명 일괄 처리)
      *
      * 처리 순서:
-     * 1. 입력값 검증 (자기 자신 평가 불가, 존재하는 거래인지)
-     * 2. 각 태그에 대해 중복 체크 후 MannerReview 로그 저장
-     * 3. UserTagStats UPSERT로 통계 즉시 반영
+     * 1. 공통 검증 (거래 존재 여부, sender 존재 여부)
+     * 2. 각 대상(receiver)마다:
+     *    a. 자기 자신 평가 불가 검증
+     *    b. receiver 존재 여부 검증
+     *    c. 각 태그에 대해 중복 체크 후 MannerReview 로그 저장
+     *    d. UserTagStats UPSERT로 통계 즉시 반영
      *
-     * @param request  평가 요청 DTO
+     * @param request  평가 요청 DTO (groupPostId + reviews 목록)
      * @param senderId 평가를 남기는 현재 로그인 사용자 ID
-     * @return 실제로 저장된 태그 코드 목록 (이미 평가한 태그는 제외)
+     * @return receiverId → 실제로 저장된 태그 코드 목록 (중복 태그는 제외)
      */
     @Transactional
-    public List<String> submitMannerReview(MannerReviewRequest request, Long senderId) {
-        log.info("매너 평가 요청 - senderId: {}, receiverId: {}, postId: {}, tags: {}",
-            senderId, request.getReceiverId(), request.getGroupPostId(), request.getTagCodes());
-
-        // 자기 자신 평가 불가
-        if (senderId.equals(request.getReceiverId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "자기 자신을 평가할 수 없습니다.");
-        }
+    public Map<Long, List<String>> submitMannerReviews(MannerReviewRequest request, Long senderId) {
+        log.info("매너 평가 요청 - senderId: {}, postId: {}, 대상 수: {}",
+            senderId, request.getGroupPostId(), request.getReviews().size());
 
         User sender = userRepository.findById(senderId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        User receiver = userRepository.findById(request.getReceiverId())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "평가 대상 사용자를 찾을 수 없습니다."));
-
         GroupPost groupPost = groupPostRepository.findById(request.getGroupPostId())
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "거래 게시글을 찾을 수 없습니다."));
 
-        List<String> savedTagCodes = new ArrayList<>();
+        Map<Long, List<String>> result = new LinkedHashMap<>();
 
-        for (String tagCodeStr : request.getTagCodes()) {
-            MannerTag tag;
-            try {
-                tag = MannerTag.valueOf(tagCodeStr);
-            } catch (IllegalArgumentException e) {
-                log.warn("유효하지 않은 태그 코드 요청 - tagCode: {}", tagCodeStr);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 태그 코드입니다: " + tagCodeStr);
+        for (MannerReviewRequest.ReviewItem item : request.getReviews()) {
+            Long receiverId = item.getReceiverId();
+
+            // 자기 자신 평가 불가
+            if (senderId.equals(receiverId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "자기 자신을 평가할 수 없습니다.");
             }
 
-            // 동일 거래 + 동일 태그 중복 평가 방지 (DB UNIQUE 제약의 사전 방어)
-            if (mannerReviewRepository.existsBySenderIdAndReceiverIdAndGroupPostIdAndTagCode(
-                    senderId, request.getReceiverId(), request.getGroupPostId(), tag)) {
-                log.info("중복 태그 평가 스킵 - senderId: {}, tag: {}", senderId, tag);
-                continue;
+            User receiver = userRepository.findById(receiverId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "평가 대상 사용자를 찾을 수 없습니다. receiverId: " + receiverId));
+
+            List<String> savedTagCodes = new ArrayList<>();
+
+            for (String tagCodeStr : item.getTagCodes()) {
+                MannerTag tag;
+                try {
+                    tag = MannerTag.valueOf(tagCodeStr);
+                } catch (IllegalArgumentException e) {
+                    log.warn("유효하지 않은 태그 코드 요청 - tagCode: {}", tagCodeStr);
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 태그 코드입니다: " + tagCodeStr);
+                }
+
+                // 동일 거래 + 동일 태그 중복 평가 방지 (DB UNIQUE 제약의 사전 방어)
+                if (mannerReviewRepository.existsBySenderIdAndReceiverIdAndGroupPostIdAndTagCode(
+                        senderId, receiverId, request.getGroupPostId(), tag)) {
+                    log.info("중복 태그 평가 스킵 - senderId: {}, receiverId: {}, tag: {}", senderId, receiverId, tag);
+                    continue;
+                }
+
+                // 1단계: 리뷰 로그 저장
+                MannerReview review = MannerReview.builder()
+                    .sender(sender)
+                    .receiver(receiver)
+                    .groupPost(groupPost)
+                    .tagCode(tag)
+                    .build();
+                mannerReviewRepository.save(review);
+
+                // 2단계: 통계 UPSERT (atomic, 1쿼리)
+                userTagStatsRepository.upsertCount(receiverId, tag.name());
+
+                savedTagCodes.add(tag.name());
+                log.debug("매너 태그 저장 완료 - tag: {}, receiverId: {}", tag, receiverId);
             }
 
-            // 1단계: 리뷰 로그 저장
-            MannerReview review = MannerReview.builder()
-                .sender(sender)
-                .receiver(receiver)
-                .groupPost(groupPost)
-                .tagCode(tag)
-                .build();
-            mannerReviewRepository.save(review);
-
-            // 2단계: 통계 UPSERT (atomic, 1쿼리)
-            userTagStatsRepository.upsertCount(request.getReceiverId(), tag.name());
-
-            savedTagCodes.add(tag.name());
-            log.debug("매너 태그 저장 완료 - tag: {}, receiverId: {}", tag, request.getReceiverId());
+            result.put(receiverId, savedTagCodes);
         }
 
-        log.info("매너 평가 완료 - savedTags: {}", savedTagCodes);
-        return savedTagCodes;
+        log.info("매너 평가 완료 - senderId: {}, result: {}", senderId, result);
+        return result;
     }
 }
