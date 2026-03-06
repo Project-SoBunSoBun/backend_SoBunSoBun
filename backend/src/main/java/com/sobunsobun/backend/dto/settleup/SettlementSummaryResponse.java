@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 정산 목록 조회용 요약 응답 (참여자 상세 미포함)
@@ -34,6 +35,9 @@ public class SettlementSummaryResponse {
     @Schema(description = "참여자 수", example = "3")
     private int participantCount;
 
+    @Schema(description = "참여자 목록 (userId, nickname)")
+    private List<ParticipantInfo> participants;
+
     @Schema(description = "만남 장소명", example = "강남역 2번 출구")
     private String locationName;
 
@@ -50,17 +54,35 @@ public class SettlementSummaryResponse {
     private LocalDateTime updatedAt;
 
     public static SettlementSummaryResponse from(Settlement settlement) {
+        List<ParticipantInfo> participantInfos = settlement.getParticipants().stream()
+                .map(p -> new ParticipantInfo(p.getUser().getId(), p.getUser().getNickname()))
+                .toList();
+
         return SettlementSummaryResponse.builder()
                 .id(settlement.getId())
                 .groupPostId(settlement.getGroupPost().getId())
                 .groupPostTitle(settlement.getGroupPost().getTitle())
                 .status(settlement.getStatus().name())
                 .totalAmount(settlement.getTotalAmount())
-                .participantCount(settlement.getParticipants().size())
+                .participantCount(participantInfos.size())
+                .participants(participantInfos)
                 .locationName(settlement.getGroupPost().getLocationName())
                 .meetAt(settlement.getGroupPost().getMeetAt())
                 .createdAt(settlement.getCreatedAt())
                 .updatedAt(settlement.getUpdatedAt())
                 .build();
+    }
+
+    @Getter
+    public static class ParticipantInfo {
+        @Schema(description = "참여자 userId", example = "42")
+        private final Long userId;
+        @Schema(description = "참여자 닉네임", example = "소분이")
+        private final String nickname;
+
+        public ParticipantInfo(Long userId, String nickname) {
+            this.userId = userId;
+            this.nickname = nickname;
+        }
     }
 }
