@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatInvite;
 import com.sobunsobun.backend.domain.chat.ChatMember;
-import com.sobunsobun.backend.domain.chat.ChatMessage;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.domain.chat.ChatRoomType;
@@ -16,7 +15,6 @@ import com.sobunsobun.backend.dto.chat.ChatInviteResponse;
 import com.sobunsobun.backend.dto.chat.InviteCardPayload;
 import com.sobunsobun.backend.repository.chat.ChatInviteRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
-import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.support.exception.ChatException;
@@ -24,6 +22,7 @@ import com.sobunsobun.backend.support.exception.ErrorCode;
 import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,10 +38,10 @@ public class ChatInviteService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMemberRepository chatMemberRepository;
     private final ChatInviteRepository chatInviteRepository;
-    private final ChatMessageRepository chatMessageRepository;
     private final ChatMessageService chatMessageService;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
     /**
      * 그룹 채팅방 초대 발송
@@ -98,8 +97,13 @@ public class ChatInviteService {
         log.info("[ChatInvite] 초대 생성 완료 - inviteId: {}, roomId: {}, inviterId: {}, inviteeId: {}",
                 savedInvite.getId(), roomId, inviterId, inviteeId);
 
-        // 8. INVITE_CARD 메시지 저장
-        saveInviteCardMessage(chatRoom, inviter, savedInvite, expiresAt);
+        // 8. invitee와의 1:1 채팅방에 INVITE_CARD 메시지 저장 (invitee가 채팅에서 바로 확인)
+        Long groupPostId = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null;
+        chatMemberRepository.findOneToOneChatRoom(inviterId, inviteeId, groupPostId)
+                .ifPresentOrElse(
+                        oneToOneRoom -> saveInviteCardMessage(oneToOneRoom, chatRoom, inviter, savedInvite, expiresAt),
+                        () -> log.warn("[ChatInvite] 1:1 채팅방 없음, INVITE_CARD 저장 생략 - inviterId: {}, inviteeId: {}", inviterId, inviteeId)
+                );
 
         return ChatInviteResponse.from(savedInvite);
     }
@@ -195,10 +199,16 @@ public class ChatInviteService {
         return ChatInviteCancelResponse.from(invite);
     }
 
-    private void saveInviteCardMessage(ChatRoom chatRoom, User inviter, ChatInvite invite, LocalDateTime expiresAt) {
+    /**
+     * 1:1 채팅방에 INVITE_CARD 메시지 저장 및 브로드캐스트
+     *
+     * @param oneToOneRoom inviter↔invitee 간 1:1 채팅방 (카드를 보여줄 방)
+     * @param groupRoom    초대 대상 그룹 채팅방 (groupPostId/Title 추출용)
+     */
+    private void saveInviteCardMessage(ChatRoom oneToOneRoom, ChatRoom groupRoom, User inviter, ChatInvite invite, LocalDateTime expiresAt) {
         try {
-            Long groupPostId = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null;
-            String groupPostTitle = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getTitle() : null;
+            Long groupPostId = groupRoom.getGroupPost() != null ? groupRoom.getGroupPost().getId() : null;
+            String groupPostTitle = groupRoom.getGroupPost() != null ? groupRoom.getGroupPost().getTitle() : null;
 
             InviteCardPayload payload = InviteCardPayload.builder()
                     .inviteId(invite.getId())
@@ -212,15 +222,17 @@ public class ChatInviteService {
 
             String cardPayloadJson = objectMapper.writeValueAsString(payload);
 
-            ChatMessage message = ChatMessage.builder()
-                    .chatRoom(chatRoom)
-                    .sender(inviter)
-                    .type(ChatMessageType.INVITE_CARD)
-                    .cardPayload(cardPayloadJson)
-                    .build();
-
-            chatMessageRepository.save(message);
-            log.info("[ChatInvite] INVITE_CARD 메시지 저장 완료 - roomId: {}", chatRoom.getId());
+            // 1:1 채팅방에 저장 → invitee가 채팅에서 바로 확인 가능
+            // saveMessage()가 DB 저장 + Redis 브로드캐스트 + 채팅 목록 업데이트 일괄 처리
+            chatMessageService.saveMessage(
+                    oneToOneRoom.getId(),
+                    inviter.getId(),
+                    ChatMessageType.INVITE_CARD,
+                    null,
+                    null,
+                    cardPayloadJson
+            );
+            log.info("[ChatInvite] INVITE_CARD 저장 완료 - 1:1roomId: {}, groupRoomId: {}", oneToOneRoom.getId(), groupRoom.getId());
 
         } catch (JsonProcessingException e) {
             log.warn("[ChatInvite] INVITE_CARD payload 직렬화 실패 - inviteId: {}", invite.getId(), e);
