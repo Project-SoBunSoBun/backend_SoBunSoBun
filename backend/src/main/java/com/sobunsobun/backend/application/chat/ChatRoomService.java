@@ -251,7 +251,7 @@ public class ChatRoomService {
             ChatRoom chatRoom = ChatRoom.builder()
                     .name(user2.getNickname())  // 개인 채팅방은 상대방 이름으로 표시
                     .roomType(ChatRoomType.ONE_TO_ONE)
-                    .owner(user1)
+                    .owner(user2)
                     .groupPost(groupPost)
                     .messageCount(0L)
                     .build();
