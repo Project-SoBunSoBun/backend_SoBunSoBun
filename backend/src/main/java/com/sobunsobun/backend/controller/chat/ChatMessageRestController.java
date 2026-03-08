@@ -106,6 +106,9 @@ public class ChatMessageRestController {
             if (!chatRoom.isOwner(userId)) {
                 throw new ChatException(ErrorCode.CHAT_NOT_OWNER);
             }
+            if (chatMessageRepository.existsByChatRoomIdAndType(request.getGroupChatRoomId(), ChatMessageType.SETTLEMENT_CARD)) {
+                throw new ChatException(ErrorCode.CHAT_SETTLEMENT_ALREADY_SENT);
+            }
             cardPayload = "{\"settlementId\":" + request.getSettlementId() + "}";
             type = ChatMessageType.SETTLEMENT_CARD;
         } else if (request.getContent() == null || request.getContent().isBlank()) {
