@@ -157,6 +157,7 @@ public class ChatMessageService {
                         .readByMe(false)
                         .readCount(0)
                         .settlementId(extractSettlementId(savedMessage))
+                        .inviteId(extractInviteId(savedMessage))
                         .groupChatRoomId(chatRoom.getId().intValue())
                         .build();
 
@@ -288,6 +289,7 @@ public class ChatMessageService {
                 .createdAt(message.getCreatedAt())
                 .readByMe(readByMe)
                 .settlementId(extractSettlementId(message))
+                .inviteId(extractInviteId(message))
                 .groupChatRoomId(message.getChatRoom().getId().intValue())
                 .build();
     }
@@ -307,6 +309,25 @@ public class ChatMessageService {
             }
         } catch (Exception e) {
             log.debug("cardPayload에서 settlementId 추출 실패: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 메시지의 cardPayload에서 inviteId를 추출
+     */
+    private Long extractInviteId(ChatMessage message) {
+        if (message.getCardPayload() == null || message.getCardPayload().isBlank()) {
+            return null;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(message.getCardPayload());
+            if (node.has("inviteId") && !node.get("inviteId").isNull()) {
+                return node.get("inviteId").asLong();
+            }
+        } catch (Exception e) {
+            log.debug("cardPayload에서 inviteId 추출 실패: {}", e.getMessage());
         }
         return null;
     }
@@ -388,6 +409,7 @@ public class ChatMessageService {
                                 .createdAt(msg.getCreatedAt())
                                 .readByMe(readByMe)
                                 .settlementId(extractSettlementId(msg))
+                                .inviteId(extractInviteId(msg))
                                 .groupChatRoomId(msg.getChatRoom().getId().intValue())
                                 .build();
                     })
@@ -503,6 +525,7 @@ public class ChatMessageService {
                 .createdAt(message.getCreatedAt())
                 .readByMe(isReadByMe)
                 .settlementId(extractSettlementId(message))
+                .inviteId(extractInviteId(message))
                 .groupChatRoomId(message.getChatRoom().getId().intValue())
                 .build();
     }

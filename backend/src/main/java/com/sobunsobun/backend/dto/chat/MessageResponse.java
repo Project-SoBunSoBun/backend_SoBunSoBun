@@ -73,6 +73,11 @@ public class MessageResponse {
     private Integer settlementId;
 
     /**
+     * 초대 ID (INVITE_CARD 타입일 때)
+     */
+    private Long inviteId;
+
+    /**
      * 단체 채팅방 ID
      */
     private Integer groupChatRoomId;
