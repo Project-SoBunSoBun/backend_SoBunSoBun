@@ -2,10 +2,14 @@ package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatMessageService;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
+import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.dto.chat.MessageSendRequest;
 import com.sobunsobun.backend.dto.chat.ReadMarkRequest;
+import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
+import com.sobunsobun.backend.support.exception.ChatException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -34,6 +38,7 @@ public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatRoomRepository chatRoomRepository;
 
     /**
      * 메시지 전송
@@ -66,6 +71,15 @@ public class ChatMessageController {
                     request.getRoomId(),
                     request.getContent() != null ? request.getContent().length() : 0,
                     request.getType());
+
+            // 정산서는 방장(owner)만 발송 가능
+            if (ChatMessageType.SETTLEMENT_CARD == request.getType()) {
+                ChatRoom chatRoom = chatRoomRepository.findById(request.getRoomId())
+                        .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+                if (!chatRoom.isOwner(userId)) {
+                    throw new ChatException(ErrorCode.CHAT_NOT_OWNER);
+                }
+            }
 
             // 메시지 저장
             log.debug("💾 [단계1] ChatMessageService.saveMessage() 호출 중...");
