@@ -88,6 +88,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     void incrementReadCount(@Param("id") UUID id);
 
     /**
+     * 특정 채팅방에 특정 타입의 메시지가 존재하는지 확인
+     */
+    boolean existsByChatRoomIdAndType(Long chatRoomId, com.sobunsobun.backend.domain.chat.ChatMessageType type);
+
+    /**
      * 특정 사용자가 보낸 모든 메시지 삭제 (회원탈퇴용)
      */
     void deleteBySenderId(Long senderId);

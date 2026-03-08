@@ -6,6 +6,7 @@ import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.dto.chat.MessageSendRequest;
 import com.sobunsobun.backend.dto.chat.ReadMarkRequest;
+import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import com.sobunsobun.backend.support.exception.ChatException;
@@ -39,6 +40,7 @@ public class ChatMessageController {
     private final ChatMessageService chatMessageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     /**
      * 메시지 전송
@@ -72,12 +74,15 @@ public class ChatMessageController {
                     request.getContent() != null ? request.getContent().length() : 0,
                     request.getType());
 
-            // 정산서는 방장(owner)만 발송 가능
+            // 정산서는 방장(owner)만 발송 가능, 중복 발송 불가
             if (ChatMessageType.SETTLEMENT_CARD == request.getType()) {
                 ChatRoom chatRoom = chatRoomRepository.findById(request.getRoomId())
                         .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
                 if (!chatRoom.isOwner(userId)) {
                     throw new ChatException(ErrorCode.CHAT_NOT_OWNER);
+                }
+                if (chatMessageRepository.existsByChatRoomIdAndType(request.getRoomId(), ChatMessageType.SETTLEMENT_CARD)) {
+                    throw new ChatException(ErrorCode.CHAT_SETTLEMENT_ALREADY_SENT);
                 }
             }
 

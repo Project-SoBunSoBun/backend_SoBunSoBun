@@ -194,6 +194,17 @@ public class ChatMessageService {
                 log.warn("⚠️ [단계7 경고] 채팅 목록 업데이트 발송 실패 (메시지 저장은 완료됨): {}", e.getMessage());
             }
 
+            // 8. SETTLEMENT_CARD를 GROUP 채팅방에 보낸 경우 → 각 참여자 1:1 채팅방에도 전송
+            if (type == ChatMessageType.SETTLEMENT_CARD && chatRoom.getRoomType() == ChatRoomType.GROUP) {
+                log.debug("📨 [단계8] 참여자 1:1 채팅방에 정산서 전송 중...");
+                try {
+                    broadcastSettlementCardToPrivateRooms(chatRoom, senderId, cardPayload);
+                    log.info("✅ [단계8 성공] 참여자 1:1 정산서 전송 완료");
+                } catch (Exception e) {
+                    log.warn("⚠️ [단계8 경고] 1:1 정산서 전송 실패 (그룹 메시지는 저장됨): {}", e.getMessage());
+                }
+            }
+
             log.info("✅ [메시지 저장 및 발행 완료] roomId: {}, messageId: {}, sender: {}",
                     roomId, savedMessage.getId(), sender.getNickname());
 
@@ -613,6 +624,38 @@ public class ChatMessageService {
             log.error("❌ [시스템 메시지 발행 오류] roomId: {}, userId: {}, type: {}, error: {}",
                     roomId, user.getId(), type, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * SETTLEMENT_CARD를 그룹 채팅방 각 참여자의 1:1 채팅방에도 전송
+     *
+     * GROUP 채팅방에 정산서 발송 시 호출.
+     * 재귀 방지: 1:1 방(ONE_TO_ONE)에 저장할 때는 이 메서드가 호출되지 않음.
+     */
+    private void broadcastSettlementCardToPrivateRooms(ChatRoom groupRoom, Long ownerId, String cardPayload) {
+        Long groupPostId = groupRoom.getGroupPost() != null ? groupRoom.getGroupPost().getId() : null;
+        List<Long> memberIds = chatMemberRepository.findActiveMemberIdsByRoomId(groupRoom.getId());
+
+        for (Long memberId : memberIds) {
+            if (memberId.equals(ownerId)) continue; // 방장 본인 제외
+
+            chatMemberRepository.findOneToOneChatRoom(ownerId, memberId, groupPostId)
+                    .ifPresentOrElse(
+                            oneToOneRoom -> {
+                                try {
+                                    saveMessage(oneToOneRoom.getId(), ownerId,
+                                            ChatMessageType.SETTLEMENT_CARD, null, null, cardPayload);
+                                    log.info("[SETTLEMENT_CARD] 1:1 전송 완료 - memberId: {}, roomId: {}",
+                                            memberId, oneToOneRoom.getId());
+                                } catch (Exception e) {
+                                    log.warn("[SETTLEMENT_CARD] 1:1 전송 실패 - memberId: {}, error: {}",
+                                            memberId, e.getMessage());
+                                }
+                            },
+                            () -> log.warn("[SETTLEMENT_CARD] 1:1 채팅방 없음 - ownerId: {}, memberId: {}",
+                                    ownerId, memberId)
+                    );
         }
     }
 

@@ -81,6 +81,7 @@ public enum ErrorCode {
     CHAT_TARGET_NOT_MEMBER("CHAT_015", "대상 사용자가 채팅방 멤버가 아닙니다.", HttpStatus.NOT_FOUND),
     CHAT_MEMBER_ALREADY_LEFT("CHAT_016", "이미 퇴장한 멤버입니다.", HttpStatus.CONFLICT),
     CHAT_SETTLEMENT_IN_PROGRESS("CHAT_017", "정산이 진행 중인 채팅방은 퇴장할 수 없습니다.", HttpStatus.FORBIDDEN),
+    CHAT_SETTLEMENT_ALREADY_SENT("CHAT_018", "이미 처리된 정산입니다.", HttpStatus.CONFLICT),
 
     // 차단 관련 (BLOCK_001~BLOCK_003)
     BLOCK_SELF_NOT_ALLOWED("BLOCK_001", "자기 자신을 차단할 수 없습니다.", HttpStatus.BAD_REQUEST),
