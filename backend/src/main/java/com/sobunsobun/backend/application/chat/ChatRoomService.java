@@ -805,6 +805,7 @@ public class ChatRoomService {
             // ⑤ 정산 완료 여부 / 리뷰 완료 여부
             Boolean isSettled = null;
             Boolean isReviewed = null;
+            Long settlementId = null;
             if (chatRoom.getGroupPost() != null) {
                 Long groupPostId = chatRoom.getGroupPost().getId();
 
@@ -813,9 +814,10 @@ public class ChatRoomService {
                         .map(m -> m.getUser().getId())
                         .collect(Collectors.toList());
 
-                // 게시글의 정산이 COMPLETED 상태이면 true
-                isSettled = settlementRepository
-                        .existsByGroupPostIdAndStatus(groupPostId, SettlementStatus.COMPLETED);
+                // 게시글의 정산 ID 및 완료 여부
+                var settlement = settlementRepository.findByGroupPostId(groupPostId);
+                settlementId = settlement.map(s -> s.getId()).orElse(null);
+                isSettled = settlement.map(s -> s.getStatus() == SettlementStatus.COMPLETED).orElse(false);
 
                 // 현재 사용자가 다른 모든 활성 멤버에게 리뷰를 남겨야 true
                 List<Long> otherMemberIds = activeMemberIds.stream()
@@ -841,6 +843,7 @@ public class ChatRoomService {
                     .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
                     .lastMessageAt(chatRoom.getLastMessageAt())
                     .createdAt(chatRoom.getCreatedAt())
+                    .settlementId(settlementId)
                     .isSettled(isSettled)
                     .isReviewed(isReviewed);
 
