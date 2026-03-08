@@ -14,6 +14,9 @@ import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.security.JwtUserPrincipal;
+import com.sobunsobun.backend.support.exception.ChatException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -436,6 +439,49 @@ public class ChatRestController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.badRequest("GET_ROOM_DETAIL_FAILED", e.getMessage()));
         }
+    }
+
+    // ====== 정산서 카드 전송 API ======
+
+    /**
+     * 정산서 카드 전송 (방장 전용)
+     * 그룹 채팅방에 SETTLEMENT_CARD를 발송하고 각 참여자의 1:1 채팅방에도 자동 전달합니다.
+     */
+    @Operation(
+        summary = "정산서 카드 전송",
+        description = """
+            방장만 사용 가능합니다.
+            - 그룹 채팅방에 SETTLEMENT_CARD 메시지를 발송합니다.
+            - 각 참여자의 1:1 채팅방에도 자동으로 동일한 카드가 전송됩니다.
+            - 이미 발송한 경우 409 에러를 반환합니다.
+            """
+    )
+    @PostMapping("/rooms/{roomId}/settlement-card")
+    public ResponseEntity<?> sendSettlementCard(
+            @PathVariable Long roomId,
+            @jakarta.validation.Valid @RequestBody SendSettlementCardRequest request,
+            Authentication authentication
+    ) {
+        JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
+        Long userId = principal.id();
+        log.info("📤 [정산서 카드 전송] roomId: {}, userId: {}, settlementId: {}", roomId, userId, request.getSettlementId());
+
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId)
+                .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+        if (!chatRoom.isOwner(userId)) {
+            throw new ChatException(ErrorCode.CHAT_NOT_OWNER);
+        }
+        if (chatMessageRepository.existsByChatRoomIdAndType(roomId, ChatMessageType.SETTLEMENT_CARD)) {
+            throw new ChatException(ErrorCode.CHAT_SETTLEMENT_ALREADY_SENT);
+        }
+
+        String cardPayload = "{\"settlementId\":" + request.getSettlementId() + "}";
+        MessageResponse response = chatMessageService.saveMessage(
+                roomId, userId, ChatMessageType.SETTLEMENT_CARD, null, null, cardPayload);
+
+        log.info("✅ [정산서 카드 전송 완료] messageId: {}", response.getId());
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(com.sobunsobun.backend.dto.common.ApiResponse.success(response));
     }
 
     // ====== 메시지 관련 API ======

@@ -82,6 +82,10 @@ public class ChatRoomDetailResponse {
     @JsonProperty("members")
     private List<MemberInfo> members;
 
+    @Schema(description = "정산 ID (groupPost가 없으면 null)", example = "7")
+    @JsonProperty("settlementId")
+    private Long settlementId;
+
     @Schema(description = "정산 완료 여부 (groupPost가 없으면 null)", example = "false")
     @JsonProperty("isSettled")
     private Boolean isSettled;
