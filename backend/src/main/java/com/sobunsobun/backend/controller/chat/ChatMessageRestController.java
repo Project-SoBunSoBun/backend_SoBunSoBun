@@ -2,12 +2,16 @@ package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatMessageService;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
+import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.dto.chat.PageResponse;
 import com.sobunsobun.backend.dto.chat.SendMessageRequest;
 import com.sobunsobun.backend.dto.common.ApiResponse;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
+import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
+import com.sobunsobun.backend.support.exception.ChatException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -47,6 +51,7 @@ public class ChatMessageRestController {
     private final ChatMessageService chatMessageService;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMemberRepository chatMemberRepository;
+    private final ChatRoomRepository chatRoomRepository;
 
     // ──────────────────────────────────────────────────────────────────────────
     // POST /api/messages  —  메시지 전송
@@ -95,6 +100,12 @@ public class ChatMessageRestController {
         String cardPayload = null;
         ChatMessageType type = ChatMessageType.TEXT;
         if (request.getSettlementId() != null && !request.getSettlementId().isBlank()) {
+            // 정산서는 방장(owner)만 발송 가능
+            ChatRoom chatRoom = chatRoomRepository.findById(request.getGroupChatRoomId())
+                    .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
+            if (!chatRoom.isOwner(userId)) {
+                throw new ChatException(ErrorCode.CHAT_NOT_OWNER);
+            }
             cardPayload = "{\"settlementId\":" + request.getSettlementId() + "}";
             type = ChatMessageType.SETTLEMENT_CARD;
         }
