@@ -96,7 +96,7 @@ public class ChatMessageRestController {
         Long userId = extractUserId(authentication);
         log.info("📤 [메시지 전송 요청] userId: {}, roomId: {}", userId, request.getGroupChatRoomId());
 
-        // settlementId가 있으면 cardPayload JSON 구성
+        // settlementId가 있으면 SETTLEMENT_CARD, 없으면 TEXT (content 필수)
         String cardPayload = null;
         ChatMessageType type = ChatMessageType.TEXT;
         if (request.getSettlementId() != null && !request.getSettlementId().isBlank()) {
@@ -108,6 +108,8 @@ public class ChatMessageRestController {
             }
             cardPayload = "{\"settlementId\":" + request.getSettlementId() + "}";
             type = ChatMessageType.SETTLEMENT_CARD;
+        } else if (request.getContent() == null || request.getContent().isBlank()) {
+            throw new ChatException(ErrorCode.INVALID_REQUEST);
         }
 
         MessageResponse response = chatMessageService.saveMessage(
