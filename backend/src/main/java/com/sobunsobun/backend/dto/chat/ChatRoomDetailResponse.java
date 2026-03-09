@@ -119,8 +119,5 @@ public class ChatRoomDetailResponse {
         @JsonProperty("isOwner")
         private Boolean isOwner;
 
-        @Schema(description = "현재 사용자가 이 멤버에게 리뷰를 완료했는지 (자신은 null, groupPost 없으면 null)", example = "false")
-        @JsonProperty("isReviewed")
-        private Boolean isReviewed;
     }
 }
