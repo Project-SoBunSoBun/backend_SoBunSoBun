@@ -863,18 +863,11 @@ public class ChatRoomService {
                         .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
                         .map(m -> {
                             Long memberId = m.getUser().getId();
-                            Boolean memberIsReviewed = null;
-                            if (chatRoom.getGroupPost() != null && !memberId.equals(userId)) {
-                                memberIsReviewed = mannerReviewRepository
-                                        .existsBySenderIdAndReceiverIdAndGroupPostId(
-                                                userId, memberId, chatRoom.getGroupPost().getId());
-                            }
                             return ChatRoomDetailResponse.MemberInfo.builder()
                                     .userId(memberId)
                                     .nickname(m.getUser().getNickname())
                                     .profileImage(m.getUser().getProfileImageUrl())
                                     .isOwner(chatRoom.isOwner(memberId))
-                                    .isReviewed(memberIsReviewed)
                                     .build();
                         })
                         .collect(Collectors.toList());
@@ -891,18 +884,11 @@ public class ChatRoomService {
                         .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
                         .map(m -> {
                             Long memberId = m.getUser().getId();
-                            Boolean memberIsReviewed = null;
-                            if (chatRoom.getGroupPost() != null && !memberId.equals(userId)) {
-                                memberIsReviewed = mannerReviewRepository
-                                        .existsBySenderIdAndReceiverIdAndGroupPostId(
-                                                userId, memberId, chatRoom.getGroupPost().getId());
-                            }
                             return ChatRoomDetailResponse.MemberInfo.builder()
                                     .userId(memberId)
                                     .nickname(m.getUser().getNickname())
                                     .profileImage(m.getUser().getProfileImageUrl())
                                     .isOwner(chatRoom.isOwner(memberId))
-                                    .isReviewed(memberIsReviewed)
                                     .build();
                         })
                         .collect(Collectors.toList());

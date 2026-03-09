@@ -11,641 +11,794 @@
             padding: 20px;
             background: #f5f5f5;
         }
-        .container {
-            max-width: 500px;
+        /* ── 전체 레이아웃 ── */
+        .page-wrap {
+            max-width: 1100px;
             margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .col-chat     { flex: 1; min-width: 0; }
+        .col-list     { width: 340px; flex-shrink: 0; }
+
+        /* ── 공통 카드 ── */
+        .card {
             background: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
         }
-        h2 { margin-bottom: 20px; color: #333; }
+        h2 { margin-bottom: 16px; color: #333; font-size: 17px; }
+        h3 { color: #444; font-size: 15px; }
+
+        /* ── 폼 요소 ── */
         .control-panel {
             display: grid;
             gap: 10px;
-            margin-bottom: 20px;
             padding: 15px;
             background: #f9f9f9;
             border-radius: 5px;
+            margin-bottom: 14px;
         }
         .input-row {
             display: flex;
             gap: 10px;
             align-items: center;
         }
-        label { font-weight: bold; min-width: 100px; }
+        label { font-weight: bold; min-width: 100px; font-size: 13px; }
         input[type="number"], input[type="text"] {
             flex: 1;
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 13px;
         }
         button {
-            padding: 10px 15px;
+            padding: 9px 14px;
             background: #4CAF50;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: background 0.3s;
+            font-size: 13px;
+            transition: background 0.2s;
+            white-space: nowrap;
         }
-        button:hover { background: #45a049; }
-        button.disconnect { background: #f44336; }
-        button.disconnect:hover { background: #da190b; }
+        button:hover    { background: #45a049; }
+        button.btn-red  { background: #f44336; }
+        button.btn-red:hover  { background: #da190b; }
+        button.btn-blue { background: #2196F3; }
+        button.btn-blue:hover { background: #1976D2; }
+        button.btn-orange { background: #ff9800; }
+        button.btn-orange:hover { background: #e68900; }
+
+        /* ── 상태 표시 ── */
         #status {
             padding: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
             border-radius: 4px;
             font-weight: bold;
             text-align: center;
-        }
-        #status.connected {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        #status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        #chat-box {
-            width: 100%;
-            height: 350px;
-            border: 2px solid #ddd;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            padding: 12px;
-            background: #fafafa;
-            border-radius: 5px;
             font-size: 13px;
-            line-height: 1.6;
+        }
+        #status.connected    { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        #status.disconnected { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* ── 채팅 박스 ── */
+        #chat-box {
+            width: 100%; height: 280px;
+            border: 2px solid #ddd; overflow-y: auto;
+            margin-bottom: 12px; padding: 12px;
+            background: #fafafa; border-radius: 5px;
+            font-size: 12px; line-height: 1.6;
         }
         .msg {
-            margin-bottom: 8px;
-            padding: 6px;
+            margin-bottom: 8px; padding: 6px;
             background: white;
             border-left: 3px solid #4CAF50;
             border-radius: 3px;
         }
-        .msg-input-group {
-            display: flex;
-            gap: 10px;
-        }
+        .msg-input-group { display: flex; gap: 10px; margin-bottom: 12px; }
         #message {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
+            flex: 1; padding: 10px;
+            border: 1px solid #ddd; border-radius: 4px; font-size: 13px;
         }
-        #message:focus {
-            outline: none;
-            border-color: #4CAF50;
-            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+        #message:focus { outline: none; border-color: #4CAF50; }
+
+        /* ── 로그 박스 ── */
+        #log-box {
+            width: 100%; height: 160px;
+            border: 2px solid #ddd; overflow-y: auto;
+            padding: 10px; background: #000; color: #0f0;
+            font-family: 'Courier New', monospace; font-size: 11px;
+            line-height: 1.4; border-radius: 5px;
+        }
+
+        /* ── 로그인 섹션 ── */
+        .login-box {
+            margin-bottom: 14px; padding: 14px;
+            background: #e3f2fd; border-radius: 5px;
+        }
+        .user-box {
+            margin-bottom: 14px; padding: 14px;
+            background: #c8e6c9; border-radius: 5px;
+            font-weight: bold; color: #1b5e20; font-size: 13px;
+        }
+
+        /* ── 채팅 목록 업데이트 패널 ── */
+        .list-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .sub-status {
+            font-size: 11px; padding: 3px 8px;
+            border-radius: 10px; font-weight: bold;
+        }
+        .sub-status.on  { background: #d4edda; color: #155724; }
+        .sub-status.off { background: #f8d7da; color: #721c24; }
+
+        #chat-list-box {
+            height: 460px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #fafafa;
+            padding: 8px;
+        }
+        .list-empty {
+            text-align: center;
+            color: #aaa;
+            font-size: 12px;
+            padding: 40px 0;
+        }
+        .list-item {
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            animation: slideIn 0.2s ease;
+        }
+        .list-item.highlight {
+            border-left: 3px solid #2196F3;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .list-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .room-name   { font-weight: bold; color: #222; font-size: 13px; }
+        .room-type   {
+            font-size: 10px; padding: 2px 6px;
+            border-radius: 8px; font-weight: bold;
+        }
+        .room-type.oto { background: #e3f2fd; color: #1565C0; }
+        .room-type.grp { background: #f3e5f5; color: #6A1B9A; }
+        .list-item-body { color: #555; margin-bottom: 4px; }
+        .list-item-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #999; font-size: 11px;
+        }
+        .unread-badge {
+            background: #f44336; color: white;
+            font-size: 10px; font-weight: bold;
+            padding: 1px 6px; border-radius: 8px;
+        }
+        .unread-badge.zero { background: #bbb; }
+        .profile-row {
+            display: flex; align-items: center; gap: 6px;
+            margin-bottom: 4px;
+        }
+        .profile-img {
+            width: 28px; height: 28px;
+            border-radius: 50%; object-fit: cover;
+            border: 1px solid #ddd;
+        }
+        .profile-placeholder {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #e0e0e0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #999;
+        }
+
+        /* ── 이미지 업로드 ── */
+        .image-panel {
+            padding: 14px;
+            background: #fff3e0;
+            border-radius: 5px;
+            border: 1px solid #ffcc80;
+            margin-bottom: 12px;
+        }
+        .image-panel-title { font-weight: bold; margin-bottom: 10px; color: #e65100; font-size: 13px; }
+        #uploadProgress { display: none; margin-top: 10px; }
+        .progress-bar-wrap { background: #e0e0e0; border-radius: 4px; height: 18px; overflow: hidden; }
+        #progressBar { background: #4CAF50; height: 100%; width: 0%; transition: width 0.3s; }
+        #progressText { text-align: center; font-size: 11px; margin-top: 4px; }
+
+        /* ── Raw JSON 영역 ── */
+        .raw-toggle {
+            font-size: 11px; color: #2196F3; cursor: pointer;
+            text-decoration: underline;
+        }
+        .raw-json {
+            display: none;
+            background: #1e1e1e; color: #9cdcfe;
+            padding: 8px; border-radius: 4px;
+            font-family: monospace; font-size: 10px;
+            word-break: break-all; white-space: pre-wrap;
+            margin-top: 6px;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>🎯 소분소분 WebSocket 채팅 테스트</h2>
+<div class="page-wrap">
 
-    <!-- 로그인 영역 -->
-    <div id="loginSection" style="margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 5px;">
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <label style="font-weight: bold; min-width: 80px;">JWT 토큰:</label>
-            <input type="text" id="jwtTokenLogin" placeholder="JWT 토큰 입력..." style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-            <button onclick="loginWithToken()" style="padding: 8px 15px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">로그인</button>
-        </div>
-    </div>
+    <!-- ══════════════ 왼쪽: 채팅 테스트 ══════════════ -->
+    <div class="col-chat">
+        <div class="card">
+            <h2>🎯 소분소분 WebSocket 채팅 테스트</h2>
 
-    <!-- 사용자 정보 표시 영역 -->
-    <div id="userInfo" style="display: none; margin-bottom: 20px; padding: 15px; background: #c8e6c9; border-radius: 5px;">
-        <div style="font-weight: bold; color: #1b5e20;">
-            👋 <span id="userNickname"></span>님 안녕하세요!
-            <button onclick="logout()" style="float: right; padding: 5px 10px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">로그아웃</button>
-        </div>
-    </div>
-
-    <div id="status" class="disconnected">❌ 연결 안 됨</div>
-
-    <div class="control-panel">
-        <div class="input-row">
-            <label>채팅방 ID:</label>
-            <input type="number" id="roomId" value="1" min="1">
-        </div>
-        <div class="input-row">
-            <label>내 사용자 ID:</label>
-            <input type="number" id="senderId" value="100" min="1">
-            <span style="font-size: 12px; color: #666; white-space: nowrap;">👤 (DB의 User ID)</span>
-        </div>
-        <div class="input-row">
-            <button onclick="connect()">✅ 접속 및 방 입장</button>
-            <button class="disconnect" onclick="disconnect()">❌ 연결 끊기</button>
-        </div>
-    </div>
-
-    <div id="chat-box"></div>
-
-        <!-- 메시지 입력 영역 -->
-    <div class="msg-input-group">
-        <input type="text" id="message" placeholder="메시지 입력 후 Enter 또는 전송 클릭..." onkeypress="if(event.keyCode==13) sendMessage()">
-        <button onclick="sendMessage()">전송</button>
-    </div>
-
-    <!-- 이미지 업로드 영역 -->
-    <div style="margin-top: 10px; padding: 15px; background: #fff3e0; border-radius: 5px; border: 1px solid #ffcc80;">
-        <div style="font-weight: bold; margin-bottom: 10px; color: #e65100;">📷 이미지 전송</div>
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-            <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp"
-                   style="flex: 1; min-width: 150px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; background: white;">
-            <input type="text" id="imageMessage" placeholder="이미지와 함께 보낼 메시지 (선택)"
-                   style="flex: 2; min-width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-            <button onclick="sendImageMessage()"
-                    style="padding: 10px 20px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
-                📤 이미지 전송
-            </button>
-        </div>
-        <div style="margin-top: 8px; font-size: 11px; color: #666;">
-            💡 지원 형식: JPG, PNG, WEBP (최대 5MB)
-        </div>
-        <!-- 업로드 진행 상태 -->
-        <div id="uploadProgress" style="display: none; margin-top: 10px;">
-            <div style="background: #e0e0e0; border-radius: 4px; height: 20px; overflow: hidden;">
-                <div id="progressBar" style="background: #4CAF50; height: 100%; width: 0%; transition: width 0.3s;"></div>
+            <!-- 로그인 -->
+            <div class="login-box" id="loginSection">
+                <div class="input-row">
+                    <label>JWT 토큰:</label>
+                    <input type="text" id="jwtTokenLogin" placeholder="JWT 토큰 입력...">
+                    <button class="btn-blue" onclick="loginWithToken()">로그인</button>
+                </div>
             </div>
-            <div id="progressText" style="text-align: center; font-size: 12px; margin-top: 5px;"></div>
+
+            <!-- 유저 정보 -->
+            <div class="user-box" id="userInfo" style="display:none;">
+                👋 <span id="userNickname"></span>님 안녕하세요!
+                <button class="btn-red" onclick="logout()" style="float:right; padding:5px 10px;">로그아웃</button>
+            </div>
+
+            <div id="status" class="disconnected">❌ 연결 안 됨</div>
+
+            <!-- 접속 설정 -->
+            <div class="control-panel">
+                <div class="input-row">
+                    <label>채팅방 ID:</label>
+                    <input type="number" id="roomId" value="1" min="1">
+                </div>
+                <div class="input-row">
+                    <label>내 사용자 ID:</label>
+                    <input type="number" id="senderId" value="100" min="1">
+                    <span style="font-size:11px; color:#666; white-space:nowrap;">👤 DB User ID</span>
+                </div>
+                <div class="input-row">
+                    <button onclick="connect()">✅ 접속 및 방 입장</button>
+                    <button class="btn-red" onclick="disconnect()">❌ 연결 끊기</button>
+                </div>
+            </div>
+
+            <!-- 채팅 박스 -->
+            <div id="chat-box"><div class="list-empty">메시지가 없습니다.</div></div>
+
+            <!-- 텍스트 전송 -->
+            <div class="msg-input-group">
+                <input type="text" id="message"
+                       placeholder="메시지 입력 후 Enter 또는 전송 클릭..."
+                       onkeypress="if(event.keyCode==13) sendMessage()">
+                <button onclick="sendMessage()">전송</button>
+            </div>
+
+            <!-- 이미지 전송 -->
+            <div class="image-panel">
+                <div class="image-panel-title">📷 이미지 전송</div>
+                <div class="input-row" style="flex-wrap:wrap; gap:8px;">
+                    <input type="file" id="imageFile" accept="image/jpeg,image/png,image/webp"
+                           style="flex:1; min-width:140px; padding:5px; border:1px solid #ddd; border-radius:4px; background:white; font-size:12px;">
+                    <input type="text" id="imageMessage" placeholder="이미지 메시지 (선택)"
+                           style="flex:2; min-width:140px;">
+                    <button class="btn-orange" onclick="sendImageMessage()">📤 전송</button>
+                </div>
+                <div style="margin-top:6px; font-size:11px; color:#666;">💡 JPG / PNG / WEBP (최대 5MB)</div>
+                <div id="uploadProgress">
+                    <div class="progress-bar-wrap"><div id="progressBar"></div></div>
+                    <div id="progressText"></div>
+                </div>
+            </div>
+
+            <!-- 시스템 로그 -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <h3>📋 시스템 로그</h3>
+                    <button class="btn-orange" onclick="clearLogs()" style="padding:5px 10px;">로그 지우기</button>
+                </div>
+                <div id="log-box"></div>
+            </div>
         </div>
     </div>
 
-    <!-- 로그 영역 -->
-    <div style="margin-top: 20px; border-top: 2px solid #ccc; padding-top: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h3 style="margin: 0;">📋 시스템 로그</h3>
-            <button onclick="clearLogs()" style="padding: 5px 10px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer;">로그 지우기</button>
+    <!-- ══════════════ 오른쪽: 채팅 목록 업데이트 ══════════════ -->
+    <div class="col-list">
+        <div class="card">
+            <div class="list-panel-header">
+                <h2 style="margin:0;">📋 채팅 목록 업데이트</h2>
+                <span class="sub-status off" id="listSubStatus">● 미구독</span>
+            </div>
+
+            <div style="font-size:12px; color:#666; margin-bottom:10px; background:#f0f4ff; padding:8px; border-radius:4px;">
+                구독 채널:<br>
+                <code style="font-size:11px; color:#1565C0;">/sub/users/<strong id="subUserId">?</strong>/chat-rooms</code>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+                <button class="btn-red" onclick="clearListEvents()" style="padding:5px 10px; font-size:12px;">목록 지우기</button>
+            </div>
+
+            <div id="chat-list-box">
+                <div class="list-empty" id="listEmpty">
+                    연결 후 새 메시지가 발생하면<br>여기에 실시간으로 표시됩니다.
+                </div>
+            </div>
+
+            <!-- 이벤트 카운터 -->
+            <div style="margin-top:10px; font-size:12px; color:#666; text-align:right;">
+                수신 이벤트: <strong id="eventCount">0</strong>건
+            </div>
         </div>
-        <div id="log-box" style="width: 100%; height: 200px; border: 2px solid #ddd; overflow-y: auto; padding: 10px; background: #000; color: #0f0; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.4; border-radius: 5px;"></div>
+
+        <!-- 구독 채널 안내 -->
+        <div class="card" style="font-size:12px; color:#555; line-height:1.8;">
+            <h3 style="margin-bottom:10px;">📡 현재 구독 채널</h3>
+            <div id="subscriptionList" style="font-family:monospace; font-size:11px; color:#1565C0; line-height:2;">
+                <div style="color:#aaa;">접속 후 표시됩니다.</div>
+            </div>
+        </div>
     </div>
-</div>
+
+</div><!-- /page-wrap -->
 
 <script>
     let stompClient = null;
     let currentJwtToken = null;
     let currentUser = null;
-    let currentRoomId = null;  // ✅ 전역 변수 추가
-    let currentSenderId = null;  // ✅ 전역 변수 추가
-    let displayedMessageIds = new Set();  // ✅ 이미 표시된 메시지 ID 추적 (중복 방지)
+    let currentRoomId = null;
+    let currentSenderId = null;
+    let displayedMessageIds = new Set();
+    let listEventCount = 0;
 
-    /**
-     * JWT 토큰으로 로그인하고 사용자 정보 조회
-     */
+    // ─────────────────────────────────────────────
+    // 로그인 / 로그아웃
+    // ─────────────────────────────────────────────
+
     function loginWithToken() {
         const jwtToken = document.getElementById('jwtTokenLogin').value.trim();
+        if (!jwtToken) { alert('JWT 토큰을 입력해주세요'); return; }
 
-        if (!jwtToken) {
-            alert('JWT 토큰을 입력해주세요');
-            return;
-        }
-
-        appendLog('🔐 로그인 시도: ' + jwtToken.substring(0, 30) + '...');
-
-        // /api/me 엔드포인트 호출하여 사용자 정보 조회
-        // 현재 페이지의 호스트를 사용
+        appendLog('🔐 로그인 시도...');
         const apiUrl = window.location.protocol + '//' + window.location.host + '/api/me';
-        appendLog('📡 API 호출: ' + apiUrl);
 
         fetch(apiUrl, {
             method: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + jwtToken,
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Authorization': 'Bearer ' + jwtToken }
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('로그인 실패: ' + response.status);
-            }
-            return response.json();
-        })
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => {
-            // 로그인 성공
             currentJwtToken = jwtToken;
             currentUser = data;
-
             appendLog('✅ 로그인 성공: userId=' + data.id + ', nickname=' + data.nickname);
-            appendMessage('시스템', '✅ 로그인 성공! 닉네임: ' + data.nickname, 'darkgreen');
+            appendChatMsg('시스템', '✅ 로그인 성공! 닉네임: ' + data.nickname, 'darkgreen');
 
-            // UI 업데이트
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('userInfo').style.display = 'block';
             document.getElementById('userNickname').innerText = data.nickname;
-
-            // 사용자 ID 자동 설정 (선택사항)
             document.getElementById('senderId').value = data.id;
+            document.getElementById('subUserId').innerText = data.id;
         })
-        .catch(error => {
-            appendLog('❌ 로그인 실패: ' + error.message);
-            appendMessage('시스템', '❌ 로그인 실패: ' + error.message, 'red');
+        .catch(err => {
+            appendLog('❌ 로그인 실패: ' + err.message);
+            appendChatMsg('시스템', '❌ 로그인 실패: ' + err.message, 'red');
         });
     }
 
-    /**
-     * 로그아웃
-     */
     function logout() {
         currentJwtToken = null;
         currentUser = null;
+        if (stompClient && stompClient.connected) disconnect();
 
-        // 연결된 경우 연결 해제
-        if (stompClient && stompClient.connected) {
-            disconnect();
-        }
-
-        // UI 업데이트
         document.getElementById('loginSection').style.display = 'block';
         document.getElementById('userInfo').style.display = 'none';
         document.getElementById('jwtTokenLogin').value = '';
+        document.getElementById('subUserId').innerText = '?';
 
-        appendMessage('시스템', '👋 로그아웃 했습니다.', 'orange');
-        log.info('로그아웃 완료');
+        appendLog('로그아웃 완료');
+        appendChatMsg('시스템', '👋 로그아웃 했습니다.', 'orange');
     }
 
+    // ─────────────────────────────────────────────
+    // WebSocket 연결
+    // ─────────────────────────────────────────────
+
     function connect() {
-        // 로그인 확인
         if (!currentJwtToken) {
             alert('먼저 로그인해주세요');
-            appendMessage('시스템', '❌ 로그인이 필요합니다', 'red');
             return;
         }
 
-        currentRoomId = document.getElementById('roomId').value;  // ✅ 전역 변수에 할당
-        currentSenderId = document.getElementById('senderId').value;  // ✅ 전역 변수에 할당
+        currentRoomId   = document.getElementById('roomId').value;
+        currentSenderId = document.getElementById('senderId').value;
 
-        appendMessage('시스템', '✏️ 연결 시도 중...', 'orange');
+        document.getElementById('subUserId').innerText = currentSenderId;
 
-        // WebSocket URL 동적 생성 (현재 페이지의 호스트 사용)
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = protocol + '//' + window.location.host + '/ws-stomp';
-        appendLog('🔌 WebSocket 연결 시도: ' + wsUrl);
+        const wsUrl    = protocol + '//' + window.location.host + '/ws-stomp';
 
-        // 1. STOMP 클라이언트 설정
-        const clientConfig = {
+        appendLog('🔌 WebSocket 연결 시도: ' + wsUrl);
+        appendChatMsg('시스템', '✏️ 연결 시도 중...', 'orange');
+
+        stompClient = new StompJs.Client({
             brokerURL: wsUrl,
-            connectHeaders: {
-                'Authorization': 'Bearer ' + currentJwtToken
-            },
-            debug: function (str) {
-                console.log('[STOMP DEBUG] ' + str);
-                appendLog('STOMP: ' + str);
-            },
+            connectHeaders: { 'Authorization': 'Bearer ' + currentJwtToken },
+            debug: (str) => { console.log('[STOMP]', str); appendLog('STOMP: ' + str); },
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
-        };
+        });
 
-        appendLog('🔐 JWT 토큰 적용: ' + currentUser.nickname);
-
-        stompClient = new StompJs.Client(clientConfig);
-
-        stompClient.onConnect = function (frame) {
-            console.log('✅ 연결 성공: ' + frame);
+        stompClient.onConnect = function(frame) {
             updateStatus(true);
-            appendMessage('시스템', '✅ 서버에 연결되었습니다! (방 번호: ' + currentRoomId + ')', 'darkgreen');
             appendLog('✅ WebSocket 연결 성공');
+            appendChatMsg('시스템', '✅ 서버에 연결되었습니다! (방: ' + currentRoomId + ')', 'darkgreen');
 
-            // 2. 채팅방 구독 (Subscribe)
-            const destination = '/topic/chat/room/' + currentRoomId;  // ✅ /topic으로 변경
-            console.log('📡 구독 시작: ' + destination);
-            appendLog('📡 구독 시작: ' + destination);
-            appendMessage('시스템', '📡 구독 중: ' + destination, 'blue');
+            // ① 채팅방 메시지 구독 (/topic/rooms/{roomId})
+            const roomDest = '/topic/rooms/' + currentRoomId;
+            stompClient.subscribe(roomDest, onChatRoomMessage);
+            appendLog('📡 구독: ' + roomDest);
 
-            stompClient.subscribe(destination, function (chatMessage) {
-                try {
-                    appendLog('📥 WebSocket 메시지 도착!');
-                    console.log('📥 Raw message:', chatMessage);
+            // ② 채팅 목록 업데이트 구독 (/sub/users/{userId}/chat-rooms)
+            const listDest = '/sub/users/' + currentSenderId + '/chat-rooms';
+            stompClient.subscribe(listDest, onChatListUpdate);
+            appendLog('📡 구독: ' + listDest);
+            setListSubStatus(true);
 
-                    const data = JSON.parse(chatMessage.body);
-                    console.log('📨 파싱된 메시지:', data);
-                    appendLog('📨 파싱 성공: ' + JSON.stringify(data));
-
-                    // ✅ 중복 메시지 체크 (messageId 기반)
-                    const messageId = data.messageId || data.id;
-                    if (messageId && displayedMessageIds.has(messageId)) {
-                        appendLog('⚠️ 중복 메시지 무시: messageId=' + messageId);
-                        return;  // 이미 표시된 메시지면 무시
-                    }
-                    if (messageId) {
-                        displayedMessageIds.add(messageId);
-                    }
-
-                    const messageContent = data.message || data.content;  // ✅ message와 content 모두 지원
-                    const isMyMsg = String(data.senderId) === String(currentSenderId);  // ✅ currentSenderId 사용
-                    const senderName = data.nickname || data.senderName || data.senderId;  // ✅ nickname 우선 사용
-                    const imageUrl = data.imageUrl || null;  // ✅ 이미지 URL
-
-                    appendLog('👤 발송자: ' + senderName + ', 타입: ' + (data.type || 'TEXT') + ', msgId: ' + messageId);
-
-                    // 이미지 메시지인 경우
-                    if (data.type === 'IMAGE' && imageUrl) {
-                        appendLog('📸 이미지 메시지 수신: ' + imageUrl);
-                        appendMessage(senderName, messageContent, isMyMsg ? 'blue' : 'green', imageUrl);
-                    } else {
-                        appendMessage(senderName, messageContent, isMyMsg ? 'blue' : 'green');
-                    }
-
-                    appendLog('✅ 메시지 표시 완료!');
-                } catch (e) {
-                    console.error('❌ 메시지 파싱 오류:', e);
-                    appendLog('❌ 메시지 파싱 오류: ' + e.message);
-                    appendLog('❌ Raw body: ' + chatMessage.body);
-                    appendMessage('오류', '메시지 파싱 오류: ' + e.message, 'red');
-                }
-            });
-
-            // (선택) 입장 메시지 발송 - 비활성화 (DB에 저장하지 않음)
-            // sendEnterMessage(currentRoomId, currentSenderId);
+            // 구독 채널 목록 표시
+            updateSubscriptionList([roomDest, listDest]);
         };
 
-        stompClient.onStompError = function (frame) {
-            console.error('❌ STOMP 에러:', frame);
-            appendLog('❌ STOMP 에러: ' + (frame.headers['message'] || frame));
-            appendMessage('에러', 'STOMP 에러: ' + (frame.headers['message'] || frame), 'red');
+        stompClient.onStompError = function(frame) {
+            appendLog('❌ STOMP 에러: ' + (frame.headers['message'] || JSON.stringify(frame)));
+            appendChatMsg('에러', 'STOMP 에러: ' + (frame.headers['message'] || ''), 'red');
         };
 
-        stompClient.onWebSocketError = function (event) {
-            console.error('❌ WebSocket 에러:', event);
-            appendLog('❌ WebSocket 에러 발생');
-            appendMessage('에러', 'WebSocket 연결 실패!', 'red');
+        stompClient.onWebSocketError = function() {
+            appendLog('❌ WebSocket 연결 실패');
+            appendChatMsg('에러', 'WebSocket 연결 실패!', 'red');
         };
 
-        stompClient.onDisconnect = function (frame) {
-            console.log('⚠️ 연결 해제:', frame);
+        stompClient.onDisconnect = function() {
             appendLog('⚠️ 연결 해제됨');
-            appendMessage('시스템', '⚠️ 서버 연결이 끊어졌습니다.', 'red');
+            appendChatMsg('시스템', '⚠️ 서버 연결이 끊어졌습니다.', 'red');
             updateStatus(false);
+            setListSubStatus(false);
+            updateSubscriptionList([]);
         };
 
-        console.log('🔌 WebSocket 활성화 중...');
-        appendLog('🔌 WebSocket 활성화 중...');
         stompClient.activate();
     }
 
     function disconnect() {
-        if (stompClient !== null && stompClient.connected) {
+        if (stompClient && stompClient.connected) {
             stompClient.deactivate();
             updateStatus(false);
-            displayedMessageIds.clear();  // ✅ 메시지 ID 초기화
-            appendMessage('시스템', '✂️ 연결이 끊어졌습니다.', 'red');
+            setListSubStatus(false);
+            displayedMessageIds.clear();
+            updateSubscriptionList([]);
+            appendChatMsg('시스템', '✂️ 연결이 끊어졌습니다.', 'red');
         } else {
-            appendMessage('시스템', '❌ 연결된 상태가 아닙니다.', 'red');
+            appendChatMsg('시스템', '❌ 연결된 상태가 아닙니다.', 'red');
         }
     }
+
+    // ─────────────────────────────────────────────
+    // ① 채팅방 메시지 수신 핸들러
+    // ─────────────────────────────────────────────
+
+    function onChatRoomMessage(frame) {
+        try {
+            appendLog('📥 채팅 메시지 수신');
+            const data = JSON.parse(frame.body);
+
+            const messageId = data.messageId || data.id;
+            if (messageId && displayedMessageIds.has(messageId)) {
+                appendLog('⚠️ 중복 메시지 무시: ' + messageId);
+                return;
+            }
+            if (messageId) displayedMessageIds.add(messageId);
+
+            const content    = data.message || data.content;
+            const isMyMsg    = String(data.senderId) === String(currentSenderId);
+            const senderName = data.nickname || data.senderName || data.senderId;
+            const imageUrl   = data.imageUrl || null;
+
+            if (data.type === 'IMAGE' && imageUrl) {
+                appendChatMsg(senderName, content, isMyMsg ? 'blue' : 'green', imageUrl);
+            } else {
+                appendChatMsg(senderName, content, isMyMsg ? 'blue' : 'green');
+            }
+        } catch(e) {
+            appendLog('❌ 채팅 메시지 파싱 오류: ' + e.message);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // ② 채팅 목록 업데이트 수신 핸들러 (CHAT_LIST_UPDATE)
+    // ─────────────────────────────────────────────
+
+    function onChatListUpdate(frame) {
+        try {
+            appendLog('📋 채팅 목록 업데이트 수신');
+            const payload = JSON.parse(frame.body);
+
+            if (payload.type !== 'CHAT_LIST_UPDATE') {
+                appendLog('⚠️ 알 수 없는 타입: ' + payload.type);
+                return;
+            }
+
+            appendLog('  roomId=' + payload.roomId
+                    + ' roomName=' + payload.roomName
+                    + ' unread=' + payload.unreadCount);
+
+            renderListEvent(payload, frame.body);
+        } catch(e) {
+            appendLog('❌ 채팅 목록 파싱 오류: ' + e.message);
+        }
+    }
+
+    function renderListEvent(p, rawJson) {
+        // 빈 안내 문구 제거
+        const empty = document.getElementById('listEmpty');
+        if (empty) empty.remove();
+
+        listEventCount++;
+        document.getElementById('eventCount').innerText = listEventCount;
+
+        const box = document.getElementById('chat-list-box');
+        const item = document.createElement('div');
+        item.className = 'list-item highlight';
+
+        const isOTO  = p.roomType === 'ONE_TO_ONE';
+        const typeLabel = isOTO
+            ? '<span class="room-type oto">1:1</span>'
+            : '<span class="room-type grp">GROUP</span>';
+
+        const badge = p.unreadCount > 0
+            ? `<span class="unread-badge">${p.unreadCount}</span>`
+            : `<span class="unread-badge zero">0</span>`;
+
+        const profileHtml = p.profileImageUrl
+            ? `<img class="profile-img" src="${p.profileImageUrl}" onerror="this.style.display='none'">`
+            : `<div class="profile-placeholder">👤</div>`;
+
+        const timeStr = p.lastMessageAt
+            ? new Date(p.lastMessageAt).toLocaleTimeString('ko-KR')
+            : '';
+
+        const itemId = 'raw-' + Date.now();
+
+        item.innerHTML = `
+            <div class="list-item-header">
+                <div class="profile-row">
+                    ${profileHtml}
+                    <span class="room-name">${escHtml(p.roomName || '(이름없음)')}</span>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    ${typeLabel}
+                    ${badge}
+                </div>
+            </div>
+            <div class="list-item-body">
+                💬 ${escHtml(p.lastMessage || '(메시지 없음)')}
+            </div>
+            <div class="list-item-footer">
+                <span>방 ID: <strong>${p.roomId}</strong></span>
+                <span>${timeStr}</span>
+            </div>
+            <div style="margin-top:6px;">
+                <span class="raw-toggle" onclick="toggleRaw('${itemId}')">▶ Raw JSON 보기</span>
+                <pre class="raw-json" id="${itemId}">${escHtml(JSON.stringify(JSON.parse(rawJson), null, 2))}</pre>
+            </div>
+        `;
+
+        // 최신 이벤트가 맨 위에
+        box.insertBefore(item, box.firstChild);
+        box.scrollTop = 0;
+    }
+
+    function toggleRaw(id) {
+        const el = document.getElementById(id);
+        const toggle = el.previousElementSibling;
+        if (el.style.display === 'block') {
+            el.style.display = 'none';
+            toggle.innerText = '▶ Raw JSON 보기';
+        } else {
+            el.style.display = 'block';
+            toggle.innerText = '▼ Raw JSON 닫기';
+        }
+    }
+
+    function clearListEvents() {
+        document.getElementById('chat-list-box').innerHTML =
+            '<div class="list-empty" id="listEmpty">목록이 초기화되었습니다.</div>';
+        listEventCount = 0;
+        document.getElementById('eventCount').innerText = '0';
+    }
+
+    // ─────────────────────────────────────────────
+    // 메시지 전송
+    // ─────────────────────────────────────────────
 
     function sendMessage() {
         if (!stompClient || !stompClient.connected) {
-            alert("❌ 먼저 접속해주세요!");
-            appendMessage('시스템', '❌ 서버에 연결되지 않았습니다.', 'red');
-            return;
+            alert('먼저 접속해주세요!'); return;
         }
+        const input = document.getElementById('message');
+        const text  = input.value.trim();
+        if (!text) { alert('메시지를 입력해주세요!'); return; }
 
-        const msgInput = document.getElementById('message');
-        const messageText = msgInput.value.trim();
-
-        if (!messageText) {
-            alert("❌ 메시지를 입력해주세요!");
-            return;
-        }
-
-        // 3. 메시지 발행 (Publish)
-        const chatMessage = {
-            type: 'TEXT',
-            roomId: Number(currentRoomId),  // ✅ currentRoomId 사용
-            content: messageText
-        };
-
-        console.log('📤 메시지 발송 정보:');
-        console.log('  - 목표 경로: /app/chat/send');
-        console.log('  - 메시지 객체:', chatMessage);
-        appendLog('📤 메시지 발송: ' + messageText);
+        const payload = { type: 'TEXT', roomId: Number(currentRoomId), content: text };
+        appendLog('📤 전송: ' + text);
 
         try {
-            console.log('🚀 stompClient.publish() 호출');
-            appendLog('🚀 stompClient.publish() 호출');
-            stompClient.publish({
-                destination: '/app/chat/send',
-                body: JSON.stringify(chatMessage)
-            });
-            console.log('✅ stompClient.publish() 완료');
-            appendLog('✅ stompClient.publish() 완료');
-            msgInput.value = '';
-        } catch (e) {
-            console.error('❌ 메시지 발송 오류:', e);
-            appendLog('❌ 메시지 발송 오류: ' + e.message);
-            appendMessage('오류', '메시지 발송 실패: ' + e.message, 'red');
+            stompClient.publish({ destination: '/app/chat/send', body: JSON.stringify(payload) });
+            input.value = '';
+        } catch(e) {
+            appendLog('❌ 전송 오류: ' + e.message);
         }
     }
 
-    function sendEnterMessage(roomId, senderId) {
-        const chatMessage = {
-            type: 'ENTER',
-            roomId: Number(roomId),
-            content: '채팅방에 입장했습니다.'  // ✅ "message"에서 "content"로 변경
-        };
+    // ─────────────────────────────────────────────
+    // 이미지 전송
+    // ─────────────────────────────────────────────
 
-        console.log('📤 입장 메시지 발송:', chatMessage);
-        try {
-            stompClient.publish({
-                destination: '/app/chat/send',
-                body: JSON.stringify(chatMessage)
-            });
-        } catch (e) {
-            console.error('❌ 입장 메시지 발송 오류:', e);
-        }
-    }
-
-    function appendMessage(sender, message, color, imageUrl = null) {
-        const chatBox = document.getElementById('chat-box');
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'msg';
-        msgDiv.style.color = color;
-        msgDiv.style.fontSize = '12px';
-
-        // 이미지가 있는 경우
-        if (imageUrl) {
-            const timestamp = new Date().toLocaleTimeString();
-            msgDiv.innerHTML = `
-                <div>[${timestamp}] [${sender}]</div>
-                <img src="${imageUrl}" style="max-width: 200px; max-height: 200px; margin: 5px 0; border-radius: 5px; cursor: pointer;"
-                     onclick="window.open('${imageUrl}', '_blank')" title="클릭하여 원본 보기">
-                ${message ? `<div>${message}</div>` : ''}
-            `;
-        } else {
-            msgDiv.innerText = `[${new Date().toLocaleTimeString()}] [${sender}] ${message}`;
-        }
-
-        chatBox.appendChild(msgDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function appendLog(message) {
-        const logBox = document.getElementById('log-box');
-        const logDiv = document.createElement('div');
-        const timestamp = new Date().toLocaleTimeString();
-        logDiv.innerText = `[${timestamp}] ${message}`;
-        logDiv.style.color = '#0f0';  // 초록색
-        logBox.appendChild(logDiv);
-        logBox.scrollTop = logBox.scrollHeight;
-    }
-
-    function clearLogs() {
-        const logBox = document.getElementById('log-box');
-        logBox.innerHTML = '';
-        appendLog('로그가 초기화되었습니다.');
-    }
-
-    function updateStatus(connected) {
-        const statusDiv = document.getElementById('status');
-        if (connected) {
-            statusDiv.className = 'connected';
-            statusDiv.innerText = '✅ 연결됨';
-        } else {
-            statusDiv.className = 'disconnected';
-            statusDiv.innerText = '❌ 연결 안 됨';
-        }
-    }
-
-    /**
-     * 이미지 메시지 전송 (FormData + multipart/form-data)
-     */
     async function sendImageMessage() {
-        // 로그인 확인
-        if (!currentJwtToken) {
-            alert('먼저 로그인해주세요');
-            appendMessage('시스템', '❌ 로그인이 필요합니다', 'red');
-            return;
-        }
+        if (!currentJwtToken) { alert('먼저 로그인해주세요'); return; }
+        if (!currentRoomId)   { alert('먼저 채팅방에 접속해주세요'); return; }
 
-        // 채팅방 연결 확인
-        if (!currentRoomId) {
-            alert('먼저 채팅방에 접속해주세요');
-            appendMessage('시스템', '❌ 채팅방에 접속해주세요', 'red');
-            return;
-        }
+        const file = document.getElementById('imageFile').files[0];
+        if (!file) { alert('이미지를 선택해주세요'); return; }
 
-        const fileInput = document.getElementById('imageFile');
-        const messageInput = document.getElementById('imageMessage');
-        const file = fileInput.files[0];
-        const message = messageInput.value.trim() || null;
+        const allowed = ['image/jpeg','image/png','image/webp'];
+        if (!allowed.includes(file.type)) { alert('JPG/PNG/WEBP만 가능합니다'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('파일 크기가 5MB를 초과합니다'); return; }
 
-        // 파일 선택 확인
-        if (!file) {
-            alert('이미지를 선택해주세요');
-            appendMessage('시스템', '❌ 이미지 파일을 선택해주세요', 'red');
-            return;
-        }
-
-        // 파일 타입 검증
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-        if (!allowedTypes.includes(file.type)) {
-            alert('지원하지 않는 이미지 형식입니다. (jpg/png/webp만 가능)');
-            appendMessage('시스템', '❌ 지원하지 않는 이미지 형식입니다', 'red');
-            return;
-        }
-
-        // 파일 크기 검증 (5MB)
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-            alert('파일 크기가 5MB를 초과합니다');
-            appendMessage('시스템', '❌ 파일 크기가 5MB를 초과합니다', 'red');
-            return;
-        }
-
-        // 진행 상태 표시
+        const msg = document.getElementById('imageMessage').value.trim() || null;
         const progressDiv = document.getElementById('uploadProgress');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
+
         progressDiv.style.display = 'block';
         progressBar.style.width = '0%';
         progressText.innerText = '업로드 준비 중...';
 
-        appendLog('📤 이미지 업로드 시작: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + 'KB)');
-        appendMessage('시스템', '📤 이미지 업로드 중...', 'orange');
+        appendLog('📤 이미지 업로드: ' + file.name + ' (' + (file.size/1024).toFixed(1) + 'KB)');
 
-        try {
-            // FormData 생성
-            const formData = new FormData();
-            formData.append('image', file);
-            if (message) {
-                formData.append('message', message);
+        const formData = new FormData();
+        formData.append('image', file);
+        if (msg) formData.append('message', msg);
+
+        const apiUrl = window.location.protocol + '//' + window.location.host
+                     + '/api/v1/chat/rooms/' + currentRoomId + '/images';
+
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable) {
+                const pct = Math.round(e.loaded / e.total * 100);
+                progressBar.style.width = pct + '%';
+                progressText.innerText = '업로드 중... ' + pct + '%';
             }
-
-            // API URL 생성
-            const apiUrl = window.location.protocol + '//' + window.location.host +
-                           '/api/v1/chat/rooms/' + currentRoomId + '/images';
-
-            appendLog('📡 API 호출: ' + apiUrl);
-
-            // XMLHttpRequest로 업로드 (진행 상태 표시를 위해)
-            const xhr = new XMLHttpRequest();
-
-            xhr.upload.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = Math.round((e.loaded / e.total) * 100);
-                    progressBar.style.width = percentComplete + '%';
-                    progressText.innerText = '업로드 중... ' + percentComplete + '%';
-                    appendLog('📊 업로드 진행: ' + percentComplete + '%');
-                }
-            });
-
-            xhr.addEventListener('load', function() {
-                progressDiv.style.display = 'none';
-
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    appendLog('✅ 이미지 업로드 성공: ' + JSON.stringify(response));
-
-                    if (response.status === 'success' && response.data) {
-                        const data = response.data;
-                        // WebSocket으로 메시지가 브로드캐스트되므로 여기서는 표시하지 않음
-                        // (중복 표시 방지)
-                        appendLog('📸 이미지 URL: ' + data.imageUrl);
-                        appendLog('👤 발신자: ' + (data.nickname || data.senderName) + ' (userId: ' + data.userId + ')');
-                        appendLog('🕐 생성시간: ' + data.createdAt);
-                        appendLog('ℹ️ WebSocket으로 메시지가 전달됩니다.');
-                    }
-
-                    // 입력 초기화
-                    fileInput.value = '';
-                    messageInput.value = '';
-                } else {
-                    let errorMsg = '이미지 업로드 실패';
-                    try {
-                        const errorResponse = JSON.parse(xhr.responseText);
-                        errorMsg = errorResponse.message || errorMsg;
-                    } catch (e) {}
-
-                    appendLog('❌ 업로드 실패: HTTP ' + xhr.status);
-                    appendMessage('시스템', '❌ ' + errorMsg, 'red');
-                }
-            });
-
-            xhr.addEventListener('error', function() {
-                progressDiv.style.display = 'none';
-                appendLog('❌ 네트워크 오류');
-                appendMessage('시스템', '❌ 네트워크 오류가 발생했습니다', 'red');
-            });
-
-            xhr.open('POST', apiUrl, true);
-            xhr.setRequestHeader('Authorization', 'Bearer ' + currentJwtToken);
-            // Content-Type은 FormData 사용 시 자동 설정됨 (boundary 포함)
-            xhr.send(formData);
-
-        } catch (error) {
+        });
+        xhr.addEventListener('load', () => {
             progressDiv.style.display = 'none';
-            appendLog('❌ 이미지 업로드 오류: ' + error.message);
-            appendMessage('시스템', '❌ 이미지 업로드 실패: ' + error.message, 'red');
+            if (xhr.status === 200) {
+                appendLog('✅ 이미지 업로드 성공');
+                document.getElementById('imageFile').value = '';
+                document.getElementById('imageMessage').value = '';
+            } else {
+                appendLog('❌ 업로드 실패: HTTP ' + xhr.status);
+            }
+        });
+        xhr.addEventListener('error', () => {
+            progressDiv.style.display = 'none';
+            appendLog('❌ 네트워크 오류');
+        });
+
+        xhr.open('POST', apiUrl, true);
+        xhr.setRequestHeader('Authorization', 'Bearer ' + currentJwtToken);
+        xhr.send(formData);
+    }
+
+    // ─────────────────────────────────────────────
+    // UI 헬퍼
+    // ─────────────────────────────────────────────
+
+    function appendChatMsg(sender, message, color, imageUrl = null) {
+        const box = document.getElementById('chat-box');
+
+        // 최초 빈 안내 문구 제거
+        const empty = box.querySelector('.list-empty');
+        if (empty) empty.remove();
+
+        const div = document.createElement('div');
+        div.className = 'msg';
+        div.style.color = color;
+        div.style.fontSize = '12px';
+
+        if (imageUrl) {
+            const ts = new Date().toLocaleTimeString();
+            div.innerHTML = `
+                <div>[${ts}] [${sender}]</div>
+                <img src="${imageUrl}"
+                     style="max-width:200px; max-height:200px; margin:5px 0; border-radius:5px; cursor:pointer;"
+                     onclick="window.open('${imageUrl}','_blank')" title="클릭하여 원본 보기">
+                ${message ? `<div>${message}</div>` : ''}
+            `;
+        } else {
+            div.innerText = `[${new Date().toLocaleTimeString()}] [${sender}] ${message}`;
         }
+
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function appendLog(message) {
+        const box = document.getElementById('log-box');
+        const div = document.createElement('div');
+        div.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function clearLogs() {
+        document.getElementById('log-box').innerHTML = '';
+        appendLog('로그 초기화');
+    }
+
+    function updateStatus(connected) {
+        const el = document.getElementById('status');
+        el.className = connected ? 'connected' : 'disconnected';
+        el.innerText  = connected ? '✅ 연결됨' : '❌ 연결 안 됨';
+    }
+
+    function setListSubStatus(on) {
+        const el = document.getElementById('listSubStatus');
+        el.className = on ? 'sub-status on' : 'sub-status off';
+        el.innerText  = on ? '● 구독 중' : '● 미구독';
+    }
+
+    function updateSubscriptionList(destinations) {
+        const el = document.getElementById('subscriptionList');
+        if (!destinations.length) {
+            el.innerHTML = '<div style="color:#aaa;">접속 후 표시됩니다.</div>';
+            return;
+        }
+        el.innerHTML = destinations
+            .map(d => `<div>✅ ${d}</div>`)
+            .join('');
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g,'&amp;')
+                  .replace(/</g,'&lt;')
+                  .replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;');
     }
 </script>
 </body>
