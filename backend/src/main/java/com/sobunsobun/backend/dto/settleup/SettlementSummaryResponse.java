@@ -20,6 +20,9 @@ public class SettlementSummaryResponse {
     @Schema(description = "정산 ID", example = "7")
     private Long id;
 
+    @Schema(description = "글쓴이 userId", example = "12")
+    private Long authorId;
+
     @Schema(description = "게시글 ID", example = "5")
     private Long groupPostId;
 
@@ -60,6 +63,7 @@ public class SettlementSummaryResponse {
 
         return SettlementSummaryResponse.builder()
                 .id(settlement.getId())
+                .authorId(settlement.getGroupPost().getOwner().getId())
                 .groupPostId(settlement.getGroupPost().getId())
                 .groupPostTitle(settlement.getGroupPost().getTitle())
                 .status(settlement.getStatus().name())

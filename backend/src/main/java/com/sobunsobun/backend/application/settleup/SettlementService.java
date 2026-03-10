@@ -173,6 +173,27 @@ public class SettlementService {
     }
 
     // =================================================
+    // 정산 삭제
+    // =================================================
+
+    /**
+     * 정산 삭제 — 게시글 작성자(방장)만 가능
+     */
+    @Transactional
+    public void deleteSettlement(Long userId, Long settlementId) {
+        Settlement settlement = settlementRepository.findWithDetailById(settlementId)
+                .orElseThrow(SettlementException::notFound);
+
+        if (!settlement.getGroupPost().getOwner().getId().equals(userId)) {
+            log.warn("[정산 삭제 권한 없음] settlementId={}, userId={}", settlementId, userId);
+            throw SettlementException.forbidden();
+        }
+
+        settlementRepository.delete(settlement);
+        log.info("[정산 삭제] settlementId={}, userId={}", settlementId, userId);
+    }
+
+    // =================================================
     // Private helpers
     // =================================================
 
