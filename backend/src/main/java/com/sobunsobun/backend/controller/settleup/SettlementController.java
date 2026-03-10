@@ -62,6 +62,21 @@ public class SettlementController extends BaseController {
     }
 
     // ──────────────────────────────────────────────────
+    // 정산 삭제
+    // ──────────────────────────────────────────────────
+
+    @Operation(summary = "정산 삭제", description = "게시글 작성자(방장)만 삭제 가능합니다.",
+               security = @SecurityRequirement(name = "bearerAuth"))
+    @DeleteMapping("/{settlementId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> deleteSettlement(
+            @AuthenticationPrincipal JwtUserPrincipal principal,
+            @PathVariable Long settlementId) {
+        settlementService.deleteSettlement(principal.id(), settlementId);
+        return deleted();
+    }
+
+    // ──────────────────────────────────────────────────
     // 정산 완료 (iOS → 서버)
     // ──────────────────────────────────────────────────
 
