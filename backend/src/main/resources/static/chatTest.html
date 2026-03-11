@@ -586,8 +586,10 @@
             ? `<img class="profile-img" src="${p.profileImageUrl}" onerror="this.style.display='none'">`
             : `<div class="profile-placeholder">👤</div>`;
 
-        const timeStr = p.lastMessageAt
-            ? new Date(p.lastMessageAt).toLocaleTimeString('ko-KR')
+        const lastMsgContent = p.lastMessage?.content ?? p.lastMessage ?? null;
+        const lastMsgAt     = p.lastMessage?.createdAt ?? p.lastMessageAt ?? null;
+        const timeStr = lastMsgAt
+            ? new Date(lastMsgAt).toLocaleTimeString('ko-KR')
             : '';
 
         const itemId = 'raw-' + Date.now();
@@ -604,7 +606,7 @@
                 </div>
             </div>
             <div class="list-item-body">
-                💬 ${escHtml(p.lastMessage || '(메시지 없음)')}
+                💬 ${escHtml(lastMsgContent || '(메시지 없음)')}
             </div>
             <div class="list-item-footer">
                 <span>방 ID: <strong>${p.roomId}</strong></span>
