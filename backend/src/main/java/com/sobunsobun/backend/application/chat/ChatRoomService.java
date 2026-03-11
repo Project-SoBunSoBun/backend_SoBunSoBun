@@ -13,6 +13,7 @@ import com.sobunsobun.backend.dto.chat.ChatRoomDetailResponse;
 import com.sobunsobun.backend.dto.chat.ChatRoomListResponseDto;
 import com.sobunsobun.backend.dto.chat.ChatRoomResponse;
 import com.sobunsobun.backend.dto.chat.CreateChatRoomResponse;
+import com.sobunsobun.backend.dto.chat.LastMessageDto;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.MannerReviewRepository;
@@ -116,8 +117,7 @@ public class ChatRoomService {
                                     .profileImageUrl(profileImageUrl)
                                     .roomType(chatRoom.getRoomType().toString())
                                     .memberCount(chatRoom.getMembers().size())
-                                    .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
-                                    .lastMessageTime(latestMessage.map(ChatMessage::getCreatedAt).orElse(null))
+                                    .lastMessage(latestMessage.map(LastMessageDto::from).orElse(null))
                                     .unreadCount(unreadCount)
                                     .groupPostId(chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null)
                                     .build();
@@ -134,18 +134,12 @@ public class ChatRoomService {
             log.debug("🔄 [단계3] lastMessageTime 기준 정렬 중...");
             List<ChatRoomListResponseDto> sortedList = chatRoomList.stream()
                     .sorted((a, b) -> {
-                        // null 처리: 메시지가 없는 경우 맨 뒤로
-                        if (a.getLastMessageTime() == null && b.getLastMessageTime() == null) {
-                            return 0;
-                        }
-                        if (a.getLastMessageTime() == null) {
-                            return 1;  // a가 뒤로
-                        }
-                        if (b.getLastMessageTime() == null) {
-                            return -1; // b가 뒤로
-                        }
-                        // 내림차순: 최신이 먼저
-                        return b.getLastMessageTime().compareTo(a.getLastMessageTime());
+                        String aTime = a.getLastMessage() != null ? a.getLastMessage().getCreatedAt() : null;
+                        String bTime = b.getLastMessage() != null ? b.getLastMessage().getCreatedAt() : null;
+                        if (aTime == null && bTime == null) return 0;
+                        if (aTime == null) return 1;
+                        if (bTime == null) return -1;
+                        return bTime.compareTo(aTime); // 내림차순: 최신이 먼저
                     })
                     .collect(Collectors.toList());
 
@@ -840,8 +834,7 @@ public class ChatRoomService {
                                     .count()
                     )
                     .unreadCount(unreadCount)
-                    .lastMessage(latestMessage.map(ChatMessage::getContent).orElse(null))
-                    .lastMessageAt(chatRoom.getLastMessageAt())
+                    .lastMessage(latestMessage.map(LastMessageDto::from).orElse(null))
                     .createdAt(chatRoom.getCreatedAt())
                     .settlementId(settlementId)
                     .isSettled(isSettled)

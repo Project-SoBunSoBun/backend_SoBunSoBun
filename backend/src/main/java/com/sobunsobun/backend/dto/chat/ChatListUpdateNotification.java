@@ -48,11 +48,8 @@ public class ChatListUpdateNotification {
      */
     private String profileImageUrl;
 
-    /** 마지막 메시지 미리보기 (최대 100자) */
-    private String lastMessage;
-
-    /** 마지막 메시지 전송 시각 - ISO-8601 KST (예: 2026-02-27T12:34:56+09:00) */
-    private String lastMessageAt;
+    /** 마지막 메시지 정보 */
+    private LastMessageDto lastMessage;
 
     /**
      * 안 읽은 메시지 수

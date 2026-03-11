@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -196,8 +197,12 @@ public class ChatRedisService {
      * 1순위: Redis Hash에서 HGET
      * 2순위: Cache Miss → DB에서 계산 후 Hash에 캐싱 (Write-through)
      *
+     * NOT_SUPPORTED: 외부 트랜잭션(예: getChatRoomList readOnly)에 참여하지 않고 독립 실행.
+     * countUnreadMessages 쿼리 실패 시 외부 트랜잭션이 rollback-only 오염되는 것을 방지.
+     *
      * @return 안 읽은 수 (Redis 미사용 환경에서는 DB 직접 조회)
      */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Long getUnreadCount(Long roomId, Long userId) {
         if (!isRedisAvailable()) {
             // Redis 없을 때는 DB 직접 조회
