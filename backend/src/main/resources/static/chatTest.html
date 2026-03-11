@@ -586,7 +586,7 @@
             ? `<img class="profile-img" src="${p.profileImageUrl}" onerror="this.style.display='none'">`
             : `<div class="profile-placeholder">👤</div>`;
 
-        const lastMsgContent = p.lastMessage?.content ?? p.lastMessage ?? null;
+        const lastMsgContent = p.lastMessage?.content ?? null;
         const lastMsgAt     = p.lastMessage?.createdAt ?? p.lastMessageAt ?? null;
         const timeStr = lastMsgAt
             ? new Date(lastMsgAt).toLocaleTimeString('ko-KR')
@@ -796,8 +796,8 @@
     }
 
     function escHtml(str) {
-        if (!str) return '';
-        return str.replace(/&/g,'&amp;')
+        if (str == null) return '';
+        return String(str).replace(/&/g,'&amp;')
                   .replace(/</g,'&lt;')
                   .replace(/>/g,'&gt;')
                   .replace(/"/g,'&quot;');
