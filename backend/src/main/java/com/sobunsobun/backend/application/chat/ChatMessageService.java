@@ -4,6 +4,7 @@ import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.*;
 import com.sobunsobun.backend.dto.chat.ChatListUpdateNotification;
 import com.sobunsobun.backend.dto.chat.ChatMessageDto;
+import com.sobunsobun.backend.dto.chat.LastMessageDto;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.infrastructure.redis.RedisPublisher;
@@ -677,12 +678,7 @@ public class ChatMessageService {
                 .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
                 .toList();
 
-        // lastMessageAt ISO-8601 KST 변환 (공통)
-        String lastMessageAtIso = chatRoom.getLastMessageAt() != null
-                ? chatRoom.getLastMessageAt()
-                        .atZone(java.time.ZoneId.of("Asia/Seoul"))
-                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX"))
-                : null;
+        LastMessageDto lastMessageDto = LastMessageDto.from(savedMessage);
 
         for (ChatMember member : activeMembers) {
             Long memberId = member.getUser().getId();
@@ -718,8 +714,7 @@ public class ChatMessageService {
                     .roomId(chatRoom.getId())
                     .roomName(roomName)
                     .profileImageUrl(profileImageUrl)
-                    .lastMessage(chatRoom.getLastMessagePreview())
-                    .lastMessageAt(lastMessageAtIso)
+                    .lastMessage(lastMessageDto)
                     .unreadCount(unreadCount.intValue())
                     .roomType(chatRoom.getRoomType().name())
                     .build();

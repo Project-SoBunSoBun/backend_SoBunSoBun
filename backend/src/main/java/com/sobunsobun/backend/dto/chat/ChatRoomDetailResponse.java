@@ -53,14 +53,9 @@ public class ChatRoomDetailResponse {
     @JsonProperty("unreadCount")
     private Long unreadCount;
 
-    @Schema(description = "마지막 메시지 미리보기")
+    @Schema(description = "마지막 메시지 정보")
     @JsonProperty("lastMessage")
-    private String lastMessage;
-
-    @Schema(description = "마지막 메시지 시간 (ISO 8601)")
-    @JsonProperty("lastMessageAt")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
-    private LocalDateTime lastMessageAt;
+    private LastMessageDto lastMessage;
 
     @Schema(description = "채팅방 생성 시간 (ISO 8601)")
     @JsonProperty("createdAt")

@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 /**
  * 채팅방 목록 응답 DTO
  *
@@ -65,21 +63,12 @@ public class ChatRoomListResponseDto {
     private Integer memberCount;
 
     /**
-     * 마지막 메시지 내용 (미리보기)
+     * 마지막 메시지 정보
      *
      * null인 경우: 메시지 없음
      */
     @JsonProperty("lastMessage")
-    private String lastMessage;
-
-    /**
-     * 마지막 메시지 전송 시간
-     *
-     * ISO 8601 형식: 2026-02-14T12:30:45
-     * null인 경우: 메시지 없음
-     */
-    @JsonProperty("lastMessageTime")
-    private LocalDateTime lastMessageTime;
+    private LastMessageDto lastMessage;
 
     /**
      * 안 읽은 메시지 개수
