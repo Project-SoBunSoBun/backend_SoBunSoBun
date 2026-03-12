@@ -31,8 +31,8 @@ public class StompEventListener {
 
     private final ChatRedisService chatRedisService;
 
-    // /sub/chat/room/{roomId} 형식의 destination에서 roomId를 추출하기 위한 정규식
-    private static final Pattern ROOM_ID_PATTERN = Pattern.compile("/sub/chat/room/(\\d+)");
+    // /topic/chat/room/{roomId} 형식의 destination에서 roomId를 추출하기 위한 정규식
+    private static final Pattern ROOM_ID_PATTERN = Pattern.compile("/topic/chat/room/(\\d+)");
 
     /**
      * 사용자가 특정 채팅방을 구독할 때 호출
