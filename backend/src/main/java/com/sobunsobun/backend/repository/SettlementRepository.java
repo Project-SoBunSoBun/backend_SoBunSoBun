@@ -5,9 +5,11 @@ import com.sobunsobun.backend.domain.SettlementStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -59,6 +61,22 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     Page<Settlement> findByGroupPostOwnerIdAndStatus(@Param("userId") Long userId,
                                                      @Param("status") SettlementStatus status,
                                                      Pageable pageable);
+
+    /**
+     * 정산 재완료 시 기존 품목 전체 삭제 (items FK 제약 때문에 participants 삭제 전에 먼저 삭제)
+     */
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM SettlementItem si WHERE si.participant.settlement.id = :settlementId")
+    void deleteItemsBySettlementId(@Param("settlementId") Long settlementId);
+
+    /**
+     * 정산 재완료 시 기존 참여자 전체 삭제
+     */
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM SettlementParticipant sp WHERE sp.settlement.id = :settlementId")
+    void deleteParticipantsBySettlementId(@Param("settlementId") Long settlementId);
 
     /**
      * 게시글의 정산 완료 여부 (ChatRoomService 사용)
