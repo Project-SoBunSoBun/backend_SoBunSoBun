@@ -46,7 +46,7 @@ public class SecurityConfig {
         "/swagger-ui.html",
 
         // 헬스체크
-        "/healthz",
+        "/health",
 
         // 인증 관련 (모든 하위 경로)
         "/auth/**",
