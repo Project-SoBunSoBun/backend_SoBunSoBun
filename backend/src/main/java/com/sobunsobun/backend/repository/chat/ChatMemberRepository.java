@@ -41,7 +41,7 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
         WHERE msg.chatRoom.id = :roomId
         AND msg.sender.id != :userId
         AND msg.createdAt > COALESCE(
-            (SELECT m.lastReadAt FROM ChatMember m
+            (SELECT MAX(m.lastReadAt) FROM ChatMember m
              WHERE m.chatRoom.id = :roomId AND m.user.id = :userId),
             CAST('1970-01-01 00:00:00' AS timestamp))
     """)
