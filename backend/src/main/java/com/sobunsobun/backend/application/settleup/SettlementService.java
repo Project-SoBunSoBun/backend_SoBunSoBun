@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.application.settleup;
 
 import com.sobunsobun.backend.domain.*;
+import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.settleup.*;
@@ -87,7 +88,15 @@ public class SettlementService {
             settlements = settlementRepository.findByGroupPostOwnerId(userId, pageable);
         }
 
-        return settlements.map(SettlementSummaryResponse::from);
+        return settlements.map(settlement -> {
+            List<ChatMember> activeMembers = chatRoomRepository
+                    .findByGroupPostIdWithMembers(settlement.getGroupPost().getId())
+                    .map(room -> room.getMembers().stream()
+                            .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                            .toList())
+                    .orElse(List.of());
+            return SettlementSummaryResponse.from(settlement, activeMembers);
+        });
     }
 
     // =================================================
