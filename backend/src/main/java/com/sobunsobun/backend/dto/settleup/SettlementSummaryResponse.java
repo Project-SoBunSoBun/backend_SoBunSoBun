@@ -2,6 +2,7 @@ package com.sobunsobun.backend.dto.settleup;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.sobunsobun.backend.domain.Settlement;
+import com.sobunsobun.backend.domain.chat.ChatMember;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -38,8 +39,11 @@ public class SettlementSummaryResponse {
     @Schema(description = "참여자 수", example = "3")
     private int participantCount;
 
-    @Schema(description = "참여자 목록 (userId, nickname)")
+    @Schema(description = "참여자 목록 (userId, nickname) — COMPLETED 시에만 채워짐")
     private List<ParticipantInfo> participants;
+
+    @Schema(description = "채팅방 ACTIVE 멤버 목록 — 정산 대상 인원 (PENDING 포함 항상 제공)")
+    private List<ChatMemberInfo> chatRoomMembers;
 
     @Schema(description = "만남 장소명", example = "강남역 2번 출구")
     private String locationName;
@@ -56,9 +60,13 @@ public class SettlementSummaryResponse {
     @Schema(description = "수정 일시")
     private LocalDateTime updatedAt;
 
-    public static SettlementSummaryResponse from(Settlement settlement) {
+    public static SettlementSummaryResponse from(Settlement settlement, List<ChatMember> activeMembers) {
         List<ParticipantInfo> participantInfos = settlement.getParticipants().stream()
                 .map(p -> new ParticipantInfo(p.getUser().getId(), p.getUser().getNickname()))
+                .toList();
+
+        List<ChatMemberInfo> chatMemberInfos = activeMembers.stream()
+                .map(ChatMemberInfo::from)
                 .toList();
 
         return SettlementSummaryResponse.builder()
@@ -70,6 +78,7 @@ public class SettlementSummaryResponse {
                 .totalAmount(settlement.getTotalAmount())
                 .participantCount(participantInfos.size())
                 .participants(participantInfos)
+                .chatRoomMembers(chatMemberInfos)
                 .locationName(settlement.getGroupPost().getLocationName())
                 .meetAt(settlement.getGroupPost().getMeetAt())
                 .createdAt(settlement.getCreatedAt())
@@ -87,6 +96,25 @@ public class SettlementSummaryResponse {
         public ParticipantInfo(Long userId, String nickname) {
             this.userId = userId;
             this.nickname = nickname;
+        }
+    }
+
+    @Getter
+    @Builder
+    public static class ChatMemberInfo {
+        @Schema(description = "유저 ID", example = "36")
+        private Long userId;
+        @Schema(description = "닉네임", example = "소분이")
+        private String nickname;
+        @Schema(description = "프로필 이미지 URL")
+        private String profileImageUrl;
+
+        public static ChatMemberInfo from(ChatMember m) {
+            return ChatMemberInfo.builder()
+                    .userId(m.getUser().getId())
+                    .nickname(m.getUser().getNickname())
+                    .profileImageUrl(m.getUser().getProfileImageUrl())
+                    .build();
         }
     }
 }
