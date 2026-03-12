@@ -16,6 +16,7 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     @Query("""
         SELECT DISTINCT r FROM ChatRoom r
         LEFT JOIN FETCH r.members m
+        LEFT JOIN FETCH m.user
         WHERE r.id = :id
     """)
     Optional<ChatRoom> findByIdWithMembers(@Param("id") Long id);

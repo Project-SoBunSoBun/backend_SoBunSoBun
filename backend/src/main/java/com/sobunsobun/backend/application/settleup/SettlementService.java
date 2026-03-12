@@ -130,12 +130,16 @@ public class SettlementService {
         // 4. [방식 B] 요청 참여자 == 채팅방 ACTIVE 멤버 검증
         validateParticipantsMatchChatRoom(settlement.getGroupPost().getId(), request);
 
-        // 5. 참여자 + 품목 엔티티 구성
+        // 5. 기존 참여자/품목을 JPQL로 직접 삭제 후 재삽입
+        //    orphanRemoval 대신 직접 삭제: settlement_item FK 제약 순서 문제(items 미로딩 → participant DELETE 실패) 방지
+        settlementRepository.deleteItemsBySettlementId(settlementId);
+        settlementRepository.deleteParticipantsBySettlementId(settlementId);
+        settlement.clearParticipants(); // Hibernate 세션 동기화
+
+        // 6. 참여자 + 품목 엔티티 구성 (DB 삭제 이후에 빌드해야 flush 순서 충돌 없음)
         List<SettlementParticipant> participants = request.getParticipants().stream()
                 .map(pReq -> buildParticipant(settlement, pReq))
                 .toList();
-
-        // 6. 도메인 메서드로 완료 처리 (orphanRemoval로 기존 데이터 자동 삭제)
         settlement.complete(request.getTotalAmount(), participants);
 
         log.info("[정산 완료] settlementId={}, totalAmount={}, participants={}",

@@ -83,9 +83,12 @@ public class Settlement extends BaseTimeEntity {
      * iOS 최종 데이터로 정산 완료 처리
      * 기존 participants를 orphanRemoval로 모두 제거 후 새로 추가
      */
+    public void clearParticipants() {
+        this.participants.clear();
+    }
+
     public void complete(long totalAmount, List<SettlementParticipant> newParticipants) {
         this.totalAmount = totalAmount;
-        this.participants.clear();
         this.participants.addAll(newParticipants);
         this.status = SettlementStatus.COMPLETED;
     }

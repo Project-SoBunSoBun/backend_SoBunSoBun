@@ -1,10 +1,12 @@
 package com.sobunsobun.backend.infrastructure.stomp;
 
+import com.sobunsobun.backend.dto.chat.ChatListUpdateNotification;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -30,6 +32,7 @@ import java.util.regex.Pattern;
 public class StompEventListener {
 
     private final ChatRedisService chatRedisService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     // /topic/chat/room/{roomId} 형식의 destination에서 roomId를 추출하기 위한 정규식
     private static final Pattern ROOM_ID_PATTERN = Pattern.compile("/topic/chat/room/(\\d+)");
@@ -75,8 +78,16 @@ public class StompEventListener {
             log.info("🚪 [채팅방 입장 이벤트] userId: {}, roomId: {}, destination: {}",
                     userId, roomId, destination);
 
-            // 3. ChatRedisService.enterRoom() 호출
+            // 3. ChatRedisService.enterRoom() 호출 (Redis 리셋 + DB lastReadAt 갱신)
             chatRedisService.enterRoom(userId, roomId);
+
+            // 4. 입장한 유저에게 unreadCount: 0 알림 전송
+            ChatListUpdateNotification resetNotification = ChatListUpdateNotification.builder()
+                    .type("CHAT_LIST_UPDATE")
+                    .roomId(roomId)
+                    .unreadCount(0)
+                    .build();
+            messagingTemplate.convertAndSend("/sub/users/" + userId + "/chat-rooms", resetNotification);
 
             log.info("✅ [채팅방 입장 처리 완료] userId: {}, roomId: {}", userId, roomId);
 
