@@ -39,4 +39,26 @@ public enum MannerTag {
         }
         throw new IllegalArgumentException("존재하지 않는 태그 ID: " + id);
     }
+
+    /**
+     * 문자열 코드로 MannerTag 조회
+     * "TAG001", "001", "1" 형식 모두 허용
+     */
+    public static MannerTag fromCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("태그 코드가 비어있습니다.");
+        }
+        // "TAG001" 형식 — 직접 enum name 매핑
+        try {
+            return MannerTag.valueOf(code.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+        }
+        // "001", "01", "1" 형식 — 숫자로 파싱 후 id 매핑
+        try {
+            int id = Integer.parseInt(code);
+            return fromId(id);
+        } catch (NumberFormatException ignored) {
+        }
+        throw new IllegalArgumentException("유효하지 않은 태그 코드입니다: " + code);
+    }
 }
