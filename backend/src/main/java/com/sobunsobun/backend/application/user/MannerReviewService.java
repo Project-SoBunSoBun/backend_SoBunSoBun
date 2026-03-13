@@ -93,7 +93,7 @@ public class MannerReviewService {
             for (String tagCodeStr : item.getTagCodes()) {
                 MannerTag tag;
                 try {
-                    tag = MannerTag.valueOf(tagCodeStr);
+                    tag = MannerTag.fromCode(tagCodeStr);
                 } catch (IllegalArgumentException e) {
                     log.warn("유효하지 않은 태그 코드 요청 - tagCode: {}", tagCodeStr);
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "유효하지 않은 태그 코드입니다: " + tagCodeStr);
