@@ -3,7 +3,6 @@ package com.sobunsobun.backend.dto.manner;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -56,7 +55,6 @@ public class MannerReviewRequest {
          * 예: ["TAG001", "TAG003"]
          */
         @NotEmpty(message = "태그를 최소 1개 선택해야 합니다.")
-        @Size(max = 3, message = "태그는 최대 3개까지 선택 가능합니다.")
         private List<String> tagCodes;
     }
 }
