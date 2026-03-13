@@ -874,7 +874,11 @@ public class ChatRoomService {
 
                 if (chatRoom.getGroupPost() != null) {
                     builder.groupPostId(chatRoom.getGroupPost().getId());
-                    builder.groupPostTitle(chatRoom.getGroupPost().getTitle());
+                    try {
+                        builder.groupPostTitle(chatRoom.getGroupPost().getTitle());
+                    } catch (jakarta.persistence.EntityNotFoundException e) {
+                        log.warn("⚠️ GroupPost {} 삭제됨, title null 처리", chatRoom.getGroupPost().getId());
+                    }
                 }
 
             } else {
@@ -896,7 +900,11 @@ public class ChatRoomService {
 
                 if (chatRoom.getGroupPost() != null) {
                     builder.groupPostId(chatRoom.getGroupPost().getId());
-                    builder.groupPostTitle(chatRoom.getGroupPost().getTitle());
+                    try {
+                        builder.groupPostTitle(chatRoom.getGroupPost().getTitle());
+                    } catch (jakarta.persistence.EntityNotFoundException e) {
+                        log.warn("⚠️ GroupPost {} 삭제됨, title null 처리", chatRoom.getGroupPost().getId());
+                    }
                 }
             }
 
