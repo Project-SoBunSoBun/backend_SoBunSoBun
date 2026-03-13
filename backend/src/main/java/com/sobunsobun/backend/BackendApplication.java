@@ -20,7 +20,7 @@ public class BackendApplication {
 		SpringApplication.run(BackendApplication.class, args);
 
 		log.info("==========================================================");
-		log.info("소분소분 백엔드 서버가 성공적으로 시작되었습니다!");
+		log.info("소분소분 백엔드 서버가 성공적으로 시작되었습니다! ");
 		log.info("==========================================================");
 	}
 
