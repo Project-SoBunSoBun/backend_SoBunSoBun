@@ -187,7 +187,7 @@ public class ChatRedisService {
             }
 
         } catch (Exception e) {
-            log.error("❌ [unread count 증가 오류] roomId: {}, error: {}", roomId, e.getMessage());
+            log.error("❌ [unread count 증가 오류] roomId: {}, error: {}", roomId, e.getMessage(), e);
         }
     }
 
@@ -234,7 +234,7 @@ public class ChatRedisService {
             return dbCount;
 
         } catch (Exception e) {
-            log.warn("⚠️ [unread count 조회 실패] roomId: {}, userId: {}", roomId, userId);
+            log.warn("⚠️ [unread count 조회 실패] roomId: {}, userId: {}, error: {}", roomId, userId, e.getMessage(), e);
             return 0L;
         }
     }

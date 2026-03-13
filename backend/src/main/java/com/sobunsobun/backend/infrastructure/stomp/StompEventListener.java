@@ -2,11 +2,13 @@ package com.sobunsobun.backend.infrastructure.stomp;
 
 import com.sobunsobun.backend.dto.chat.ChatListUpdateNotification;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
+import com.sobunsobun.backend.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -184,21 +186,17 @@ public class StompEventListener {
         }
 
         try {
-            // 임의 구현: Principal.getName()을 userId로 가정
-            // 실제 프로젝트에서는 JWT 토큰이나 SecurityContext 사용 권장
-            String userIdStr = principal.getName();
+            // UsernamePasswordAuthenticationToken → JwtUserPrincipal에서 id 추출
+            if (principal instanceof UsernamePasswordAuthenticationToken auth &&
+                    auth.getPrincipal() instanceof JwtUserPrincipal jwtPrincipal) {
+                return jwtPrincipal.id();
+            }
 
-            // 만약 JWT 토큰이라면, 여기서 파싱하여 userId를 추출
-            // 예: JwtTokenProvider.getUserIdFromToken(userIdStr);
-
-            // 현재는 getName()이 직접 userId라고 가정
-            return Long.parseLong(userIdStr);
-        } catch (NumberFormatException e) {
-            log.warn("⚠️ [userId 추출 실패] Principal.getName()을 Long으로 변환 불가: {}",
-                    principal.getName());
-            return null;
+            // fallback: getName()이 숫자인 경우
+            return Long.parseLong(principal.getName());
         } catch (Exception e) {
-            log.warn("⚠️ [userId 추출 실패] error: {}", e.getMessage());
+            log.warn("⚠️ [userId 추출 실패] principal type: {}, error: {}",
+                    principal.getClass().getSimpleName(), e.getMessage());
             return null;
         }
     }
