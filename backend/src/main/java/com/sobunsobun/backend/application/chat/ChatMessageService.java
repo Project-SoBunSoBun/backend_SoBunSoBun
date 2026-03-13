@@ -726,6 +726,64 @@ public class ChatMessageService {
     }
 
     /**
+     * 새 채팅방 생성 시 멤버들에게 WebSocket 알림 발송
+     *
+     * 구독 경로: /sub/users/{userId}/chat-rooms
+     * 메시지 없이 방 정보만 전달 (lastMessage: null, unreadCount: 0)
+     *
+     * @param chatRoom 새로 생성된 채팅방 (getMembers()가 채워진 상태)
+     */
+    public void broadcastNewRoomNotification(ChatRoom chatRoom) {
+        try {
+            List<ChatMember> activeMembers = chatRoom.getMembers().stream()
+                    .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                    .toList();
+
+            for (ChatMember member : activeMembers) {
+                Long memberId = member.getUser().getId();
+
+                String roomName;
+                String profileImageUrl;
+
+                if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
+                    ChatMember other = activeMembers.stream()
+                            .filter(m -> !m.getUser().getId().equals(memberId))
+                            .findFirst()
+                            .orElse(null);
+                    if (other != null) {
+                        roomName = other.getUser().getNickname();
+                        profileImageUrl = other.getUser().getProfileImageUrl();
+                    } else {
+                        roomName = chatRoom.getName();
+                        profileImageUrl = null;
+                    }
+                } else {
+                    roomName = chatRoom.getName();
+                    profileImageUrl = null;
+                }
+
+                ChatListUpdateNotification notification = ChatListUpdateNotification.builder()
+                        .type("CHAT_LIST_UPDATE")
+                        .roomId(chatRoom.getId())
+                        .roomName(roomName)
+                        .profileImageUrl(profileImageUrl)
+                        .lastMessage(null)
+                        .unreadCount(0)
+                        .roomType(chatRoom.getRoomType().name())
+                        .build();
+
+                messagingTemplate.convertAndSend("/sub/users/" + memberId + "/chat-rooms", notification);
+                log.debug("📡 [새 채팅방 알림 발송] userId: {}, roomId: {}", memberId, chatRoom.getId());
+            }
+
+            log.info("✅ [새 채팅방 알림 발송 완료] roomId: {}, memberCount: {}",
+                    chatRoom.getId(), activeMembers.size());
+        } catch (Exception e) {
+            log.warn("⚠️ [새 채팅방 알림 발송 실패] roomId: {}, error: {}", chatRoom.getId(), e.getMessage());
+        }
+    }
+
+    /**
      * 미리보기 텍스트 생성 (너무 길면 잘라냠)
      */
     private String truncateContent(String content) {

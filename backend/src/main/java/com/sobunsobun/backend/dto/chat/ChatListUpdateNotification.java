@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.dto.chat;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,7 +19,7 @@ import lombok.NoArgsConstructor;
  *   "profileImageUrl": "https://...",
  *   "lastMessage": "안녕하세요",
  *   "lastMessageAt": "2026-02-27T12:34:56+09:00",
- *   "unreadCount": 3,
+ *   "unReadCount": 3,
  *   "roomType": "ONE_TO_ONE"
  * }
  */
@@ -56,6 +57,7 @@ public class ChatListUpdateNotification {
      * - Redis Hash에서 조회 (Cache Miss 시 DB 폴백)
      * - 현재 해당 방에 접속 중인 유저: 0
      */
+    @JsonProperty("unReadCount")
     private Integer unreadCount;
 
     /** 채팅방 타입: "ONE_TO_ONE" | "GROUP" */
