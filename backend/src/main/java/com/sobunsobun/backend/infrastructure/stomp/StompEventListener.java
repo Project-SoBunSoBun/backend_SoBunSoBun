@@ -42,7 +42,7 @@ public class StompEventListener {
      *
      * 이벤트: SessionSubscribeEvent
      * 트리거: 클라이언트가 SUBSCRIBE 메시지를 보낼 때
-     * 대상: /sub/chat/room/{roomId}
+     * 대상: /topic/chat/room/{roomId}
      *
      * 처리:
      * 1. destination에서 roomId 추출

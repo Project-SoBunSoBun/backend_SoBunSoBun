@@ -453,6 +453,9 @@ public class ChatRoomService {
             chatMemberRepository.saveAndFlush(member2);
             log.info("✅ [단계5 완료] ChatMember DB 저장됨");
 
+            // WebSocket으로 멤버 양쪽에 새 채팅방 알림 발송
+            chatMessageService.broadcastNewRoomNotification(savedRoom);
+
             log.info("✅ [1:1 채팅방 생성 완료] roomId: {}, members: {} <-> {}",
                     savedRoom.getId(), myUser.getNickname(), targetUser.getNickname());
             log.info("═════════════════════════════════════════════════════════════");
@@ -620,6 +623,9 @@ public class ChatRoomService {
                 }
                 log.info("✅ [단계7 완료] 총 {} 명 멤버 추가됨", addedMemberCount);
             }
+
+            // WebSocket으로 모든 멤버에게 새 채팅방 알림 발송
+            chatMessageService.broadcastNewRoomNotification(savedRoom);
 
             log.info("✅ [단체 채팅방 생성 완료] roomId: {}, roomName: {}, memberCount: {}, groupPostId: {}",
                     savedRoom.getId(), finalRoomName, addedMemberCount, groupPostId);

@@ -50,7 +50,7 @@ public class ChatRoomDetailResponse {
     private Integer memberCount;
 
     @Schema(description = "안 읽은 메시지 수", example = "3")
-    @JsonProperty("unreadCount")
+    @JsonProperty("unReadCount")
     private Long unreadCount;
 
     @Schema(description = "마지막 메시지 정보")

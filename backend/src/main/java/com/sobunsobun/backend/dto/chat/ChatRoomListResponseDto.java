@@ -77,7 +77,7 @@ public class ChatRoomListResponseDto {
      * Cache Miss 시 DB(ChatMember.lastReadAt 기준) Write-through 캐싱
      * 0이면 읽은 메시지만 있음
      */
-    @JsonProperty("unreadCount")
+    @JsonProperty("unReadCount")
     private Long unreadCount;
 
     /**
