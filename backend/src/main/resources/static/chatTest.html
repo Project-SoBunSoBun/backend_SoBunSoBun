@@ -340,7 +340,7 @@ async function loadRoomList() {
     const res = await apiFetch('/api/v1/chat/rooms/list');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const body = await res.json();
-    rooms = body.data || [];
+    rooms = (body.data || []).map(r => ({ ...r, unreadCount: r.unReadCount != null ? r.unReadCount : (r.unreadCount || 0) }));
     renderRoomList(rooms);
     log(`✅ 채팅방 ${rooms.length}개 로드됨`, 'info');
   } catch (e) {
@@ -417,19 +417,21 @@ function updateRoomInList(notification) {
     if (notification.roomType != null)      rooms[idx].roomType      = notification.roomType;
 
     // 현재 보고 있는 방이면 unread는 항상 0
-    rooms[idx].unreadCount = (notification.roomId == activeRoomId) ? 0 : (notification.unreadCount || 0);
+    const notifUnread = notification.unReadCount != null ? notification.unReadCount : (notification.unreadCount || 0);
+    rooms[idx].unreadCount = (notification.roomId == activeRoomId) ? 0 : notifUnread;
 
     const updated = rooms.splice(idx, 1)[0];
     rooms.unshift(updated);
   } else if (notification.roomName != null) {
     // 목록에 없는 새 방 알림 → 추가
+    const notifUnread = notification.unReadCount != null ? notification.unReadCount : (notification.unreadCount || 0);
     rooms.unshift({
       roomId:         notification.roomId,
       roomName:       notification.roomName,
       roomType:       notification.roomType,
       profileImageUrl: notification.profileImageUrl,
       lastMessage:    notification.lastMessage,
-      unreadCount:    (notification.roomId == activeRoomId) ? 0 : (notification.unreadCount || 0),
+      unreadCount:    (notification.roomId == activeRoomId) ? 0 : notifUnread,
     });
   }
   renderRoomList(rooms);
