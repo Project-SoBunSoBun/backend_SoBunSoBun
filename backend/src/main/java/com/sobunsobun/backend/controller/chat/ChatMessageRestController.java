@@ -184,9 +184,10 @@ public class ChatMessageRestController {
                     .body(ApiResponse.error("FORBIDDEN", "채팅방에 접근 권한이 없습니다."));
         }
 
-        // 첫 페이지 진입 시 unread count 초기화 (채팅방 입장으로 간주)
+        // 첫 페이지 진입 시 unread count 초기화 및 WebSocket 알림 전송 (채팅방 입장으로 간주)
         if (page == 0) {
             chatRedisService.enterRoom(userId, groupChatRoomId);
+            chatMessageService.sendEnterRoomNotification(userId, groupChatRoomId);
         }
 
         // 요청 유저의 lastReadAt 조회 (readByMe 판단 기준)
