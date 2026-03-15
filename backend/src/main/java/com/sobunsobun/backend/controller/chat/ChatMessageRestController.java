@@ -2,6 +2,7 @@ package com.sobunsobun.backend.controller.chat;
 
 import com.sobunsobun.backend.application.chat.ChatMessageService;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
+import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.dto.chat.PageResponse;
@@ -52,6 +53,7 @@ public class ChatMessageRestController {
     private final ChatMessageRepository chatMessageRepository;
     private final ChatMemberRepository chatMemberRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatRedisService chatRedisService;
 
     // ──────────────────────────────────────────────────────────────────────────
     // POST /api/messages  —  메시지 전송
@@ -180,6 +182,11 @@ public class ChatMessageRestController {
             log.warn("❌ [메시지 목록 조회 실패] 접근 권한 없음 - roomId: {}, userId: {}", groupChatRoomId, userId);
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("FORBIDDEN", "채팅방에 접근 권한이 없습니다."));
+        }
+
+        // 첫 페이지 진입 시 unread count 초기화 (채팅방 입장으로 간주)
+        if (page == 0) {
+            chatRedisService.enterRoom(userId, groupChatRoomId);
         }
 
         // 요청 유저의 lastReadAt 조회 (readByMe 판단 기준)
