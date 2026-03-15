@@ -3,6 +3,7 @@ package com.sobunsobun.backend.controller.chat;
 import com.sobunsobun.backend.application.chat.ChatMessageService;
 import com.sobunsobun.backend.application.chat.ChatRoomService;
 import com.sobunsobun.backend.application.file.FileStorageService;
+import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
@@ -59,6 +60,7 @@ public class ChatRestController {
     private final ChatMemberRepository chatMemberRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final ChatRedisService chatRedisService;
 
     // ====== 채팅방 관련 API ======
 
@@ -334,7 +336,7 @@ public class ChatRestController {
             List<ChatRoomResponse> responses = chatRooms.getContent()
                     .stream()
                     .map(room -> {
-                        long unreadCount = chatMemberRepository.countUnreadMessages(room.getId(), userId);
+                        long unreadCount = chatRedisService.getUnreadCount(room.getId(), userId);
                         log.debug("  - roomId: {}, roomName: {}, unreadCount: {}",
                                 room.getId(), room.getName(), unreadCount);
 
@@ -599,6 +601,12 @@ public class ChatRestController {
                         .body(ApiResponse.forbidden("NOT_MEMBER", "채팅방 멤버가 아닙니다"));
             }
             log.info("✅ 권한 확인 완료 - 멤버임");
+
+            // 첫 페이지 진입 시 unread count 초기화 (채팅방 입장으로 간주)
+            if (page == 0) {
+                chatRedisService.enterRoom(userId, roomId);
+                log.debug("✅ [unread 초기화] enterRoom 완료 - userId: {}, roomId: {}", userId, roomId);
+            }
 
             log.debug("🔄 ChatMessageRepository.findByChatRoomIdOrderByCreatedAtDesc() 조회 중...");
             Pageable pageable = PageRequest.of(page, size);
