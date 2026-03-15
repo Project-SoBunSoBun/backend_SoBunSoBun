@@ -201,7 +201,8 @@ public class StompEventListener {
                     principal.getName());
             return null;
         } catch (Exception e) {
-            log.warn("⚠️ [userId 추출 실패] error: {}", e.getMessage());
+            log.warn("⚠️ [userId 추출 실패] principal type: {}, error: {}",
+                    principal.getClass().getSimpleName(), e.getMessage());
             return null;
         }
     }
