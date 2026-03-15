@@ -2,11 +2,13 @@ package com.sobunsobun.backend.infrastructure.stomp;
 
 import com.sobunsobun.backend.dto.chat.ChatListUpdateNotification;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
+import com.sobunsobun.backend.security.JwtUserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
@@ -141,7 +143,7 @@ public class StompEventListener {
      * destination 문자열에서 roomId 추출
      *
      * 형식: /sub/chat/room/{roomId}
-     * 예: /sub/chat/room/123 → 123
+     * 예:   /sub/chat/room/123 → 123
      *
      * @param destination STOMP destination 문자열
      * @return 추출된 roomId (추출 실패 시 null)
@@ -184,15 +186,16 @@ public class StompEventListener {
         }
 
         try {
-            // 임의 구현: Principal.getName()을 userId로 가정
-            // 실제 프로젝트에서는 JWT 토큰이나 SecurityContext 사용 권장
-            String userIdStr = principal.getName();
+            // WebSocketAuthInterceptor가 설정한 UsernamePasswordAuthenticationToken에서 JwtUserPrincipal 추출
+            if (principal instanceof UsernamePasswordAuthenticationToken auth) {
+                Object innerPrincipal = auth.getPrincipal();
+                if (innerPrincipal instanceof JwtUserPrincipal jwtPrincipal) {
+                    return jwtPrincipal.id();
+                }
+            }
 
-            // 만약 JWT 토큰이라면, 여기서 파싱하여 userId를 추출
-            // 예: JwtTokenProvider.getUserIdFromToken(userIdStr);
-
-            // 현재는 getName()이 직접 userId라고 가정
-            return Long.parseLong(userIdStr);
+            // Fallback: getName()을 Long으로 변환 시도
+            return Long.parseLong(principal.getName());
         } catch (NumberFormatException e) {
             log.warn("⚠️ [userId 추출 실패] Principal.getName()을 Long으로 변환 불가: {}",
                     principal.getName());
