@@ -784,6 +784,63 @@ public class ChatMessageService {
     }
 
     /**
+     * 채팅방 입장 시 해당 유저에게 완전한 CHAT_LIST_UPDATE 알림 전송 (unreadCount=0)
+     *
+     * StompEventListener.onSubscribe 및 REST API 메시지 조회(page=0) 시 호출.
+     * roomName, profileImageUrl, lastMessage, roomType 등 모든 필드를 포함하여
+     * iOS가 알림을 무시하지 않고 정상적으로 unReadCount를 초기화할 수 있도록 합니다.
+     */
+    public void sendEnterRoomNotification(Long userId, Long roomId) {
+        try {
+            chatRoomRepository.findByIdWithMembers(roomId).ifPresent(chatRoom -> {
+                List<ChatMember> activeMembers = chatRoom.getMembers().stream()
+                        .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
+                        .toList();
+
+                String roomName;
+                String profileImageUrl;
+
+                if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
+                    ChatMember other = activeMembers.stream()
+                            .filter(m -> !m.getUser().getId().equals(userId))
+                            .findFirst()
+                            .orElse(null);
+                    if (other != null) {
+                        roomName = other.getUser().getNickname();
+                        profileImageUrl = other.getUser().getProfileImageUrl();
+                    } else {
+                        roomName = chatRoom.getName();
+                        profileImageUrl = null;
+                    }
+                } else {
+                    roomName = chatRoom.getName();
+                    profileImageUrl = null;
+                }
+
+                LastMessageDto lastMessageDto = chatMessageRepository
+                        .findLatestMessageByRoomId(roomId)
+                        .map(LastMessageDto::from)
+                        .orElse(null);
+
+                ChatListUpdateNotification notification = ChatListUpdateNotification.builder()
+                        .type("CHAT_LIST_UPDATE")
+                        .roomId(roomId)
+                        .roomName(roomName)
+                        .profileImageUrl(profileImageUrl)
+                        .lastMessage(lastMessageDto)
+                        .unreadCount(0)
+                        .roomType(chatRoom.getRoomType().name())
+                        .build();
+
+                messagingTemplate.convertAndSend("/sub/users/" + userId + "/chat-rooms", notification);
+                log.debug("📡 [입장 unread 초기화 알림] userId: {}, roomId: {}", userId, roomId);
+            });
+        } catch (Exception e) {
+            log.warn("⚠️ [입장 알림 전송 실패] userId: {}, roomId: {}, error: {}", userId, roomId, e.getMessage());
+        }
+    }
+
+    /**
      * 미리보기 텍스트 생성 (너무 길면 잘라냠)
      */
     private String truncateContent(String content) {
