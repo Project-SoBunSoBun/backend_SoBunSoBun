@@ -143,7 +143,7 @@ public class StompEventListener {
      * destination 문자열에서 roomId 추출
      *
      * 형식: /sub/chat/room/{roomId}
-     * 예: /sub/chat/room/123 → 123
+     * 예:   /sub/chat/room/123 → 123
      *
      * @param destination STOMP destination 문자열
      * @return 추출된 roomId (추출 실패 시 null)
@@ -186,14 +186,20 @@ public class StompEventListener {
         }
 
         try {
-            // UsernamePasswordAuthenticationToken → JwtUserPrincipal에서 id 추출
-            if (principal instanceof UsernamePasswordAuthenticationToken auth &&
-                    auth.getPrincipal() instanceof JwtUserPrincipal jwtPrincipal) {
-                return jwtPrincipal.id();
+            // WebSocketAuthInterceptor가 설정한 UsernamePasswordAuthenticationToken에서 JwtUserPrincipal 추출
+            if (principal instanceof UsernamePasswordAuthenticationToken auth) {
+                Object innerPrincipal = auth.getPrincipal();
+                if (innerPrincipal instanceof JwtUserPrincipal jwtPrincipal) {
+                    return jwtPrincipal.id();
+                }
             }
 
-            // fallback: getName()이 숫자인 경우
+            // Fallback: getName()을 Long으로 변환 시도
             return Long.parseLong(principal.getName());
+        } catch (NumberFormatException e) {
+            log.warn("⚠️ [userId 추출 실패] Principal.getName()을 Long으로 변환 불가: {}",
+                    principal.getName());
+            return null;
         } catch (Exception e) {
             log.warn("⚠️ [userId 추출 실패] principal type: {}, error: {}",
                     principal.getClass().getSimpleName(), e.getMessage());

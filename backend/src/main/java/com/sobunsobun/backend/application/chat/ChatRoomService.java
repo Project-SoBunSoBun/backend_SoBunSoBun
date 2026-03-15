@@ -267,6 +267,9 @@ public class ChatRoomService {
             chatMemberRepository.saveAndFlush(member2);
             log.info("✅ [단계7 완료] ChatMember DB 저장됨");
 
+            // WebSocket으로 멤버 양쪽에 새 채팅방 알림 발송
+            chatMessageService.broadcastNewRoomNotification(savedRoom);
+
             log.info("✅ [개인 채팅방 생성 완료] roomId: {}, owner: {}, member: {} <-> {}",
                     savedRoom.getId(), user1.getNickname(), user1.getNickname(), user2.getNickname());
             log.info("═════════════════════════════════════════════════════════════");
