@@ -28,8 +28,10 @@ public class SavedPostDto {
     }
 
     /**
-     * 저장된 게시글 목록 응답 DTO
+     * 저장된 게시글 목록 응답 DTO (더 이상 사용되지 않음 - PostResponse 사용)
+     * @deprecated Use PostResponse instead
      */
+    @Deprecated
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

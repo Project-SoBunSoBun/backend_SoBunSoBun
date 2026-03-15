@@ -2,6 +2,7 @@ package com.sobunsobun.backend.controller.post;
 
 import com.sobunsobun.backend.application.post.SavedPostService;
 import com.sobunsobun.backend.dto.post.SavedPostDto;
+import com.sobunsobun.backend.dto.post.PostResponse;
 import com.sobunsobun.backend.security.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -61,12 +62,12 @@ public class SavedPostController {
     @GetMapping("/my/list")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "내 저장된 게시글 목록", description = "현재 사용자가 저장한 게시글 목록을 조회합니다")
-    public ResponseEntity<Page<SavedPostDto.ListResponse>> getMySavedPosts(
+    public ResponseEntity<Page<PostResponse>> getMySavedPosts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long userId = SecurityUtil.getCurrentUserId();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<SavedPostDto.ListResponse> response = savedPostService.getMySavedPosts(userId, pageable);
+        Page<PostResponse> response = savedPostService.getMySavedPostsAsPostResponse(userId, pageable);
         return ResponseEntity.ok(response);
     }
 

@@ -161,7 +161,7 @@ jobs:
             set -Eeuo pipefail
             APP_DIR="/opt/apps/sobunsobun"
             SERVICE_NAME="sobunsobun"
-            HEALTH_URL="http://127.0.0.1:8081/healthz"
+            HEALTH_URL="http://158.180.80.135:8081/health"
             STARTUP_TIMEOUT=120
 
             # 1) 서비스가 active 될 때까지 대기
