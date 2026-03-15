@@ -410,11 +410,27 @@ function renderRoomList(list) {
 function updateRoomInList(notification) {
   const idx = rooms.findIndex(r => r.roomId == notification.roomId);
   if (idx >= 0) {
-    rooms[idx].lastMessage = notification.lastMessage;
+    // null/undefined 필드는 기존 값 유지
+    if (notification.lastMessage != null)   rooms[idx].lastMessage   = notification.lastMessage;
+    if (notification.roomName != null)      rooms[idx].roomName      = notification.roomName;
+    if (notification.profileImageUrl != null) rooms[idx].profileImageUrl = notification.profileImageUrl;
+    if (notification.roomType != null)      rooms[idx].roomType      = notification.roomType;
+
     // 현재 보고 있는 방이면 unread는 항상 0
-    rooms[idx].unreadCount = (notification.roomId == activeRoomId) ? 0 : notification.unreadCount;
+    rooms[idx].unreadCount = (notification.roomId == activeRoomId) ? 0 : (notification.unreadCount || 0);
+
     const updated = rooms.splice(idx, 1)[0];
     rooms.unshift(updated);
+  } else if (notification.roomName != null) {
+    // 목록에 없는 새 방 알림 → 추가
+    rooms.unshift({
+      roomId:         notification.roomId,
+      roomName:       notification.roomName,
+      roomType:       notification.roomType,
+      profileImageUrl: notification.profileImageUrl,
+      lastMessage:    notification.lastMessage,
+      unreadCount:    (notification.roomId == activeRoomId) ? 0 : (notification.unreadCount || 0),
+    });
   }
   renderRoomList(rooms);
 }
@@ -538,6 +554,13 @@ function onChatMessage(frame) {
     if (data.roomId != activeRoomId) return;
 
     appendMessage(data, true);
+
+    // 현재 방 unreadCount 즉시 0으로 반영 (CHAT_LIST_UPDATE 도착 전 선반영)
+    const idx = rooms.findIndex(r => r.roomId == activeRoomId);
+    if (idx >= 0 && rooms[idx].unreadCount !== 0) {
+      rooms[idx].unreadCount = 0;
+      renderRoomList(rooms);
+    }
 
     // 메시지 박스 하단 스크롤
     const box = document.getElementById('messagesBox');
