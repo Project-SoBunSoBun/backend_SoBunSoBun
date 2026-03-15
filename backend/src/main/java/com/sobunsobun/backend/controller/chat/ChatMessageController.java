@@ -6,6 +6,7 @@ import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.MessageResponse;
 import com.sobunsobun.backend.dto.chat.MessageSendRequest;
 import com.sobunsobun.backend.dto.chat.ReadMarkRequest;
+import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
@@ -41,6 +42,7 @@ public class ChatMessageController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatRedisService chatRedisService;
 
     /**
      * 메시지 전송
@@ -148,6 +150,14 @@ public class ChatMessageController {
                     request.getLastReadMessageId()
             );
             log.info("✅ [단계1 완료] 읽음 처리 완료");
+
+            // Redis unReadCount 초기화
+            chatRedisService.resetUnreadCount(request.getRoomId(), userId);
+            log.debug("✅ [Redis] unReadCount 초기화 완료 - roomId: {}, userId: {}", request.getRoomId(), userId);
+
+            // 채팅 목록 CHAT_LIST_UPDATE 알림 전송 (unReadCount: 0)
+            chatMessageService.sendEnterRoomNotification(userId, request.getRoomId());
+            log.debug("✅ [WebSocket] 채팅 목록 unReadCount:0 알림 전송 완료");
 
             // ✅ 읽음 처리 완료 - 개인 큐로 알림
             log.debug("📢 [단계2] 읽음 완료 알림 전송 중... userId: {}", userId);
