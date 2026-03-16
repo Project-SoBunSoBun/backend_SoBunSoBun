@@ -63,8 +63,8 @@ public class ChatInviteService {
             throw new ChatException(ErrorCode.CHAT_MEMBER_NOT_FOUND);
         }
 
-        // 3. 그룹 채팅방인지 확인
-        if (chatRoom.getRoomType() != ChatRoomType.GROUP) {
+        // 3. 1:1 채팅방인지 확인 (초대는 1:1 채팅방에서 발송, 수락 시 그룹 채팅방 생성)
+        if (chatRoom.getRoomType() != ChatRoomType.ONE_TO_ONE) {
             throw new ChatException(ErrorCode.CHAT_INVALID_ROOM_TYPE);
         }
 
@@ -85,25 +85,22 @@ public class ChatInviteService {
         // 7. 초대 생성 (PENDING, 24시간 유효)
         User inviter = userRepository.getReferenceById(inviterId);
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(24);
+        Long groupPostId = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null;
 
         ChatInvite invite = ChatInvite.builder()
                 .chatRoom(chatRoom)
                 .inviter(inviter)
                 .invitee(invitee)
                 .expiresAt(expiresAt)
+                .targetGroupPostId(groupPostId)
                 .build();
 
         ChatInvite savedInvite = chatInviteRepository.save(invite);
         log.info("[ChatInvite] 초대 생성 완료 - inviteId: {}, roomId: {}, inviterId: {}, inviteeId: {}",
                 savedInvite.getId(), roomId, inviterId, inviteeId);
 
-        // 8. invitee와의 1:1 채팅방에 INVITE_CARD 메시지 저장 (invitee가 채팅에서 바로 확인)
-        Long groupPostId = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null;
-        chatMemberRepository.findOneToOneChatRoom(inviterId, inviteeId, groupPostId)
-                .ifPresentOrElse(
-                        oneToOneRoom -> saveInviteCardMessage(oneToOneRoom, chatRoom, inviter, savedInvite, expiresAt),
-                        () -> log.warn("[ChatInvite] 1:1 채팅방 없음, INVITE_CARD 저장 생략 - inviterId: {}, inviteeId: {}", inviterId, inviteeId)
-                );
+        // 8. 현재 1:1 채팅방에 INVITE_CARD 메시지 저장 (invitee가 채팅에서 바로 확인)
+        saveInviteCardMessage(chatRoom, inviter, savedInvite, expiresAt);
 
         return ChatInviteResponse.from(savedInvite);
     }
@@ -140,29 +137,60 @@ public class ChatInviteService {
         // 5. 초대 수락 (status → ACCEPTED)
         invite.accept();
 
-        // 6. 채팅방 멤버로 추가 (이미 멤버면 스킵)
-        Long roomId = invite.getChatRoom().getId();
-        if (!chatMemberRepository.isActiveMember(roomId, requesterId)) {
-            ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
+        // 6. 그룹 채팅방 생성 또는 참여 (1:1 초대 수락 → 그룹방 합류)
+        Long targetGroupPostId = invite.getTargetGroupPostId();
+        User invitee = invite.getInvitee();
+        Long groupRoomId = null;
+
+        if (targetGroupPostId != null) {
+            // 해당 groupPost의 그룹 채팅방 조회, 없으면 신규 생성
+            ChatRoom groupRoom = chatRoomRepository.findByGroupPostId(targetGroupPostId)
+                    .orElseGet(() -> {
+                        User inviterUser = invite.getInviter();
+                        ChatRoom sourceRoom = invite.getChatRoom();
+                        String roomName = sourceRoom.getGroupPost() != null
+                                ? sourceRoom.getGroupPost().getTitle()
+                                : inviterUser.getNickname() + "의 모임";
+                        ChatRoom newGroupRoom = ChatRoom.builder()
+                                .name(roomName)
+                                .roomType(ChatRoomType.GROUP)
+                                .owner(inviterUser)
+                                .groupPost(sourceRoom.getGroupPost())
+                                .messageCount(0L)
+                                .build();
+                        ChatRoom saved = chatRoomRepository.saveAndFlush(newGroupRoom);
+                        chatMemberRepository.saveAndFlush(saved.addMember(inviterUser));
+                        return saved;
+                    });
+
+            groupRoomId = groupRoom.getId();
+            ChatRoom groupRoomWithMembers = chatRoomRepository.findByIdWithMembers(groupRoomId)
                     .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
-            User invitee = invite.getInvitee();
 
-            ChatMember newMember = chatRoom.addMember(invitee);
-            chatMemberRepository.saveAndFlush(newMember);
+            // inviter가 그룹방 멤버가 아니면 추가
+            Long inviterId = invite.getInviter().getId();
+            if (!chatMemberRepository.isActiveMember(groupRoomId, inviterId)) {
+                chatMemberRepository.saveAndFlush(groupRoomWithMembers.addMember(invite.getInviter()));
+            }
 
-            // ENTER 시스템 메시지 발행
-            chatMessageService.publishSystemMessage(
-                    roomId,
-                    invitee,
-                    ChatMessageType.ENTER,
-                    invitee.getNickname() + "님이 입장했습니다."
-            );
+            // invitee(수락자)를 그룹방 멤버로 추가
+            if (!chatMemberRepository.isActiveMember(groupRoomId, requesterId)) {
+                chatMemberRepository.saveAndFlush(groupRoomWithMembers.addMember(invitee));
+                chatMessageService.publishSystemMessage(
+                        groupRoomId,
+                        invitee,
+                        ChatMessageType.ENTER,
+                        invitee.getNickname() + "님이 입장했습니다."
+                );
+            }
+
+            log.info("[ChatInvite] 초대 수락 완료 - inviteId: {}, groupRoomId: {}, inviteeId: {}",
+                    inviteId, groupRoomId, requesterId);
+        } else {
+            log.warn("[ChatInvite] targetGroupPostId 없음, 그룹방 생성 생략 - inviteId: {}", inviteId);
         }
 
-        log.info("[ChatInvite] 초대 수락 완료 - inviteId: {}, roomId: {}, inviteeId: {}",
-                inviteId, roomId, requesterId);
-
-        return ChatInviteResponse.from(invite);
+        return ChatInviteResponse.from(invite, groupRoomId);
     }
 
     /**
@@ -202,13 +230,12 @@ public class ChatInviteService {
     /**
      * 1:1 채팅방에 INVITE_CARD 메시지 저장 및 브로드캐스트
      *
-     * @param oneToOneRoom inviter↔invitee 간 1:1 채팅방 (카드를 보여줄 방)
-     * @param groupRoom    초대 대상 그룹 채팅방 (groupPostId/Title 추출용)
+     * @param oneToOneRoom 초대가 발송되는 1:1 채팅방 (카드를 보여줄 방, groupPost 정보 포함)
      */
-    private void saveInviteCardMessage(ChatRoom oneToOneRoom, ChatRoom groupRoom, User inviter, ChatInvite invite, LocalDateTime expiresAt) {
+    private void saveInviteCardMessage(ChatRoom oneToOneRoom, User inviter, ChatInvite invite, LocalDateTime expiresAt) {
         try {
-            Long groupPostId = groupRoom.getGroupPost() != null ? groupRoom.getGroupPost().getId() : null;
-            String groupPostTitle = groupRoom.getGroupPost() != null ? groupRoom.getGroupPost().getTitle() : null;
+            Long groupPostId = oneToOneRoom.getGroupPost() != null ? oneToOneRoom.getGroupPost().getId() : null;
+            String groupPostTitle = oneToOneRoom.getGroupPost() != null ? oneToOneRoom.getGroupPost().getTitle() : null;
 
             InviteCardPayload payload = InviteCardPayload.builder()
                     .inviteId(invite.getId())
@@ -232,7 +259,7 @@ public class ChatInviteService {
                     null,
                     cardPayloadJson
             );
-            log.info("[ChatInvite] INVITE_CARD 저장 완료 - 1:1roomId: {}, groupRoomId: {}", oneToOneRoom.getId(), groupRoom.getId());
+            log.info("[ChatInvite] INVITE_CARD 저장 완료 - 1:1roomId: {}, groupPostId: {}", oneToOneRoom.getId(), groupPostId);
 
         } catch (JsonProcessingException e) {
             log.warn("[ChatInvite] INVITE_CARD payload 직렬화 실패 - inviteId: {}", invite.getId(), e);

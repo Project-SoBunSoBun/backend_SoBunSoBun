@@ -73,7 +73,7 @@ public enum ErrorCode {
     SETTLEMENT_NOT_COMPLETED("CHAT_007", "정산이 완료되지 않았습니다.", HttpStatus.CONFLICT),
     CHAT_ALREADY_MEMBER("CHAT_008", "이미 채팅방 멤버입니다.", HttpStatus.CONFLICT),
     CHAT_INVITE_ALREADY_PENDING("CHAT_009", "이미 대기 중인 초대가 존재합니다.", HttpStatus.CONFLICT),
-    CHAT_INVALID_ROOM_TYPE("CHAT_010", "그룹 채팅방에서만 초대할 수 있습니다.", HttpStatus.BAD_REQUEST),
+    CHAT_INVALID_ROOM_TYPE("CHAT_010", "1:1 채팅방에서만 초대할 수 있습니다.", HttpStatus.BAD_REQUEST),
     CHAT_INVITE_NOT_PENDING("CHAT_011", "이미 처리된 초대입니다.", HttpStatus.CONFLICT),
     CHAT_INVITE_ACCESS_DENIED("CHAT_012", "초대에 대한 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     CHAT_NOT_OWNER("CHAT_013", "채팅방 방장만 수행할 수 있습니다.", HttpStatus.FORBIDDEN),
