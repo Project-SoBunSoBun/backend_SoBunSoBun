@@ -7,6 +7,7 @@ import com.sobunsobun.backend.dto.post.PostListResponse;
 import com.sobunsobun.backend.dto.post.PostResponse;
 import com.sobunsobun.backend.dto.profile.MyProfileDetailResponse;
 import com.sobunsobun.backend.dto.profile.PublicUserProfileResponse;
+import com.sobunsobun.backend.repository.BlockedUserRepository;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.UserReportRepository;
@@ -43,6 +44,7 @@ public class ProfileService {
     private final SavedPostRepository savedPostRepository;
     private final UserTagStatsRepository userTagStatsRepository;
     private final UserReportRepository userReportRepository;
+    private final BlockedUserRepository blockedUserRepository;
 
     /**
      * 내 프로필 조회 (탭별 페이징)
@@ -109,11 +111,12 @@ public class ProfileService {
     /**
      * 타 유저 프로필 조회
      *
+     * @param currentUserId 현재 인증된 사용자 ID (null 가능 - 미인증 사용자)
      * @param targetUserId 조회할 사용자 ID
      * @param page         페이지 번호 (0부터 시작)
      * @param size         페이지 크기
      */
-    public PublicUserProfileResponse getUserProfile(Long targetUserId, int page, int size) {
+    public PublicUserProfileResponse getUserProfile(Long currentUserId, Long targetUserId, int page, int size) {
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
@@ -136,8 +139,14 @@ public class ProfileService {
         Pageable pageable = PageRequest.of(page, size);
         Page<GroupPost> postPage = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(targetUserId, pageable);
 
-        log.info("타 유저 프로필 조회 - userId: {}, totalPosts: {}",
-                targetUserId, postPage.getTotalElements());
+        // 현재 사용자가 해당 타 유저를 차단했는지 확인
+        Boolean isBlocked = false;
+        if (currentUserId != null) {
+            isBlocked = blockedUserRepository.existsByBlockerIdAndBlockedId(currentUserId, targetUserId);
+        }
+
+        log.info("타 유저 프로필 조회 - currentUserId: {}, targetUserId: {}, isBlocked: {}, totalPosts: {}",
+                currentUserId, targetUserId, isBlocked, postPage.getTotalElements());
 
         return PublicUserProfileResponse.builder()
                 .userId(user.getId())
@@ -147,6 +156,7 @@ public class ProfileService {
                 .hostCount(hostCount)
                 .participationCount(participationCount)
                 .mannerTags(mannerTags)
+                .isBlocked(isBlocked)
                 .posts(toPostListResponse(postPage))
                 .build();
     }
