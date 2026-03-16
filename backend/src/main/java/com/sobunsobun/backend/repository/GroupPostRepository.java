@@ -83,12 +83,17 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     // ── 차단 유저 제외 쿼리 ─────────────────────────────────────────────────
 
     /**
-     * 전체 게시글 조회 (차단 유저 제외, 최신순)
+     * 전체 게시글 조회 (차단 유저 제외, CANCELLED 제외, 최신순)
      */
-    @Query("SELECT p FROM GroupPost p WHERE p.owner.id NOT IN " +
+    @Query("SELECT p FROM GroupPost p WHERE p.status != 'CANCELLED' AND p.owner.id NOT IN " +
            "(SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
            "ORDER BY p.createdAt DESC")
     Page<GroupPost> findAllExcludingBlocked(@Param("viewerId") Long viewerId, Pageable pageable);
+
+    /**
+     * 전체 게시글 조회 (비로그인, CANCELLED 제외, 최신순)
+     */
+    Page<GroupPost> findAllByStatusNotOrderByCreatedAtDesc(PostStatus status, Pageable pageable);
 
     /**
      * 상태별 게시글 조회 (차단 유저 제외, 마감일 오름차순)
