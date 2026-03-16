@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.application.settleup;
 
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.*;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -32,6 +34,7 @@ public class SettlementService {
     private final SettlementRepository settlementRepository;
     private final UserRepository userRepository;
     private final ChatRoomRepository chatRoomRepository;
+    private final NotificationService notificationService;
 
     // =================================================
     // 게시글 생성 시 내부 호출 — 외부 API 없음
@@ -153,6 +156,30 @@ public class SettlementService {
 
         log.info("[정산 완료] settlementId={}, totalAmount={}, participants={}",
                 settlementId, request.getTotalAmount(), participants.size());
+
+        // FCM 알림: 정산 관련 참여자들에게 발송 (방장 제외)
+        Long postId = settlement.getGroupPost().getId();
+        Long ownerId = settlement.getGroupPost().getOwner().getId();
+        try {
+            participants.stream()
+                    .map(SettlementParticipant::getUser)
+                    .filter(u -> !u.getId().equals(ownerId))
+                    .forEach(recipient -> {
+                        try {
+                            notificationService.createAndSend(
+                                    recipient,
+                                    "SETTLEMENT",
+                                    "정산 요청",
+                                    "정산 요청이 도착했습니다.",
+                                    Map.of("type", "SETTLEMENT", "postId", String.valueOf(postId))
+                            );
+                        } catch (Exception e) {
+                            log.warn("[정산 FCM 실패] userId={}, error={}", recipient.getId(), e.getMessage());
+                        }
+                    });
+        } catch (Exception e) {
+            log.warn("[정산 FCM 전체 실패] settlementId={}, error={}", settlementId, e.getMessage());
+        }
 
         return SettlementDetailResponse.from(settlement);
     }

@@ -4,6 +4,7 @@ import com.sobunsobun.backend.domain.UserDevice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -21,6 +22,11 @@ public interface UserDeviceRepository extends JpaRepository<UserDevice, Long> {
      * FCM 토큰으로 조회
      */
     Optional<UserDevice> findByFcmToken(String fcmToken);
+
+    /**
+     * 특정 사용자의 모든 활성 디바이스 조회 (FCM 발송용)
+     */
+    List<UserDevice> findByUserIdAndIsEnabledTrue(Long userId);
 
     /**
      * 특정 사용자의 모든 디바이스 정보 삭제 (회원탈퇴용)

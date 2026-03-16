@@ -2,6 +2,7 @@ package com.sobunsobun.backend.application.chat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatInvite;
 import com.sobunsobun.backend.domain.chat.ChatMember;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -42,6 +44,7 @@ public class ChatInviteService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     /**
      * 그룹 채팅방 초대 발송
@@ -109,6 +112,19 @@ public class ChatInviteService {
 
         // 8. 현재 1:1 채팅방에 INVITE_CARD 메시지 저장 (invitee가 채팅에서 바로 확인)
         saveInviteCardMessage(chatRoom, inviter, savedInvite, expiresAt);
+
+        // 9. FCM 푸시 알림: invitee에게 초대 알림
+        try {
+            notificationService.createAndSend(
+                    invitee,
+                    "PARTICIPATION",
+                    "단체채팅 초대",
+                    inviter.getNickname() + "님이 초대를 보냈습니다.",
+                    Map.of("type", "PARTICIPATION", "inviteId", String.valueOf(savedInvite.getId()))
+            );
+        } catch (Exception e) {
+            log.warn("[ChatInvite] FCM 알림 발송 실패 - inviteId: {}, error: {}", savedInvite.getId(), e.getMessage());
+        }
 
         return ChatInviteResponse.from(savedInvite);
     }

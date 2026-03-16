@@ -1,5 +1,8 @@
 package com.sobunsobun.backend.dto.notification;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sobunsobun.backend.domain.Notification;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -50,5 +53,30 @@ public class NotificationItemResponse {
      * 생성 일시
      */
     private LocalDateTime createdAt;
+
+    public static NotificationItemResponse from(Notification notification) {
+        Long postId = extractPostId(notification.getDataPayload());
+        return NotificationItemResponse.builder()
+                .id(notification.getId())
+                .type(notification.getType())
+                .title(notification.getTitle())
+                .message(notification.getBody())
+                .postId(postId)
+                .isRead(notification.getIsRead())
+                .createdAt(notification.getCreatedAt())
+                .build();
+    }
+
+    private static Long extractPostId(String dataPayload) {
+        if (dataPayload == null || dataPayload.isBlank()) return null;
+        try {
+            JsonNode node = new ObjectMapper().readTree(dataPayload);
+            if (node.has("postId") && !node.get("postId").isNull()) {
+                return node.get("postId").asLong();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
 }
 

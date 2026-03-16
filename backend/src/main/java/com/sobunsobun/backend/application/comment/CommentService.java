@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.application.comment;
 
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.Comment;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.User;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -34,6 +36,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final GroupPostRepository postRepository;
     private final BlockedUserRepository blockedUserRepository;
+    private final NotificationService notificationService;
 
     /**
      * 댓글 생성
@@ -87,6 +90,22 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
         log.info("댓글 생성 완료 - commentId: {}", savedComment.getId());
+
+        // FCM 알림: 게시글 작성자에게 댓글 알림 (본인 댓글 제외)
+        User postOwner = post.getOwner();
+        if (!postOwner.getId().equals(user.getId())) {
+            try {
+                notificationService.createAndSend(
+                        postOwner,
+                        "COMMENT",
+                        "새 댓글",
+                        user.getNickname() + "님이 댓글을 남겼습니다.",
+                        Map.of("type", "COMMENT", "postId", String.valueOf(postId))
+                );
+            } catch (Exception e) {
+                log.warn("댓글 FCM 알림 발송 실패 - postId: {}, error: {}", postId, e.getMessage());
+            }
+        }
 
         return CommentResponse.from(savedComment);
     }

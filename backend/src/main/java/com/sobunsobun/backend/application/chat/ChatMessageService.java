@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.application.chat;
 
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.*;
 import com.sobunsobun.backend.dto.chat.ChatListUpdateNotification;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -34,6 +36,7 @@ public class ChatMessageService {
     private final RedisPublisher redisPublisher;  // Redis Pub/Sub을 위한 Publisher
     private final ChatRedisService chatRedisService;  // Redis 상태 관리 서비스
     private final SimpMessagingTemplate messagingTemplate;  // WebSocket 채팅 목록 알림 발송
+    private final NotificationService notificationService;
 
     /**
      * 메시지 저장
@@ -195,7 +198,16 @@ public class ChatMessageService {
                 log.warn("⚠️ [단계7 경고] 채팅 목록 업데이트 발송 실패 (메시지 저장은 완료됨): {}", e.getMessage());
             }
 
-            // 8. SETTLEMENT_CARD를 GROUP 채팅방에 보낸 경우 → 각 참여자 1:1 채팅방에도 전송
+            // 8. FCM 푸시 알림 - 현재 방에 없는 멤버에게 발송
+            if (type == ChatMessageType.TEXT || type == ChatMessageType.IMAGE) {
+                try {
+                    sendChatPushNotification(chatRoom, sender, content, roomId);
+                } catch (Exception e) {
+                    log.warn("⚠️ [FCM 발송 실패] 메시지 저장은 완료됨: {}", e.getMessage());
+                }
+            }
+
+            // 9. SETTLEMENT_CARD를 GROUP 채팅방에 보낸 경우 → 각 참여자 1:1 채팅방에도 전송
             if (type == ChatMessageType.SETTLEMENT_CARD && chatRoom.getRoomType() == ChatRoomType.GROUP) {
                 log.debug("📨 [단계8] 참여자 1:1 채팅방에 정산서 전송 중...");
                 try {
@@ -837,6 +849,33 @@ public class ChatMessageService {
             });
         } catch (Exception e) {
             log.warn("⚠️ [입장 알림 전송 실패] userId: {}, roomId: {}, error: {}", userId, roomId, e.getMessage());
+        }
+    }
+
+    /**
+     * 채팅 메시지 FCM 푸시 알림 발송
+     * - 발신자 제외
+     * - 현재 해당 방에 접속 중인 멤버 제외 (active_room 기반)
+     */
+    private void sendChatPushNotification(ChatRoom chatRoom, User sender, String content, Long roomId) {
+        List<Long> memberIds = chatMemberRepository.findActiveMemberIdsByRoomId(roomId);
+        String notifTitle = "새 메시지";
+        String notifBody = sender.getNickname() + ": " + (content != null ? truncateContent(content) : "");
+        Map<String, String> data = Map.of(
+                "type", "CHAT",
+                "roomId", String.valueOf(roomId)
+        );
+
+        for (Long memberId : memberIds) {
+            if (memberId.equals(sender.getId())) continue;
+
+            // 현재 해당 방에 접속 중인 멤버는 스킵
+            Long activeRoom = chatRedisService.getActiveRoom(memberId);
+            if (roomId.equals(activeRoom)) continue;
+
+            userRepository.findById(memberId).ifPresent(member ->
+                    notificationService.createAndSend(member, "CHAT", notifTitle, notifBody, data)
+            );
         }
     }
 
