@@ -3,6 +3,7 @@ package com.sobunsobun.backend.application.user;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.MannerReview;
 import com.sobunsobun.backend.domain.MannerTag;
+import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.manner.MannerReviewRequest;
 import com.sobunsobun.backend.repository.GroupPostRepository;
@@ -124,6 +125,10 @@ public class MannerReviewService {
 
             result.put(receiverId, savedTagCodes);
         }
+
+        // 매너 평가 완료 → 게시글 상태를 COMPLETED로 변경
+        groupPost.setStatus(PostStatus.COMPLETED);
+        log.info("게시글 상태 COMPLETED 변경 - postId: {}", groupPost.getId());
 
         log.info("매너 평가 완료 - senderId: {}, result: {}", senderId, result);
         return result;
