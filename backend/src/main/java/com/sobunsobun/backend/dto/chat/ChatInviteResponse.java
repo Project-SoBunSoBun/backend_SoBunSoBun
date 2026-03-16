@@ -41,7 +41,7 @@ public class ChatInviteResponse {
     public static ChatInviteResponse from(ChatInvite invite, Long groupRoomId) {
         return ChatInviteResponse.builder()
                 .inviteId(invite.getId())
-                .chatRoomId(invite.getChatRoom().getId())
+                .chatRoomId(groupRoomId != null ? groupRoomId : invite.getChatRoom().getId())
                 .roomName(invite.getChatRoom().getName())
                 .inviterId(invite.getInviter().getId())
                 .inviterName(invite.getInviter().getNickname())
