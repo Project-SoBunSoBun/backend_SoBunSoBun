@@ -113,6 +113,11 @@ public class PostService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
                 });
 
+        if (post.getStatus() == PostStatus.CANCELLED) {
+            log.warn("취소된 게시글 조회 시도 - ID: {}", postId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
+        }
+
         return convertToResponse(post);
     }
 
@@ -131,7 +136,7 @@ public class PostService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<GroupPost> postPage = (viewerId != null)
                 ? postRepository.findAllExcludingBlocked(viewerId, pageable)
-                : postRepository.findAll(pageable);
+                : postRepository.findAllByStatusNotOrderByCreatedAtDesc(PostStatus.CANCELLED, pageable);
 
         log.info("DB 조회 결과 - 전체 게시글 수: {}, 현재 페이지 게시글 수: {}, 총 페이지: {}",
                  postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
@@ -153,6 +158,9 @@ public class PostService {
 
         try {
             PostStatus postStatus = PostStatus.valueOf(status.toUpperCase());
+            if (postStatus == PostStatus.CANCELLED) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED)");
+            }
             Pageable pageable = PageRequest.of(page, size);
             Page<GroupPost> postPage = (viewerId != null)
                     ? postRepository.findByStatusExcludingBlocked(viewerId, postStatus, pageable)
