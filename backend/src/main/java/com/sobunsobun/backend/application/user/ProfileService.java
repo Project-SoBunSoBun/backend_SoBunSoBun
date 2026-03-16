@@ -9,6 +9,8 @@ import com.sobunsobun.backend.dto.profile.MyProfileDetailResponse;
 import com.sobunsobun.backend.dto.profile.PublicUserProfileResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
+import com.sobunsobun.backend.repository.UserReportRepository;
+import com.sobunsobun.backend.repository.UserTagStatsRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.support.exception.BusinessException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
@@ -20,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 유저 프로필 조회 서비스
@@ -37,6 +41,8 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final GroupPostRepository groupPostRepository;
     private final SavedPostRepository savedPostRepository;
+    private final UserTagStatsRepository userTagStatsRepository;
+    private final UserReportRepository userReportRepository;
 
     /**
      * 내 프로필 조회 (탭별 페이징)
@@ -68,6 +74,22 @@ public class ProfileService {
             }
         };
 
+        int hostCount = (int) groupPostRepository.countByOwnerId(userId);
+        int participationCount = 0;  // TODO: 참여 엔티티 구현 후 조회
+        int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
+        int reportedCount = (int) userReportRepository.countByTargetUserId(userId);
+        int activityScore = hostCount * 3 + participationCount * 2 + tagCount - reportedCount * 5;
+
+        List<MyProfileDetailResponse.MannerTagDto> mannerTags = userTagStatsRepository
+                .findTop5ByReceiverIdOrderByCountDesc(userId)
+                .stream()
+                .map(stats -> MyProfileDetailResponse.MannerTagDto.builder()
+                        .tagId(stats.getTagCode().getId())
+                        .label(stats.getTagCode().getLabel())
+                        .count(stats.getCount())
+                        .build())
+                .toList();
+
         log.info("내 프로필 조회 - userId: {}, tab: {}, totalElements: {}",
                 userId, tab, posts.getPageInfo().getTotalElements());
 
@@ -75,7 +97,10 @@ public class ProfileService {
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
-                .mannerScore(user.getMannerScore() != null ? user.getMannerScore().doubleValue() : 0.0)
+                .activityScore(activityScore)
+                .hostCount(hostCount)
+                .participationCount(participationCount)
+                .mannerTags(mannerTags)
                 .tab(tab.toLowerCase())
                 .posts(posts)
                 .build();
@@ -92,6 +117,22 @@ public class ProfileService {
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        int hostCount = (int) groupPostRepository.countByOwnerId(targetUserId);
+        int participationCount = 0;  // TODO: 참여 엔티티 구현 후 조회
+        int tagCount = userTagStatsRepository.sumCountByReceiverId(targetUserId);
+        int reportedCount = (int) userReportRepository.countByTargetUserId(targetUserId);
+        int activityScore = hostCount * 3 + participationCount * 2 + tagCount - reportedCount * 5;
+
+        List<PublicUserProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
+                .findTop5ByReceiverIdOrderByCountDesc(targetUserId)
+                .stream()
+                .map(stats -> PublicUserProfileResponse.MannerTagDto.builder()
+                        .tagId(stats.getTagCode().getId())
+                        .label(stats.getTagCode().getLabel())
+                        .count(stats.getCount())
+                        .build())
+                .toList();
+
         Pageable pageable = PageRequest.of(page, size);
         Page<GroupPost> postPage = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(targetUserId, pageable);
 
@@ -102,7 +143,10 @@ public class ProfileService {
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
-                .mannerScore(user.getMannerScore() != null ? user.getMannerScore().doubleValue() : 0.0)
+                .activityScore(activityScore)
+                .hostCount(hostCount)
+                .participationCount(participationCount)
+                .mannerTags(mannerTags)
                 .posts(toPostListResponse(postPage))
                 .build();
     }

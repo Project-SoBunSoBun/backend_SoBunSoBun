@@ -4,6 +4,8 @@ import com.sobunsobun.backend.dto.post.PostListResponse;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.List;
+
 /**
  * 내 프로필 상세 조회 응답 DTO
  *
@@ -19,11 +21,22 @@ public class MyProfileDetailResponse {
     private Long userId;
     private String nickname;
     private String profileImageUrl;
-    private Double mannerScore;
+    private Integer activityScore;
+    private Integer hostCount;
+    private Integer participationCount;
+    private List<MannerTagDto> mannerTags;
 
     /** 현재 조회 탭 (posts / commented / saved) */
     private String tab;
 
     /** 탭에 해당하는 페이징된 게시글 목록 */
     private PostListResponse posts;
+
+    @Getter
+    @Builder
+    public static class MannerTagDto {
+        private Integer tagId;
+        private String label;
+        private Integer count;
+    }
 }
