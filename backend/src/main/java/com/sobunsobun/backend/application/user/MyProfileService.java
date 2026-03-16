@@ -6,6 +6,7 @@ import com.sobunsobun.backend.dto.mypage.ProfileUpdateRequestDto;
 import com.sobunsobun.backend.dto.mypage.ProfileUpdateResponse;
 import com.sobunsobun.backend.dto.user.UserProfileResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
+import com.sobunsobun.backend.repository.UserReportRepository;
 import com.sobunsobun.backend.repository.UserTagStatsRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class MyProfileService {
     private final UserRepository userRepository;
     private final GroupPostRepository groupPostRepository;
     private final UserTagStatsRepository userTagStatsRepository;
+    private final UserReportRepository userReportRepository;
 
     /**
      * 사용자 프로필 조회
@@ -52,21 +54,26 @@ public class MyProfileService {
         List<MyProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
                 .findTop5ByReceiverIdOrderByCountDesc(userId)
                 .stream()
-                .
-                map(stats -> MyProfileResponse.MannerTagDto.builder()
+                .map(stats -> MyProfileResponse.MannerTagDto.builder()
                         .tagId(stats.getTagCode().getId())
                         .label(stats.getTagCode().getLabel())
                         .count(stats.getCount())
                         .build())
                 .toList();
 
+        int hostCount = (int) groupPostRepository.countByOwnerId(user.getId());
+        int participationCount = 0;  // TODO: 참여 엔티티 구현 후 조회
+        int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
+        int reportedCount = (int) userReportRepository.countByTargetUserId(userId);
+        int activityScore = hostCount * 3 + participationCount * 2 + tagCount - reportedCount * 5;
+
         MyProfileResponse profile = MyProfileResponse.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .profileImageUrl(user.getProfileImageUrl())
-                .mannerScore(user.getMannerScore() != null ? user.getMannerScore().doubleValue() : 0.0)
-                .participationCount(0)  // TODO: 참여 엔티티 구현 후 조회
-                .hostCount((int) groupPostRepository.countByOwnerId(user.getId()))
+                .activityScore(activityScore)
+                .participationCount(participationCount)
+                .hostCount(hostCount)
                 .mannerTags(mannerTags)
                 .build();
 

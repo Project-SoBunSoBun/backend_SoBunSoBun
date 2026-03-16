@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface UserTagStatsRepository extends JpaRepository<UserTagStats, Long> {
 
@@ -17,6 +18,12 @@ public interface UserTagStatsRepository extends JpaRepository<UserTagStats, Long
      * manner_review를 집계하는 대신 미리 계산된 통계 테이블을 읽으므로 성능 우수.
      */
     List<UserTagStats> findTop5ByReceiverIdOrderByCountDesc(Long receiverId);
+
+    /**
+     * 특정 유저가 받은 매너 평가 태그 총 횟수 합산
+     */
+    @Query("SELECT COALESCE(SUM(s.count), 0) FROM UserTagStats s WHERE s.receiverId = :receiverId")
+    int sumCountByReceiverId(@Param("receiverId") Long receiverId);
 
     /**
      * 태그 카운트 UPSERT (Best Practice)
