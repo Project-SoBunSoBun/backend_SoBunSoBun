@@ -49,6 +49,20 @@ public interface ChatInviteRepository extends JpaRepository<ChatInvite, Long> {
     );
 
     /**
+     * 특정 공동구매 게시글에 대해 특정 invitee의 PENDING 초대가 존재하는지 확인
+     */
+    @Query("""
+        SELECT COUNT(i) > 0 FROM ChatInvite i
+        WHERE i.targetGroupPostId = :groupPostId
+        AND i.invitee.id = :inviteeId
+        AND i.status = 'PENDING'
+    """)
+    boolean existsPendingInviteForGroupPost(
+            @Param("groupPostId") Long groupPostId,
+            @Param("inviteeId") Long inviteeId
+    );
+
+    /**
      * 특정 사용자가 받은 모든 채팅 초대 삭제 (회원탈퇴용)
      */
     void deleteByInviteeId(Long inviteeId);
