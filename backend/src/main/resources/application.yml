@@ -49,6 +49,10 @@ file:
   upload-dir: ${user.home}/.sobunsobun/uploads/profiles
   url-prefix: /files
 
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+  project-id: ${FIREBASE_PROJECT_ID:sobunsobun-default}
+
 # SpringDoc/Swagger 설정
 springdoc:
   api-docs:

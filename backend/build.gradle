@@ -23,6 +23,11 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	testRuntimeClasspath {
+		// 테스트는 Logback 사용 — Log4j2 SLF4J 브리지 제거 (이중 바인딩 방지)
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j2-impl'
+		exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+	}
 }
 
 repositories {
@@ -86,6 +91,11 @@ dependencies {
     implementation('org.springframework.boot:spring-boot-starter-data-redis') {
 		exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
 	}
+
+    // Firebase Admin SDK (FCM 푸시 알림)
+    implementation('com.google.firebase:firebase-admin:9.2.0') {
+        exclude group: 'ch.qos.logback'
+    }
 
 	// Test
 	testImplementation('org.springframework.boot:spring-boot-starter-test') {

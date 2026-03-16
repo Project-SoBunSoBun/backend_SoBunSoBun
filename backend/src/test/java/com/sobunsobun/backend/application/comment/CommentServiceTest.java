@@ -1,11 +1,13 @@
 package com.sobunsobun.backend.application.comment;
 
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.Comment;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.comment.CommentResponse;
 import com.sobunsobun.backend.dto.comment.CreateCommentRequest;
 import com.sobunsobun.backend.dto.comment.UpdateCommentRequest;
+import com.sobunsobun.backend.repository.BlockedUserRepository;
 import com.sobunsobun.backend.repository.CommentRepository;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.support.exception.CommentException;
@@ -39,6 +41,12 @@ class CommentServiceTest {
 
     @Mock
     private GroupPostRepository postRepository;
+
+    @Mock
+    private BlockedUserRepository blockedUserRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private CommentService commentService;
@@ -161,7 +169,7 @@ class CommentServiceTest {
             .thenReturn(List.of(parentComment));
 
         // When
-        List<CommentResponse> responses = commentService.getCommentsByPostId(1L);
+        List<CommentResponse> responses = commentService.getCommentsByPostId(1L, null);
 
         // Then
         assertThat(responses).isNotEmpty();
@@ -179,7 +187,7 @@ class CommentServiceTest {
         when(postRepository.existsById(999L)).thenReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> commentService.getCommentsByPostId(999L))
+        assertThatThrownBy(() -> commentService.getCommentsByPostId(999L, null))
             .isInstanceOf(PostException.class);
     }
 
@@ -293,4 +301,3 @@ class CommentServiceTest {
         verify(commentRepository, times(1)).countActiveCommentsByPostId(1L);
     }
 }
-

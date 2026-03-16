@@ -54,14 +54,12 @@ class CommentEditedFieldTest {
     void setUp() {
         // 테스트 사용자 생성
         testUser = User.builder()
-            .username("testuser")
             .nickname("test_user")
             .email("test@example.com")
             .build();
         userRepository.save(testUser);
 
         otherUser = User.builder()
-            .username("otheruser")
             .nickname("other_user")
             .email("other@example.com")
             .build();
@@ -69,7 +67,7 @@ class CommentEditedFieldTest {
 
         // 테스트 게시글 생성
         testPost = GroupPost.builder()
-            .user(testUser)
+            .owner(testUser)
             .title("Test Post")
             .content("Test content")
             .build();
@@ -84,7 +82,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 1: 댓글 생성 시 deleted=false, edited=false")
     void testCreateComment_InitialState() {
         // Given
-        CreateCommentRequest request = new CreateCommentRequest("새로운 댓글입니다!");
+        CreateCommentRequest request = CreateCommentRequest.builder()
+            .content("새로운 댓글입니다!")
+            .build();
 
         // When
         CommentResponse response = commentService.createComment(testPost.getId(), request, testUser);
@@ -100,12 +100,16 @@ class CommentEditedFieldTest {
     @DisplayName("정책 1: 대댓글 생성도 deleted=false, edited=false")
     void testCreateReply_InitialState() {
         // Given: 부모 댓글 생성
-        CreateCommentRequest parentRequest = new CreateCommentRequest("부모 댓글");
+        CreateCommentRequest parentRequest = CreateCommentRequest.builder()
+            .content("부모 댓글")
+            .build();
         CommentResponse parentResponse = commentService.createComment(testPost.getId(), parentRequest, testUser);
 
         // When: 대댓글 생성
-        CreateCommentRequest replyRequest = new CreateCommentRequest("대댓글입니다!");
-        replyRequest.setParentCommentId(parentResponse.getId());
+        CreateCommentRequest replyRequest = CreateCommentRequest.builder()
+            .content("대댓글입니다!")
+            .parentCommentId(parentResponse.getId())
+            .build();
         CommentResponse replyResponse = commentService.createComment(testPost.getId(), replyRequest, testUser);
 
         // Then
@@ -122,7 +126,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 2: 댓글 수정 시 edited=false → true 변경")
     void testUpdateComment_EditedFlagChange() {
         // Given: 댓글 생성
-        CreateCommentRequest createRequest = new CreateCommentRequest("원본 내용");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("원본 내용")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -143,7 +149,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 2: 여러 번 수정해도 edited는 true 유지")
     void testUpdateComment_MultipleEdits() {
         // Given
-        CreateCommentRequest createRequest = new CreateCommentRequest("원본");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("원본")
+            .build();
         CommentResponse response1 = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = response1.getId();
 
@@ -167,7 +175,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 2: 수정 시 updatedAt 자동 갱신")
     void testUpdateComment_UpdatedAtRefresh() throws InterruptedException {
         // Given
-        CreateCommentRequest createRequest = new CreateCommentRequest("원본");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("원본")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -196,7 +206,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 3: 댓글 삭제 시 deleted=true, edited=false로 강제")
     void testDeleteComment_StateChange() {
         // Given: 댓글 생성
-        CreateCommentRequest createRequest = new CreateCommentRequest("삭제할 댓글");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("삭제할 댓글")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -216,7 +228,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 3: 수정된 댓글 삭제 시에도 edited=false로 강제")
     void testDeleteEditedComment_EditedReset() {
         // Given: 댓글 생성 → 수정
-        CreateCommentRequest createRequest = new CreateCommentRequest("원본");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("원본")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -245,7 +259,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 4: 삭제된 댓글은 수정 불가")
     void testCannotUpdateDeletedComment() {
         // Given: 댓글 생성 후 삭제
-        CreateCommentRequest createRequest = new CreateCommentRequest("삭제할 댓글");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("삭제할 댓글")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -263,7 +279,9 @@ class CommentEditedFieldTest {
     @DisplayName("정책 4: 삭제된 댓글 재삭제 불가")
     void testCannotDeleteAlreadyDeletedComment() {
         // Given: 댓글 생성 후 삭제
-        CreateCommentRequest createRequest = new CreateCommentRequest("삭제할 댓글");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("삭제할 댓글")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -283,7 +301,9 @@ class CommentEditedFieldTest {
     @DisplayName("권한 검증: 다른 사용자는 수정 불가")
     void testCannotUpdateOtherUserComment() {
         // Given: testUser가 댓글 작성
-        CreateCommentRequest createRequest = new CreateCommentRequest("테스트 댓글");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("테스트 댓글")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -299,7 +319,9 @@ class CommentEditedFieldTest {
     @DisplayName("권한 검증: 다른 사용자는 삭제 불가")
     void testCannotDeleteOtherUserComment() {
         // Given: testUser가 댓글 작성
-        CreateCommentRequest createRequest = new CreateCommentRequest("테스트 댓글");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("테스트 댓글")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -319,7 +341,9 @@ class CommentEditedFieldTest {
         // Given: 댓글 생성 → 수정 → 삭제의 전체 생명주기
 
         // Step 1: 생성
-        CreateCommentRequest createRequest = new CreateCommentRequest("좋은 게시글입니다!");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("좋은 게시글입니다!")
+            .build();
         CommentResponse createdResponse = commentService.createComment(testPost.getId(), createRequest, testUser);
         Long commentId = createdResponse.getId();
 
@@ -353,7 +377,9 @@ class CommentEditedFieldTest {
     @DisplayName("DTO 매핑: edited 필드가 올바르게 반환됨")
     void testDtoMapping_EditedField() {
         // Given: 댓글 생성
-        CreateCommentRequest createRequest = new CreateCommentRequest("원본");
+        CreateCommentRequest createRequest = CreateCommentRequest.builder()
+            .content("원본")
+            .build();
         CommentResponse response1 = commentService.createComment(testPost.getId(), createRequest, testUser);
 
         // Then: 생성 직후
