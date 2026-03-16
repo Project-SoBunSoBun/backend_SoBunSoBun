@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -35,9 +34,9 @@ public class MyProfileResponse {
     private String profileImageUrl;
 
     /**
-     * 매너 점수 (0.00 ~ 5.00)
+     * 활동 점수 (방장 횟수 × 3 + 참여 횟수 × 2 + 받은 매너 평가 태그 수 × 1 - 신고당한 횟수 × 5, 음수 가능)
      */
-    private Double mannerScore;
+    private Integer activityScore;
 
     /**
      * 공동구매 참여 횟수
