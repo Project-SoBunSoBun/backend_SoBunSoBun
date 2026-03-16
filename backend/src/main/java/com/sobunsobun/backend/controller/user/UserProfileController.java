@@ -73,9 +73,10 @@ public class UserProfileController {
     /**
      * 타 유저 프로필 조회 (작성 게시글 목록 페이징)
      *
-     * @param userId 조회할 사용자 ID
-     * @param page   페이지 번호
-     * @param size   페이지 크기
+     * @param userId    조회할 사용자 ID
+     * @param principal 현재 인증된 사용자 (선택사항)
+     * @param page      페이지 번호
+     * @param size      페이지 크기
      */
     @GetMapping("/{userId}/profile")
     @Operation(
@@ -85,14 +86,17 @@ public class UserProfileController {
     public ResponseEntity<ApiResponse<PublicUserProfileResponse>> getUserProfile(
             @Parameter(description = "조회할 사용자 ID", required = true)
             @PathVariable Long userId,
+            @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        log.info("타 유저 프로필 조회 요청 - targetUserId: {}, page: {}, size: {}", userId, page, size);
+        Long currentUserId = principal != null ? principal.id() : null;
+        log.info("타 유저 프로필 조회 요청 - currentUserId: {}, targetUserId: {}, page: {}, size: {}", 
+                currentUserId, userId, page, size);
 
-        PublicUserProfileResponse response = profileService.getUserProfile(userId, page, size);
+        PublicUserProfileResponse response = profileService.getUserProfile(currentUserId, userId, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

@@ -22,6 +22,9 @@ public class PublicUserProfileResponse {
     private Integer hostCount;
     private Integer participationCount;
     private List<MannerTagDto> mannerTags;
+    
+    /** 현재 사용자가 해당 유저를 차단했는지 여부 */
+    private Boolean isBlocked;
 
     /** 해당 유저가 작성한 게시글 목록 (페이징) */
     private PostListResponse posts;
