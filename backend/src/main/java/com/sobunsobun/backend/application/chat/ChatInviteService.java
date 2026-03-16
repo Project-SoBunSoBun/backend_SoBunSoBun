@@ -72,20 +72,28 @@ public class ChatInviteService {
         User invitee = userRepository.findById(inviteeId)
                 .orElseThrow(UserException::notFound);
 
-        // 5. invitee가 이미 ACTIVE 멤버인지 확인
-        if (chatMemberRepository.isActiveMember(roomId, inviteeId)) {
-            throw new ChatException(ErrorCode.CHAT_ALREADY_MEMBER);
+        Long groupPostId = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null;
+
+        // 5. invitee가 이미 그룹 채팅방 멤버인지 확인 (1:1방이 아닌 GROUP방 기준)
+        if (groupPostId != null) {
+            boolean alreadyInGroupRoom = chatRoomRepository.findByGroupPostId(groupPostId)
+                    .map(groupRoom -> chatMemberRepository.isActiveMember(groupRoom.getId(), inviteeId))
+                    .orElse(false);
+            if (alreadyInGroupRoom) {
+                throw new ChatException(ErrorCode.CHAT_ALREADY_MEMBER);
+            }
         }
 
-        // 6. 동일한 PENDING 초대가 이미 존재하는지 확인
-        if (chatInviteRepository.existsPendingInvite(roomId, inviteeId)) {
+        // 6. 동일한 게시글에 대한 PENDING 초대가 이미 존재하는지 확인
+        if (groupPostId != null
+                ? chatInviteRepository.existsPendingInviteForGroupPost(groupPostId, inviteeId)
+                : chatInviteRepository.existsPendingInvite(roomId, inviteeId)) {
             throw new ChatException(ErrorCode.CHAT_INVITE_ALREADY_PENDING);
         }
 
         // 7. 초대 생성 (PENDING, 24시간 유효)
         User inviter = userRepository.getReferenceById(inviterId);
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(24);
-        Long groupPostId = chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null;
 
         ChatInvite invite = ChatInvite.builder()
                 .chatRoom(chatRoom)
