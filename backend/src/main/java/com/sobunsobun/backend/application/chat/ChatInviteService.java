@@ -14,6 +14,7 @@ import com.sobunsobun.backend.dto.chat.ChatInviteCancelResponse;
 import com.sobunsobun.backend.dto.chat.ChatInviteRequest;
 import com.sobunsobun.backend.dto.chat.ChatInviteResponse;
 import com.sobunsobun.backend.dto.chat.InviteCardPayload;
+import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.chat.ChatInviteRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -45,6 +46,7 @@ public class ChatInviteService {
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
+    private final GroupPostRepository groupPostRepository;
 
     /**
      * 그룹 채팅방 초대 발송
@@ -206,6 +208,12 @@ public class ChatInviteService {
                         ChatMessageType.ENTER,
                         invitee.getNickname() + "님이 입장했습니다."
                 );
+                // GroupPost.joinedMembers 증가
+                groupPostRepository.findById(targetGroupPostId).ifPresent(groupPost -> {
+                    groupPost.setJoinedMembers(groupPost.getJoinedMembers() + 1);
+                    log.info("[ChatInvite] joined_members 증가 - groupPostId: {}, newCount: {}",
+                            groupPost.getId(), groupPost.getJoinedMembers());
+                });
             }
 
             log.info("[ChatInvite] 초대 수락 완료 - inviteId: {}, groupRoomId: {}, inviteeId: {}",
