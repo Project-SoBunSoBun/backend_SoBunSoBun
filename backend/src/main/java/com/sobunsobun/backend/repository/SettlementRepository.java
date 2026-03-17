@@ -43,24 +43,34 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     Optional<Settlement> findWithDetailByGroupPostId(@Param("groupPostId") Long groupPostId);
 
     /**
-     * 내 정산 목록 (내가 작성한 게시글의 정산, 상태 필터 없음)
+     * 내 정산 목록 (방장이거나 참여자인 정산, 상태 필터 없음)
      */
-    @Query("SELECT s FROM Settlement s " +
-           "JOIN FETCH s.groupPost p " +
-           "WHERE p.owner.id = :userId " +
-           "ORDER BY s.createdAt DESC")
-    Page<Settlement> findByGroupPostOwnerId(@Param("userId") Long userId, Pageable pageable);
+    @Query(value = "SELECT DISTINCT s FROM Settlement s " +
+                   "JOIN FETCH s.groupPost p " +
+                   "JOIN FETCH p.owner " +
+                   "LEFT JOIN s.participants sp " +
+                   "WHERE p.owner.id = :userId OR sp.user.id = :userId " +
+                   "ORDER BY s.createdAt DESC",
+           countQuery = "SELECT COUNT(DISTINCT s) FROM Settlement s " +
+                        "LEFT JOIN s.participants sp " +
+                        "WHERE s.groupPost.owner.id = :userId OR sp.user.id = :userId")
+    Page<Settlement> findByOwnerOrParticipant(@Param("userId") Long userId, Pageable pageable);
 
     /**
-     * 내 정산 목록 (상태 필터)
+     * 내 정산 목록 (방장이거나 참여자인 정산, 상태 필터)
      */
-    @Query("SELECT s FROM Settlement s " +
-           "JOIN FETCH s.groupPost p " +
-           "WHERE p.owner.id = :userId AND s.status = :status " +
-           "ORDER BY s.createdAt DESC")
-    Page<Settlement> findByGroupPostOwnerIdAndStatus(@Param("userId") Long userId,
-                                                     @Param("status") SettlementStatus status,
-                                                     Pageable pageable);
+    @Query(value = "SELECT DISTINCT s FROM Settlement s " +
+                   "JOIN FETCH s.groupPost p " +
+                   "JOIN FETCH p.owner " +
+                   "LEFT JOIN s.participants sp " +
+                   "WHERE (p.owner.id = :userId OR sp.user.id = :userId) AND s.status = :status " +
+                   "ORDER BY s.createdAt DESC",
+           countQuery = "SELECT COUNT(DISTINCT s) FROM Settlement s " +
+                        "LEFT JOIN s.participants sp " +
+                        "WHERE (s.groupPost.owner.id = :userId OR sp.user.id = :userId) AND s.status = :status")
+    Page<Settlement> findByOwnerOrParticipantAndStatus(@Param("userId") Long userId,
+                                                       @Param("status") SettlementStatus status,
+                                                       Pageable pageable);
 
     /**
      * 정산 재완료 시 기존 품목 전체 삭제 (items FK 제약 때문에 participants 삭제 전에 먼저 삭제)

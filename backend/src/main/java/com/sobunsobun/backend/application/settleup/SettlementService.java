@@ -74,7 +74,7 @@ public class SettlementService {
     }
 
     /**
-     * 내 정산 목록 (내가 작성한 게시글의 정산)
+     * 내 정산 목록 (내가 방장이거나 참여자인 정산)
      *
      * @param status null이면 전체, "PENDING" / "COMPLETED" 필터 가능
      */
@@ -86,9 +86,9 @@ public class SettlementService {
         Page<Settlement> settlements;
         if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
             SettlementStatus statusEnum = parseStatus(status);
-            settlements = settlementRepository.findByGroupPostOwnerIdAndStatus(userId, statusEnum, pageable);
+            settlements = settlementRepository.findByOwnerOrParticipantAndStatus(userId, statusEnum, pageable);
         } else {
-            settlements = settlementRepository.findByGroupPostOwnerId(userId, pageable);
+            settlements = settlementRepository.findByOwnerOrParticipant(userId, pageable);
         }
 
         return settlements.map(settlement -> {
