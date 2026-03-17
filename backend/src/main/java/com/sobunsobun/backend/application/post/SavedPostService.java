@@ -3,8 +3,9 @@ package com.sobunsobun.backend.application.post;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.User;
-import com.sobunsobun.backend.dto.post.SavedPostDto;
+import com.sobunsobun.backend.dto.post.PostListResponse;
 import com.sobunsobun.backend.dto.post.PostResponse;
+import com.sobunsobun.backend.dto.post.SavedPostDto;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -84,9 +86,24 @@ public class SavedPostService {
      * 사용자의 저장된 게시글 목록 조회 (PostResponse 형식)
      */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getMySavedPostsAsPostResponse(Long userId, Pageable pageable) {
-        return savedPostRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(this::convertSavedPostToPostResponse);
+    public PostListResponse getMySavedPostsAsPostResponse(Long userId, Pageable pageable) {
+        Page<SavedPost> savedPosts = savedPostRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        List<PostResponse> postResponses = savedPosts.getContent().stream()
+                .map(this::convertSavedPostToPostResponse)
+                .toList();
+        return PostListResponse.builder()
+                .posts(postResponses)
+                .pageInfo(PostListResponse.PageInfo.builder()
+                        .currentPage(savedPosts.getNumber())
+                        .pageSize(savedPosts.getSize())
+                        .totalElements(savedPosts.getTotalElements())
+                        .totalPages(savedPosts.getTotalPages())
+                        .first(savedPosts.isFirst())
+                        .last(savedPosts.isLast())
+                        .hasNext(savedPosts.hasNext())
+                        .hasPrevious(savedPosts.hasPrevious())
+                        .build())
+                .build();
     }
 
     /**

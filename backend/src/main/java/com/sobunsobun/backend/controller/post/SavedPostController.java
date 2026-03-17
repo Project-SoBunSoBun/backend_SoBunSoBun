@@ -1,14 +1,13 @@
 package com.sobunsobun.backend.controller.post;
 
 import com.sobunsobun.backend.application.post.SavedPostService;
+import com.sobunsobun.backend.dto.post.PostListResponse;
 import com.sobunsobun.backend.dto.post.SavedPostDto;
-import com.sobunsobun.backend.dto.post.PostResponse;
 import com.sobunsobun.backend.security.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -62,12 +61,12 @@ public class SavedPostController {
     @GetMapping("/my/list")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "내 저장된 게시글 목록", description = "현재 사용자가 저장한 게시글 목록을 조회합니다")
-    public ResponseEntity<Page<PostResponse>> getMySavedPosts(
+    public ResponseEntity<PostListResponse> getMySavedPosts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long userId = SecurityUtil.getCurrentUserId();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<PostResponse> response = savedPostService.getMySavedPostsAsPostResponse(userId, pageable);
+        PostListResponse response = savedPostService.getMySavedPostsAsPostResponse(userId, pageable);
         return ResponseEntity.ok(response);
     }
 
