@@ -44,30 +44,37 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
 
     /**
      * 내 정산 목록 (방장이거나 참여자인 정산, 상태 필터 없음)
+     * EXISTS 서브쿼리로 각 정산이 정확히 1건씩 반환되도록 보장
      */
-    @Query(value = "SELECT DISTINCT s FROM Settlement s " +
+    @Query(value = "SELECT s FROM Settlement s " +
                    "JOIN FETCH s.groupPost p " +
                    "JOIN FETCH p.owner " +
-                   "LEFT JOIN s.participants sp " +
-                   "WHERE p.owner.id = :userId OR sp.user.id = :userId " +
+                   "WHERE p.owner.id = :userId " +
+                   "   OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
+                   "              WHERE sp.settlement = s AND sp.user.id = :userId) " +
                    "ORDER BY s.createdAt DESC",
-           countQuery = "SELECT COUNT(DISTINCT s) FROM Settlement s " +
-                        "LEFT JOIN s.participants sp " +
-                        "WHERE s.groupPost.owner.id = :userId OR sp.user.id = :userId")
+           countQuery = "SELECT COUNT(s) FROM Settlement s " +
+                        "WHERE s.groupPost.owner.id = :userId " +
+                        "   OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
+                        "              WHERE sp.settlement = s AND sp.user.id = :userId)")
     Page<Settlement> findByOwnerOrParticipant(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * 내 정산 목록 (방장이거나 참여자인 정산, 상태 필터)
      */
-    @Query(value = "SELECT DISTINCT s FROM Settlement s " +
+    @Query(value = "SELECT s FROM Settlement s " +
                    "JOIN FETCH s.groupPost p " +
                    "JOIN FETCH p.owner " +
-                   "LEFT JOIN s.participants sp " +
-                   "WHERE (p.owner.id = :userId OR sp.user.id = :userId) AND s.status = :status " +
+                   "WHERE s.status = :status " +
+                   "  AND (p.owner.id = :userId " +
+                   "       OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
+                   "                  WHERE sp.settlement = s AND sp.user.id = :userId)) " +
                    "ORDER BY s.createdAt DESC",
-           countQuery = "SELECT COUNT(DISTINCT s) FROM Settlement s " +
-                        "LEFT JOIN s.participants sp " +
-                        "WHERE (s.groupPost.owner.id = :userId OR sp.user.id = :userId) AND s.status = :status")
+           countQuery = "SELECT COUNT(s) FROM Settlement s " +
+                        "WHERE s.status = :status " +
+                        "  AND (s.groupPost.owner.id = :userId " +
+                        "       OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
+                        "                  WHERE sp.settlement = s AND sp.user.id = :userId))")
     Page<Settlement> findByOwnerOrParticipantAndStatus(@Param("userId") Long userId,
                                                        @Param("status") SettlementStatus status,
                                                        Pageable pageable);
