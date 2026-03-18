@@ -132,13 +132,22 @@ public class PostService {
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getAllPosts(Long viewerId, int page, int size) {
-        log.info("전체 게시글 목록 조회 - viewerId: {}, 페이지: {}, 크기: {}", viewerId, page, size);
+    public PostListResponse getAllPosts(Long viewerId, int page, int size, String sort) {
+        log.info("전체 게시글 목록 조회 - viewerId: {}, 페이지: {}, 크기: {}, 정렬: {}", viewerId, page, size, sort);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<GroupPost> postPage = (viewerId != null)
-                ? postRepository.findAllExcludingBlocked(viewerId, pageable)
-                : postRepository.findAllByStatusNotOrderByCreatedAtDesc(PostStatus.CANCELLED, pageable);
+        boolean isDeadline = "deadline".equalsIgnoreCase(sort);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<GroupPost> postPage;
+        if (isDeadline) {
+            postPage = (viewerId != null)
+                    ? postRepository.findAllExcludingBlockedOrderByDeadline(viewerId, pageable)
+                    : postRepository.findAllByStatusNotOrderByDeadlineAtAsc(PostStatus.CANCELLED, pageable);
+        } else {
+            pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            postPage = (viewerId != null)
+                    ? postRepository.findAllExcludingBlocked(viewerId, pageable)
+                    : postRepository.findAllByStatusNotOrderByCreatedAtDesc(PostStatus.CANCELLED, pageable);
+        }
 
         log.info("DB 조회 결과 - 전체 게시글 수: {}, 현재 페이지 게시글 수: {}, 총 페이지: {}",
                  postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
@@ -184,13 +193,22 @@ public class PostService {
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getPostsByCategories(Long viewerId, String categories, int page, int size) {
-        log.info("카테고리별 게시글 목록 조회 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categories, page, size);
+    public PostListResponse getPostsByCategories(Long viewerId, String categories, int page, int size, String sort) {
+        log.info("카테고리별 게시글 목록 조회 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}, 정렬: {}", viewerId, categories, page, size, sort);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<GroupPost> postPage = (viewerId != null)
-                ? postRepository.findByCategoriesAndStatusExcludingBlocked(viewerId, categories, PostStatus.OPEN, pageable)
-                : postRepository.findByCategoriesAndStatusOrderByCreatedAtDesc(categories, PostStatus.OPEN, pageable);
+        boolean isDeadline = "deadline".equalsIgnoreCase(sort);
+        Pageable pageable = PageRequest.of(page, size);
+        Page<GroupPost> postPage;
+        if (isDeadline) {
+            postPage = (viewerId != null)
+                    ? postRepository.findByCategoriesAndStatusExcludingBlockedOrderByDeadline(viewerId, categories, PostStatus.OPEN, pageable)
+                    : postRepository.findByCategoriesAndStatusOrderByDeadlineAtAsc(categories, PostStatus.OPEN, pageable);
+        } else {
+            pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            postPage = (viewerId != null)
+                    ? postRepository.findByCategoriesAndStatusExcludingBlocked(viewerId, categories, PostStatus.OPEN, pageable)
+                    : postRepository.findByCategoriesAndStatusOrderByCreatedAtDesc(categories, PostStatus.OPEN, pageable);
+        }
 
         log.info("DB 조회 결과 - 카테고리: {}, 전체: {}, 현재 페이지: {}, 총 페이지: {}",
                  categories, postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());
@@ -207,17 +225,25 @@ public class PostService {
      * @param size 페이지 크기
      * @return 페이징된 게시글 목록
      */
-    public PostListResponse getPostsByMultipleCategories(Long viewerId, List<String> categoriesList, int page, int size) {
-        log.info("여러 카테고리 게시글 목록 조회 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categoriesList, page, size);
+    public PostListResponse getPostsByMultipleCategories(Long viewerId, List<String> categoriesList, int page, int size, String sort) {
+        log.info("여러 카테고리 게시글 목록 조회 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}, 정렬: {}", viewerId, categoriesList, page, size, sort);
 
         // REGEXP 패턴 생성: "0001|0002|0003" 형태
         String categoryPattern = String.join("|", categoriesList);
         log.info("생성된 REGEXP 패턴: {}", categoryPattern);
 
+        boolean isDeadline = "deadline".equalsIgnoreCase(sort);
         Pageable pageable = PageRequest.of(page, size);
-        Page<GroupPost> postPage = (viewerId != null)
-                ? postRepository.findByCategoriesInAndStatusExcludingBlocked(viewerId, categoryPattern, PostStatus.OPEN.name(), pageable)
-                : postRepository.findByCategoriesInAndStatus(categoryPattern, PostStatus.OPEN.name(), pageable);
+        Page<GroupPost> postPage;
+        if (isDeadline) {
+            postPage = (viewerId != null)
+                    ? postRepository.findByCategoriesInAndStatusExcludingBlockedOrderByDeadline(viewerId, categoryPattern, PostStatus.OPEN.name(), pageable)
+                    : postRepository.findByCategoriesInAndStatusOrderByDeadline(categoryPattern, PostStatus.OPEN.name(), pageable);
+        } else {
+            postPage = (viewerId != null)
+                    ? postRepository.findByCategoriesInAndStatusExcludingBlocked(viewerId, categoryPattern, PostStatus.OPEN.name(), pageable)
+                    : postRepository.findByCategoriesInAndStatus(categoryPattern, PostStatus.OPEN.name(), pageable);
+        }
 
         log.info("DB 조회 결과 - 카테고리 패턴: {}, 전체: {}, 현재 페이지: {}, 총 페이지: {}",
                  categoryPattern, postPage.getTotalElements(), postPage.getNumberOfElements(), postPage.getTotalPages());

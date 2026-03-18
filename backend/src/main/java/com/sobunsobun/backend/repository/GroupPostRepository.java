@@ -96,9 +96,22 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     Page<GroupPost> findAllExcludingBlocked(@Param("viewerId") Long viewerId, Pageable pageable);
 
     /**
+     * 전체 게시글 조회 (차단 유저 제외, CANCELLED 제외, 마감임박순)
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.status != 'CANCELLED' AND p.owner.id NOT IN " +
+           "(SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
+           "ORDER BY p.deadlineAt ASC")
+    Page<GroupPost> findAllExcludingBlockedOrderByDeadline(@Param("viewerId") Long viewerId, Pageable pageable);
+
+    /**
      * 전체 게시글 조회 (비로그인, CANCELLED 제외, 최신순)
      */
     Page<GroupPost> findAllByStatusNotOrderByCreatedAtDesc(PostStatus status, Pageable pageable);
+
+    /**
+     * 전체 게시글 조회 (비로그인, CANCELLED 제외, 마감임박순)
+     */
+    Page<GroupPost> findAllByStatusNotOrderByDeadlineAtAsc(PostStatus status, Pageable pageable);
 
     /**
      * 상태별 게시글 조회 (차단 유저 제외, 마감일 오름차순)
@@ -123,7 +136,27 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
                                                               Pageable pageable);
 
     /**
-     * 여러 카테고리 게시글 조회 (차단 유저 제외, Native Query)
+     * 단일 카테고리 게시글 조회 (차단 유저 제외, 마감임박순)
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.categories LIKE CONCAT('%', :categories, '%') " +
+           "AND p.status = :status AND p.owner.id NOT IN " +
+           "(SELECT b.blocked.id FROM BlockedUser b WHERE b.blocker.id = :viewerId) " +
+           "ORDER BY p.deadlineAt ASC")
+    Page<GroupPost> findByCategoriesAndStatusExcludingBlockedOrderByDeadline(@Param("viewerId") Long viewerId,
+                                                                             @Param("categories") String categories,
+                                                                             @Param("status") PostStatus status,
+                                                                             Pageable pageable);
+
+    /**
+     * 단일 카테고리 게시글 조회 (비로그인, 마감임박순)
+     */
+    @Query("SELECT p FROM GroupPost p WHERE p.categories LIKE CONCAT('%', :categories, '%') AND p.status = :status ORDER BY p.deadlineAt ASC")
+    Page<GroupPost> findByCategoriesAndStatusOrderByDeadlineAtAsc(@Param("categories") String categories,
+                                                                   @Param("status") PostStatus status,
+                                                                   Pageable pageable);
+
+    /**
+     * 여러 카테고리 게시글 조회 (차단 유저 제외, 최신순, Native Query)
      */
     @Query(value = "SELECT * FROM group_post WHERE status = :status " +
                    "AND categories REGEXP :categoryPattern " +
@@ -137,6 +170,35 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
                                                                 @Param("categoryPattern") String categoryPattern,
                                                                 @Param("status") String status,
                                                                 Pageable pageable);
+
+    /**
+     * 여러 카테고리 게시글 조회 (비로그인, 마감임박순, Native Query)
+     */
+    @Query(value = "SELECT * FROM group_post WHERE status = :status " +
+                   "AND categories REGEXP :categoryPattern " +
+                   "ORDER BY deadline_at ASC",
+           countQuery = "SELECT COUNT(*) FROM group_post WHERE status = :status " +
+                        "AND categories REGEXP :categoryPattern",
+           nativeQuery = true)
+    Page<GroupPost> findByCategoriesInAndStatusOrderByDeadline(@Param("categoryPattern") String categoryPattern,
+                                                               @Param("status") String status,
+                                                               Pageable pageable);
+
+    /**
+     * 여러 카테고리 게시글 조회 (차단 유저 제외, 마감임박순, Native Query)
+     */
+    @Query(value = "SELECT * FROM group_post WHERE status = :status " +
+                   "AND categories REGEXP :categoryPattern " +
+                   "AND owner_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = :viewerId) " +
+                   "ORDER BY deadline_at ASC",
+           countQuery = "SELECT COUNT(*) FROM group_post WHERE status = :status " +
+                        "AND categories REGEXP :categoryPattern " +
+                        "AND owner_id NOT IN (SELECT blocked_id FROM blocked_users WHERE blocker_id = :viewerId)",
+           nativeQuery = true)
+    Page<GroupPost> findByCategoriesInAndStatusExcludingBlockedOrderByDeadline(@Param("viewerId") Long viewerId,
+                                                                               @Param("categoryPattern") String categoryPattern,
+                                                                               @Param("status") String status,
+                                                                               Pageable pageable);
 
     // ────────────────────────────────────────────────────────────────────────
 

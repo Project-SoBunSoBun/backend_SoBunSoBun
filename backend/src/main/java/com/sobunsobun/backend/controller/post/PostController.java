@@ -98,18 +98,20 @@ public class PostController {
     @GetMapping
     @Operation(
             summary = "전체 게시글 목록 조회",
-            description = "전체 게시글 목록을 페이징하여 조회합니다 (최신순). 로그인 시 차단 유저 게시글 자동 제외."
+            description = "전체 게시글 목록을 페이징하여 조회합니다. 로그인 시 차단 유저 게시글 자동 제외. sort=latest(최신순, 기본값), sort=deadline(마감임박순)"
     )
     public ResponseEntity<PostListResponse> getAllPosts(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "정렬 방식 (latest: 최신순, deadline: 마감임박순)", example = "latest")
+            @RequestParam(defaultValue = "latest") String sort
     ) {
         Long viewerId = (principal != null) ? principal.id() : null;
-        log.info("전체 게시글 목록 조회 요청 - viewerId: {}, 페이지: {}, 크기: {}", viewerId, page, size);
-        PostListResponse response = postService.getAllPosts(viewerId, page, size);
+        log.info("전체 게시글 목록 조회 요청 - viewerId: {}, 페이지: {}, 크기: {}, 정렬: {}", viewerId, page, size, sort);
+        PostListResponse response = postService.getAllPosts(viewerId, page, size, sort);
         log.info("응답 데이터 - 게시글 수: {}, 전체: {}, 페이지: {}/{}",
                  response.getPosts() == null ? 0 : response.getPosts().size(),
                  response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements(),
@@ -117,6 +119,7 @@ public class PostController {
                  response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalPages());
         return ResponseEntity.ok(response);
     }
+
 
     /**
      * 상태별 게시글 목록 조회
@@ -157,7 +160,7 @@ public class PostController {
     @GetMapping("/categories/{categories}")
     @Operation(
             summary = "카테고리별 게시글 조회",
-            description = "카테고리별 모집 중인 게시글 목록을 조회합니다"
+            description = "카테고리별 모집 중인 게시글 목록을 조회합니다. sort=latest(최신순, 기본값), sort=deadline(마감임박순)"
     )
     public ResponseEntity<PostListResponse> getPostsByCategories(
             @AuthenticationPrincipal JwtUserPrincipal principal,
@@ -166,10 +169,12 @@ public class PostController {
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "정렬 방식 (latest: 최신순, deadline: 마감임박순)", example = "latest")
+            @RequestParam(defaultValue = "latest") String sort
     ) {
         Long viewerId = (principal != null) ? principal.id() : null;
-        log.info("카테고리별 게시글 목록 조회 요청 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categories, page, size);
+        log.info("카테고리별 게시글 목록 조회 요청 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}, 정렬: {}", viewerId, categories, page, size, sort);
 
         // URL 디코딩
         String decoded = URLDecoder.decode(categories, StandardCharsets.UTF_8);
@@ -181,7 +186,7 @@ public class PostController {
                         .map(s -> s.trim().replaceAll("^\"|\"$", ""))
                         .filter(s -> !s.isEmpty())
                         .collect(Collectors.toList());
-                return ResponseEntity.ok(postService.getPostsByMultipleCategories(viewerId, categoryList, page, size));
+                return ResponseEntity.ok(postService.getPostsByMultipleCategories(viewerId, categoryList, page, size, sort));
             }
 
             if (decoded.contains(",")) {
@@ -189,10 +194,10 @@ public class PostController {
                         .map(String::trim)
                         .filter(s -> !s.isEmpty())
                         .collect(Collectors.toList());
-                return ResponseEntity.ok(postService.getPostsByMultipleCategories(viewerId, categoryList, page, size));
+                return ResponseEntity.ok(postService.getPostsByMultipleCategories(viewerId, categoryList, page, size, sort));
             }
 
-            PostListResponse response = postService.getPostsByCategories(viewerId, decoded, page, size);
+            PostListResponse response = postService.getPostsByCategories(viewerId, decoded, page, size, sort);
             log.info("단일 카테고리 응답 - 게시글 수: {}, 전체: {}",
                      response.getPosts() == null ? 0 : response.getPosts().size(),
                      response.getPageInfo() == null ? 0 : response.getPageInfo().getTotalElements());
@@ -225,11 +230,13 @@ public class PostController {
             @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "페이지 크기", example = "20")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "정렬 방식 (latest: 최신순, deadline: 마감임박순)", example = "latest")
+            @RequestParam(defaultValue = "latest") String sort
     ) {
         Long viewerId = (principal != null) ? principal.id() : null;
-        log.info("여러 카테고리 게시글 목록 조회 요청 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}", viewerId, categoriesList, page, size);
-        PostListResponse response = postService.getPostsByMultipleCategories(viewerId, categoriesList, page, size);
+        log.info("여러 카테고리 게시글 목록 조회 요청 - viewerId: {}, 카테고리: {}, 페이지: {}, 크기: {}, 정렬: {}", viewerId, categoriesList, page, size, sort);
+        PostListResponse response = postService.getPostsByMultipleCategories(viewerId, categoriesList, page, size, sort);
         return ResponseEntity.ok(response.getPosts());
     }
 
