@@ -51,6 +51,11 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     List<GroupPost> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
     /**
+     * 작성자별 게시글 조회 (List - 특정 상태 제외)
+     */
+    List<GroupPost> findByOwnerIdAndStatusNotOrderByCreatedAtDesc(Long ownerId, PostStatus status);
+
+    /**
      * 카테고리별 게시글 조회 (모집 중인 것만)
      * categories 컬럼에 해당 카테고리 코드가 포함된 게시글 검색 (LIKE 검색)
      */
