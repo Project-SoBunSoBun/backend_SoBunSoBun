@@ -139,6 +139,21 @@ public interface ChatMemberRepository extends JpaRepository<ChatMember, Long> {
     );
 
     /**
+     * 특정 사용자의 공동구매 게시글 참여 횟수 조회
+     * - GROUP 타입 채팅방 = 게시글 1:1 대응
+     * - 방장(owner)으로 개설한 게시글 제외
+     * - REVOKED(강퇴) 제외, ACTIVE/LEFT 모두 포함
+     */
+    @Query("""
+        SELECT COUNT(m) FROM ChatMember m
+        WHERE m.user.id = :userId
+        AND m.chatRoom.roomType = 'GROUP'
+        AND m.chatRoom.owner.id != :userId
+        AND m.status != 'REVOKED'
+    """)
+    long countParticipationByUserId(@Param("userId") Long userId);
+
+    /**
      * 특정 사용자의 모든 채팅 멤버 정보 삭제 (회원탈퇴용)
      */
     void deleteByUserId(Long userId);
