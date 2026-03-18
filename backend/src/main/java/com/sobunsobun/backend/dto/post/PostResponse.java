@@ -1,6 +1,8 @@
 package com.sobunsobun.backend.dto.post;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.sobunsobun.backend.domain.PostStatus;
+import com.sobunsobun.backend.dto.profile.MyCommentResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -57,6 +59,11 @@ public class PostResponse {
      */
     private String locationName;
 
+    /**
+     * 내가 이 게시글에 남긴 최신 댓글 (프로필 조회 시에만 포함, 없으면 미포함)
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private MyCommentResponse latestComment;
 
     /**
      * 만남 일시
