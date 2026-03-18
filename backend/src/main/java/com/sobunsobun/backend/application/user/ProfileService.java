@@ -16,6 +16,7 @@ import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.UserReportRepository;
 import com.sobunsobun.backend.repository.UserTagStatsRepository;
+import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.support.exception.BusinessException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
@@ -53,6 +54,7 @@ public class ProfileService {
     private final UserReportRepository userReportRepository;
     private final BlockedUserRepository blockedUserRepository;
     private final CommentRepository commentRepository;
+    private final ChatMemberRepository chatMemberRepository;
 
     /**
      * 내 프로필 조회 (탭별 페이징)
@@ -85,10 +87,10 @@ public class ProfileService {
         };
 
         int hostCount = (int) groupPostRepository.countByOwnerId(userId);
-        int participationCount = 0;  // TODO: 참여 엔티티 구현 후 조회
+        int participationCount = (int) chatMemberRepository.countParticipationByUserId(userId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
         int reportedCount = (int) userReportRepository.countByTargetUserId(userId);
-        int activityScore = hostCount * 3 + participationCount * 2 + tagCount - reportedCount * 5;
+        int activityScore = hostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
 
         List<MyProfileDetailResponse.MannerTagDto> mannerTags = userTagStatsRepository
                 .findTop5ByReceiverIdOrderByCountDesc(userId)
@@ -143,10 +145,10 @@ public class ProfileService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         int hostCount = (int) groupPostRepository.countByOwnerId(targetUserId);
-        int participationCount = 0;  // TODO: 참여 엔티티 구현 후 조회
+        int participationCount = (int) chatMemberRepository.countParticipationByUserId(targetUserId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(targetUserId);
         int reportedCount = (int) userReportRepository.countByTargetUserId(targetUserId);
-        int activityScore = hostCount * 3 + participationCount * 2 + tagCount - reportedCount * 5;
+        int activityScore = hostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
 
         List<PublicUserProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
                 .findTop5ByReceiverIdOrderByCountDesc(targetUserId)

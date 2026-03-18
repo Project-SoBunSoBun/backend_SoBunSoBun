@@ -9,6 +9,7 @@ import com.sobunsobun.backend.dto.user.UserProfileResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.UserReportRepository;
 import com.sobunsobun.backend.repository.UserTagStatsRepository;
+import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class MyProfileService {
     private final GroupPostRepository groupPostRepository;
     private final UserTagStatsRepository userTagStatsRepository;
     private final UserReportRepository userReportRepository;
+    private final ChatMemberRepository chatMemberRepository;
 
     /**
      * 사용자 프로필 조회
@@ -63,10 +65,10 @@ public class MyProfileService {
                 .toList();
 
         int hostCount = (int) groupPostRepository.countByOwnerId(user.getId());
-        int participationCount = 0;  // TODO: 참여 엔티티 구현 후 조회
+        int participationCount = (int) chatMemberRepository.countParticipationByUserId(userId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
         int reportedCount = (int) userReportRepository.countByTargetUserId(userId);
-        int activityScore = hostCount * 3 + participationCount * 2 + tagCount - reportedCount * 5;
+        int activityScore = hostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
 
         MyProfileResponse profile = MyProfileResponse.builder()
                 .userId(user.getId())

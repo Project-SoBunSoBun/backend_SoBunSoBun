@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserReportRequest {
 
+    @NotNull(message = "신고 대상 게시글 ID는 필수입니다.")
+    private Long groupPostId;
+
     @NotNull(message = "신고 사유는 필수입니다.")
     private ReportReason reason;
 

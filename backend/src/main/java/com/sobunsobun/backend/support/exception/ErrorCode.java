@@ -88,9 +88,10 @@ public enum ErrorCode {
     ALREADY_BLOCKED("BLOCK_002", "이미 차단된 사용자입니다.", HttpStatus.CONFLICT),
     BLOCK_NOT_FOUND("BLOCK_003", "차단 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
-    // 유저 신고 관련 (REPORT_001~REPORT_002)
+    // 유저 신고 관련 (REPORT_001~REPORT_003)
     REPORT_SELF_NOT_ALLOWED("REPORT_001", "자기 자신을 신고할 수 없습니다.", HttpStatus.BAD_REQUEST),
     REPORT_TARGET_NOT_FOUND("REPORT_002", "신고 대상 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    REPORT_ALREADY_REPORTED("REPORT_003", "이미 신고한 사용자입니다.", HttpStatus.CONFLICT),
 
     // 비즈니스 로직 (9000~9099)
     BUSINESS_RULE_VIOLATION("BIZ_001", "비즈니스 규칙 위반", HttpStatus.BAD_REQUEST),

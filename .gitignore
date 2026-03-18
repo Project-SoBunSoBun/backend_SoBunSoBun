@@ -77,3 +77,4 @@ build/
 CLAUDE.md
 *.md
 sobunsobunpj-firebase-adminsdk-fbsvc-b06cc3cc43.json
+.claude/settings.local.json
