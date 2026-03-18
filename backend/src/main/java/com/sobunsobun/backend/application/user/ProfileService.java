@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 유저 프로필 조회 서비스
@@ -202,19 +203,17 @@ public class ProfileService {
 
     /** SavedPost 페이지 → 내부 GroupPost를 꺼내어 PostListResponse로 변환 */
     private PostListResponse toPostListResponseFromSaved(Page<SavedPost> page) {
-        // 삭제된 게시글은 필터링 (lazy loading으로 인한 EntityNotFoundException 방지)
+        // flatMap으로 변환 중 예외 발생 시 해당 항목만 건너뜀
+        // (DB 정합성 문제로 삭제된 GroupPost를 참조하는 SavedPost가 남아있는 경우 대비)
         List<PostResponse> posts = page.getContent().stream()
-                .filter(savedPost -> {
+                .flatMap(savedPost -> {
                     try {
-                        // post 엔티티 접근 시도 - 삭제된 경우 예외 발생
-                        GroupPost post = savedPost.getPost();
-                        return post != null;
+                        return Stream.of(toPostResponse(savedPost.getPost()));
                     } catch (Exception e) {
-                        log.warn("저장된 게시글 조회 중 삭제된 게시글 발견: {}", savedPost.getId());
-                        return false;
+                        log.warn("저장된 게시글 조회 중 삭제된 게시글 건너뜀 - SavedPost id: {}", savedPost.getId());
+                        return Stream.empty();
                     }
                 })
-                .map(savedPost -> toPostResponse(savedPost.getPost()))
                 .toList();
         
         return PostListResponse.builder()
