@@ -29,6 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 유저 프로필 조회 서비스
@@ -97,24 +99,22 @@ public class ProfileService {
                         .build())
                 .toList();
 
-        Pageable commentPageable = PageRequest.of(page, size);
-        Page<Comment> commentPage = commentRepository.findActiveByUserIdOrderByCreatedAtDesc(userId, commentPageable);
-        List<MyCommentResponse> comments = commentPage.getContent().stream()
-                .map(MyCommentResponse::from)
-                .toList();
-        PostListResponse.PageInfo commentPageInfo = PostListResponse.PageInfo.builder()
-                .currentPage(commentPage.getNumber())
-                .pageSize(commentPage.getSize())
-                .totalElements(commentPage.getTotalElements())
-                .totalPages(commentPage.getTotalPages())
-                .first(commentPage.isFirst())
-                .last(commentPage.isLast())
-                .hasNext(commentPage.hasNext())
-                .hasPrevious(commentPage.hasPrevious())
-                .build();
+        // 각 게시글에 내가 남긴 최신 댓글 1개 세팅 (batch 조회로 N+1 방지)
+        List<Long> postIds = posts.getPosts().stream().map(PostResponse::getId).toList();
+        if (!postIds.isEmpty()) {
+            Map<Long, MyCommentResponse> latestCommentMap = commentRepository
+                    .findLatestCommentsByUserIdAndPostIds(userId, postIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            c -> c.getPost().getId(),
+                            MyCommentResponse::from,
+                            (a, b) -> a  // createdAt DESC 정렬이므로 첫 번째 = 최신
+                    ));
+            posts.getPosts().forEach(p -> p.setLatestComment(latestCommentMap.get(p.getId())));
+        }
 
-        log.info("내 프로필 조회 - userId: {}, tab: {}, totalElements: {}, commentCount: {}",
-                userId, tab, posts.getPageInfo().getTotalElements(), commentPage.getTotalElements());
+        log.info("내 프로필 조회 - userId: {}, tab: {}, totalElements: {}",
+                userId, tab, posts.getPageInfo().getTotalElements());
 
         return MyProfileDetailResponse.builder()
                 .userId(user.getId())
@@ -126,8 +126,6 @@ public class ProfileService {
                 .mannerTags(mannerTags)
                 .tab(tab.toLowerCase())
                 .posts(posts)
-                .comments(comments)
-                .commentPageInfo(commentPageInfo)
                 .build();
     }
 

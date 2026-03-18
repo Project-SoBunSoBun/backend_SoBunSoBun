@@ -121,6 +121,17 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     Page<Comment> findActiveByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId, Pageable pageable);
 
     /**
+     * 특정 게시글 목록에서 사용자가 작성한 활성 댓글 조회 (최신순)
+     * 프로필 게시글 목록에서 게시글별 내 최신 댓글 한 번에 조회 (N+1 방지용 batch)
+     *
+     * @param userId   사용자 ID
+     * @param postIds  게시글 ID 목록
+     * @return 활성 댓글 목록 (createdAt DESC) — 게시글별 최신 1개 추출은 서비스에서 처리
+     */
+    @Query("SELECT c FROM Comment c JOIN FETCH c.post WHERE c.user.id = :userId AND c.post.id IN :postIds AND c.deleted = false ORDER BY c.createdAt DESC")
+    List<Comment> findLatestCommentsByUserIdAndPostIds(@Param("userId") Long userId, @Param("postIds") List<Long> postIds);
+
+    /**
      * 특정 사용자의 모든 댓글 삭제 (회원탈퇴용)
      */
     void deleteByUserId(Long userId);
