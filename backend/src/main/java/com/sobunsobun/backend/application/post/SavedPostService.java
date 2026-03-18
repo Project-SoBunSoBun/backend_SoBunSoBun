@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.application.post;
 
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.post.PostListResponse;
@@ -87,7 +88,7 @@ public class SavedPostService {
      */
     @Transactional(readOnly = true)
     public PostListResponse getMySavedPostsAsPostResponse(Long userId, Pageable pageable) {
-        Page<SavedPost> savedPosts = savedPostRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        Page<SavedPost> savedPosts = savedPostRepository.findByUserIdExcludingPostStatus(userId, PostStatus.CANCELLED, pageable);
         List<PostResponse> postResponses = savedPosts.getContent().stream()
                 .map(this::convertSavedPostToPostResponse)
                 .toList();
