@@ -67,7 +67,7 @@ public class ProfileService {
             }
             case "saved" -> {
                 Pageable pageable = PageRequest.of(page, size);
-                Page<SavedPost> result = savedPostRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+                Page<SavedPost> result = savedPostRepository.findByUserIdOrderByCreatedAtDescSafe(userId, pageable);
                 yield toPostListResponseFromSaved(result);
             }
             default -> { // "posts"
@@ -182,10 +182,23 @@ public class ProfileService {
 
     /** SavedPost 페이지 → 내부 GroupPost를 꺼내어 PostListResponse로 변환 */
     private PostListResponse toPostListResponseFromSaved(Page<SavedPost> page) {
+        // 삭제된 게시글은 필터링 (lazy loading으로 인한 EntityNotFoundException 방지)
+        List<PostResponse> posts = page.getContent().stream()
+                .filter(savedPost -> {
+                    try {
+                        // post 엔티티 접근 시도 - 삭제된 경우 예외 발생
+                        GroupPost post = savedPost.getPost();
+                        return post != null;
+                    } catch (Exception e) {
+                        log.warn("저장된 게시글 조회 중 삭제된 게시글 발견: {}", savedPost.getId());
+                        return false;
+                    }
+                })
+                .map(savedPost -> toPostResponse(savedPost.getPost()))
+                .toList();
+        
         return PostListResponse.builder()
-                .posts(page.getContent().stream()
-                        .map(savedPost -> toPostResponse(savedPost.getPost()))
-                        .toList())
+                .posts(posts)
                 .pageInfo(PostListResponse.PageInfo.builder()
                         .currentPage(page.getNumber())
                         .pageSize(page.getSize())

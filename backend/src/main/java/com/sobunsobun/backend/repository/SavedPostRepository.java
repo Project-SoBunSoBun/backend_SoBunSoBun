@@ -47,9 +47,17 @@ public interface SavedPostRepository extends JpaRepository<SavedPost, Long> {
 
     /**
      * 삭제되지 않은 게시글만 포함한 사용자의 저장 목록 (페이징)
+     * INNER JOIN을 사용하여 존재하는 게시글만 조회 (EntityNotFoundException 방지)
      */
-    @Query("SELECT sp FROM SavedPost sp WHERE sp.user.id = :userId AND sp.post.status <> :status ORDER BY sp.createdAt DESC")
+    @Query("SELECT sp FROM SavedPost sp INNER JOIN sp.post gp WHERE sp.user.id = :userId AND gp.status <> :status ORDER BY sp.createdAt DESC")
     Page<SavedPost> findByUserIdExcludingPostStatus(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
+
+    /**
+     * 사용자의 저장된 게시글 목록 - INNER JOIN으로 존재하는 게시글만 조회
+     * (EntityNotFoundException 방지)
+     */
+    @Query("SELECT sp FROM SavedPost sp INNER JOIN sp.post WHERE sp.user.id = :userId ORDER BY sp.createdAt DESC")
+    Page<SavedPost> findByUserIdOrderByCreatedAtDescSafe(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * 특정 게시글의 모든 저장 삭제 (게시글 삭제 시)
