@@ -13,6 +13,8 @@ import java.util.List;
  * - "posts"     : 내가 작성한 게시글
  * - "commented" : 내가 댓글을 단 게시글
  * - "saved"     : 내가 저장한 게시글
+ *
+ * comments 필드는 탭과 무관하게 항상 내가 작성한 댓글 목록을 반환합니다 (최신순).
  */
 @Getter
 @Builder
@@ -31,6 +33,12 @@ public class MyProfileDetailResponse {
 
     /** 탭에 해당하는 페이징된 게시글 목록 */
     private PostListResponse posts;
+
+    /** 내가 작성한 댓글 목록 (최신순, 삭제 제외) */
+    private List<MyCommentResponse> comments;
+
+    /** 댓글 목록 페이징 정보 */
+    private PostListResponse.PageInfo commentPageInfo;
 
     @Getter
     @Builder

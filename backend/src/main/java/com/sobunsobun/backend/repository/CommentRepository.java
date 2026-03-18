@@ -2,6 +2,8 @@ package com.sobunsobun.backend.repository;
 
 import com.sobunsobun.backend.domain.BlockedUser;
 import com.sobunsobun.backend.domain.Comment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -106,6 +108,17 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
            "WHERE c.parentComment.id = :parentCommentId " +
            "AND c.deleted = false")
     boolean hasActiveChildComments(@Param("parentCommentId") Long parentCommentId);
+
+    /**
+     * 사용자가 작성한 활성 댓글 목록 조회 (최신순, 페이징)
+     * 프로필 조회 시 내 댓글 목록 표시에 사용
+     *
+     * @param userId 사용자 ID
+     * @param pageable 페이징 정보
+     * @return 활성 댓글 페이지 (createdAt DESC)
+     */
+    @Query("SELECT c FROM Comment c JOIN FETCH c.post WHERE c.user.id = :userId AND c.deleted = false ORDER BY c.createdAt DESC")
+    Page<Comment> findActiveByUserIdOrderByCreatedAtDesc(@Param("userId") Long userId, Pageable pageable);
 
     /**
      * 특정 사용자의 모든 댓글 삭제 (회원탈퇴용)

@@ -1,14 +1,17 @@
 package com.sobunsobun.backend.application.user;
 
+import com.sobunsobun.backend.domain.Comment;
 import com.sobunsobun.backend.domain.GroupPost;
 import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.post.PostListResponse;
 import com.sobunsobun.backend.dto.post.PostResponse;
+import com.sobunsobun.backend.dto.profile.MyCommentResponse;
 import com.sobunsobun.backend.dto.profile.MyProfileDetailResponse;
 import com.sobunsobun.backend.dto.profile.PublicUserProfileResponse;
 import com.sobunsobun.backend.repository.BlockedUserRepository;
+import com.sobunsobun.backend.repository.CommentRepository;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.UserReportRepository;
@@ -46,6 +49,7 @@ public class ProfileService {
     private final UserTagStatsRepository userTagStatsRepository;
     private final UserReportRepository userReportRepository;
     private final BlockedUserRepository blockedUserRepository;
+    private final CommentRepository commentRepository;
 
     /**
      * 내 프로필 조회 (탭별 페이징)
@@ -93,8 +97,24 @@ public class ProfileService {
                         .build())
                 .toList();
 
-        log.info("내 프로필 조회 - userId: {}, tab: {}, totalElements: {}",
-                userId, tab, posts.getPageInfo().getTotalElements());
+        Pageable commentPageable = PageRequest.of(page, size);
+        Page<Comment> commentPage = commentRepository.findActiveByUserIdOrderByCreatedAtDesc(userId, commentPageable);
+        List<MyCommentResponse> comments = commentPage.getContent().stream()
+                .map(MyCommentResponse::from)
+                .toList();
+        PostListResponse.PageInfo commentPageInfo = PostListResponse.PageInfo.builder()
+                .currentPage(commentPage.getNumber())
+                .pageSize(commentPage.getSize())
+                .totalElements(commentPage.getTotalElements())
+                .totalPages(commentPage.getTotalPages())
+                .first(commentPage.isFirst())
+                .last(commentPage.isLast())
+                .hasNext(commentPage.hasNext())
+                .hasPrevious(commentPage.hasPrevious())
+                .build();
+
+        log.info("내 프로필 조회 - userId: {}, tab: {}, totalElements: {}, commentCount: {}",
+                userId, tab, posts.getPageInfo().getTotalElements(), commentPage.getTotalElements());
 
         return MyProfileDetailResponse.builder()
                 .userId(user.getId())
@@ -106,6 +126,8 @@ public class ProfileService {
                 .mannerTags(mannerTags)
                 .tab(tab.toLowerCase())
                 .posts(posts)
+                .comments(comments)
+                .commentPageInfo(commentPageInfo)
                 .build();
     }
 
