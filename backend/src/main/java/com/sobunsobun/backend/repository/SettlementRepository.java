@@ -43,8 +43,9 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     Optional<Settlement> findWithDetailByGroupPostId(@Param("groupPostId") Long groupPostId);
 
     /**
-     * 내 정산 목록 (방장이거나 참여자인 정산, 상태 필터 없음)
-     * EXISTS 서브쿼리로 각 정산이 정확히 1건씩 반환되도록 보장
+     * 내 정산 목록 (방장이거나 참여자이거나 채팅방 활성 멤버인 정산, 상태 필터 없음)
+     * - COMPLETED: SettlementParticipant 레코드로 판단
+     * - PENDING: ChatMember ACTIVE 상태로 판단 (아직 참여자 레코드 없음)
      */
     @Query(value = "SELECT s FROM Settlement s " +
                    "JOIN FETCH s.groupPost p " +
@@ -52,15 +53,21 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
                    "WHERE p.owner.id = :userId " +
                    "   OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
                    "              WHERE sp.settlement = s AND sp.user.id = :userId) " +
+                   "   OR EXISTS (SELECT 1 FROM ChatMember cm " +
+                   "              WHERE cm.chatRoom.groupPost = p " +
+                   "              AND cm.user.id = :userId AND cm.status = 'ACTIVE') " +
                    "ORDER BY s.createdAt DESC",
            countQuery = "SELECT COUNT(s) FROM Settlement s " +
                         "WHERE s.groupPost.owner.id = :userId " +
                         "   OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
-                        "              WHERE sp.settlement = s AND sp.user.id = :userId)")
+                        "              WHERE sp.settlement = s AND sp.user.id = :userId) " +
+                        "   OR EXISTS (SELECT 1 FROM ChatMember cm " +
+                        "              WHERE cm.chatRoom.groupPost = s.groupPost " +
+                        "              AND cm.user.id = :userId AND cm.status = 'ACTIVE')")
     Page<Settlement> findByOwnerOrParticipant(@Param("userId") Long userId, Pageable pageable);
 
     /**
-     * 내 정산 목록 (방장이거나 참여자인 정산, 상태 필터)
+     * 내 정산 목록 (방장이거나 참여자이거나 채팅방 활성 멤버인 정산, 상태 필터)
      */
     @Query(value = "SELECT s FROM Settlement s " +
                    "JOIN FETCH s.groupPost p " +
@@ -68,13 +75,19 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
                    "WHERE s.status = :status " +
                    "  AND (p.owner.id = :userId " +
                    "       OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
-                   "                  WHERE sp.settlement = s AND sp.user.id = :userId)) " +
+                   "                  WHERE sp.settlement = s AND sp.user.id = :userId) " +
+                   "       OR EXISTS (SELECT 1 FROM ChatMember cm " +
+                   "                  WHERE cm.chatRoom.groupPost = p " +
+                   "                  AND cm.user.id = :userId AND cm.status = 'ACTIVE')) " +
                    "ORDER BY s.createdAt DESC",
            countQuery = "SELECT COUNT(s) FROM Settlement s " +
                         "WHERE s.status = :status " +
                         "  AND (s.groupPost.owner.id = :userId " +
                         "       OR EXISTS (SELECT 1 FROM SettlementParticipant sp " +
-                        "                  WHERE sp.settlement = s AND sp.user.id = :userId))")
+                        "                  WHERE sp.settlement = s AND sp.user.id = :userId) " +
+                        "       OR EXISTS (SELECT 1 FROM ChatMember cm " +
+                        "                  WHERE cm.chatRoom.groupPost = s.groupPost " +
+                        "                  AND cm.user.id = :userId AND cm.status = 'ACTIVE'))")
     Page<Settlement> findByOwnerOrParticipantAndStatus(@Param("userId") Long userId,
                                                        @Param("status") SettlementStatus status,
                                                        Pageable pageable);
