@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.application.user;
 
+import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.mypage.MyProfileResponse;
 import com.sobunsobun.backend.dto.mypage.ProfileUpdateRequestDto;
@@ -109,7 +110,7 @@ public class MyProfileService {
                         .build())
                 .toList();
 
-        var posts = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId());
+        var posts = groupPostRepository.findByOwnerIdAndStatusNotOrderByCreatedAtDesc(user.getId(), PostStatus.CANCELLED);
         List<UserProfileResponse.PostItemDto> postItems = posts.stream()
                 .map(post -> UserProfileResponse.PostItemDto.builder()
                         .postId(post.getId())
@@ -175,7 +176,7 @@ public class MyProfileService {
                         .build())
                 .toList();
 
-        var posts = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId());
+        var posts = groupPostRepository.findByOwnerIdAndStatusNotOrderByCreatedAtDesc(user.getId(), PostStatus.CANCELLED);
         List<UserProfileResponse.PostItemDto> postItems = posts.stream()
                 .map(post -> UserProfileResponse.PostItemDto.builder()
                         .postId(post.getId())

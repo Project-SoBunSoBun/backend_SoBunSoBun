@@ -1,6 +1,7 @@
 package com.sobunsobun.backend.application.user;
 
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.post.PostListResponse;
@@ -71,7 +72,7 @@ public class ProfileService {
             }
             default -> { // "posts"
                 Pageable pageable = PageRequest.of(page, size);
-                Page<GroupPost> result = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(userId, pageable);
+                Page<GroupPost> result = groupPostRepository.findByOwnerIdAndStatusNotOrderByCreatedAtDesc(userId, PostStatus.CANCELLED, pageable);
                 yield toPostListResponse(result);
             }
         };
@@ -137,7 +138,7 @@ public class ProfileService {
                 .toList();
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<GroupPost> postPage = groupPostRepository.findByOwnerIdOrderByCreatedAtDesc(targetUserId, pageable);
+        Page<GroupPost> postPage = groupPostRepository.findByOwnerIdAndStatusNotOrderByCreatedAtDesc(targetUserId, PostStatus.CANCELLED, pageable);
 
         // 현재 사용자가 해당 타 유저를 차단했는지 확인
         Boolean isBlocked = false;
