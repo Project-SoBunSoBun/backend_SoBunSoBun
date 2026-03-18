@@ -1,10 +1,14 @@
 package com.sobunsobun.backend.repository;
 
+import com.sobunsobun.backend.domain.PostStatus;
 import com.sobunsobun.backend.domain.SavedPost;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -42,7 +46,22 @@ public interface SavedPostRepository extends JpaRepository<SavedPost, Long> {
     void deleteByUserId(Long userId);
 
     /**
+     * 삭제되지 않은 게시글만 포함한 사용자의 저장 목록 (페이징)
+     * INNER JOIN을 사용하여 존재하는 게시글만 조회 (EntityNotFoundException 방지)
+     */
+    @Query("SELECT sp FROM SavedPost sp INNER JOIN sp.post gp WHERE sp.user.id = :userId AND gp.status <> :status ORDER BY sp.createdAt DESC")
+    Page<SavedPost> findByUserIdExcludingPostStatus(@Param("userId") Long userId, @Param("status") PostStatus status, Pageable pageable);
+
+    /**
+     * 사용자의 저장된 게시글 목록 - INNER JOIN으로 존재하는 게시글만 조회
+     * (EntityNotFoundException 방지)
+     */
+    @Query("SELECT sp FROM SavedPost sp INNER JOIN sp.post WHERE sp.user.id = :userId ORDER BY sp.createdAt DESC")
+    Page<SavedPost> findByUserIdOrderByCreatedAtDescSafe(@Param("userId") Long userId, Pageable pageable);
+
+    /**
      * 특정 게시글의 모든 저장 삭제 (게시글 삭제 시)
      */
+    @Transactional
     void deleteByPostId(Long postId);
 }
