@@ -122,7 +122,7 @@ public class ChatInviteService {
                     "PARTICIPATION",
                     "단체채팅 초대",
                     inviter.getNickname() + "님이 초대를 보냈습니다.",
-                    Map.of("type", "PARTICIPATION", "inviteId", String.valueOf(savedInvite.getId()))
+                    Map.of("type", "PARTICIPATION", "inviteId", String.valueOf(savedInvite.getId()), "nickname", inviter.getNickname())
             );
         } catch (Exception e) {
             log.warn("[ChatInvite] FCM 알림 발송 실패 - inviteId: {}, error: {}", savedInvite.getId(), e.getMessage());
