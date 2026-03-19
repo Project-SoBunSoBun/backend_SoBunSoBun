@@ -8,7 +8,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 
 /**
  * 알림 아이템 응답 DTO
@@ -52,7 +53,7 @@ public class NotificationItemResponse {
     /**
      * 생성 일시
      */
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     public static NotificationItemResponse from(Notification notification) {
         String payload = notification.getDataPayload();
@@ -63,7 +64,9 @@ public class NotificationItemResponse {
                 .postId(extractPostId(payload))
                 .settlementId(extractLongField(payload, "settlementId"))
                 .isRead(notification.getIsRead())
-                .createdAt(notification.getCreatedAt())
+                .createdAt(notification.getCreatedAt() != null
+                        ? notification.getCreatedAt().atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime()
+                        : null)
                 .build();
     }
 
