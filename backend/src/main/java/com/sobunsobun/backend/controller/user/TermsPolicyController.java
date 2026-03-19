@@ -1,5 +1,6 @@
 package com.sobunsobun.backend.controller.user;
 
+import com.sobunsobun.backend.application.TermsService;
 import com.sobunsobun.backend.dto.common.ApiResponse;
 import com.sobunsobun.backend.dto.terms.TermsResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,87 +32,43 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TermsPolicyController {
 
-    @Operation(summary = "서비스 이용약관 조회")
+    private final TermsService termsService;
+
+    @Operation(summary = "서비스 이용약관 조회 (최신 버전)")
     @GetMapping("/service")
     public ResponseEntity<ApiResponse<TermsResponse>> getServiceTerms() {
-        try {
-            log.info("📄 서비스 이용약관 조회 요청");
-
-            TermsResponse terms = TermsResponse.builder()
-                    .type("SERVICE")
-                    .version("1.0.0")
-                    .title("서비스 이용약관")
-                    .content("서비스 이용약관 내용...")
-                    .build();
-
-            log.info("✅ 서비스 이용약관 조회 완료 - 버전: {}", terms.getVersion());
-
-            return ResponseEntity.ok(ApiResponse.success(terms));
-        } catch (Exception e) {
-            log.error("❌ 서비스 이용약관 조회 중 오류 발생", e);
-            throw e;
-        }
+        TermsResponse terms = termsService.getLatestTerms("SERVICE");
+        return ResponseEntity.ok(ApiResponse.success(terms));
     }
 
-    @Operation(summary = "개인정보처리방침 조회")
+    @Operation(summary = "개인정보처리방침 조회 (최신 버전)")
     @GetMapping("/privacy")
     public ResponseEntity<ApiResponse<TermsResponse>> getPrivacyPolicy() {
-        try {
-            log.info("📄 개인정보처리방침 조회 요청");
+        TermsResponse terms = termsService.getLatestTerms("PRIVACY");
+        return ResponseEntity.ok(ApiResponse.success(terms));
+    }
 
-            TermsResponse terms = TermsResponse.builder()
-                    .type("PRIVACY")
-                    .version("1.0.0")
-                    .title("개인정보처리방침")
-                    .content("개인정보처리방침 내용...")
-                    .build();
-
-            log.info("✅ 개인정보처리방침 조회 완료 - 버전: {}", terms.getVersion());
-
-            return ResponseEntity.ok(ApiResponse.success(terms));
-        } catch (Exception e) {
-            log.error("❌ 개인정보처리방침 조회 중 오류 발생", e);
-            throw e;
-        }
+    @Operation(summary = "위치기반서비스 이용약관 조회 (최신 버전)")
+    @GetMapping("/location")
+    public ResponseEntity<ApiResponse<TermsResponse>> getLocationTerms() {
+        TermsResponse terms = termsService.getLatestTerms("LOCATION");
+        return ResponseEntity.ok(ApiResponse.success(terms));
     }
 
     @Operation(summary = "약관 버전 목록 조회")
     @GetMapping("/{type}/versions")
     public ResponseEntity<ApiResponse<List<TermsResponse>>> getTermsVersions(
-            @PathVariable @Parameter(description = "약관 유형") String type) {
-        try {
-            log.info("📄 약관 버전 목록 조회 요청 - 유형: {}", type);
-
-            List<TermsResponse> versions = List.of();
-
-            log.info("✅ 약관 버전 목록 조회 완료 - 유형: {}", type);
-
-            return ResponseEntity.ok(ApiResponse.success(versions));
-        } catch (Exception e) {
-            log.error("❌ 약관 버전 목록 조회 중 오류 발생", e);
-            throw e;
-        }
+            @PathVariable @Parameter(description = "약관 유형 (SERVICE, PRIVACY, LOCATION)") String type) {
+        List<TermsResponse> versions = termsService.getTermsVersions(type);
+        return ResponseEntity.ok(ApiResponse.success(versions));
     }
 
     @Operation(summary = "특정 버전 약관 조회")
     @GetMapping("/{type}/versions/{version}")
     public ResponseEntity<ApiResponse<TermsResponse>> getTermsByVersion(
-            @PathVariable String type,
-            @PathVariable String version) {
-        try {
-            log.info("📄 특정 버전 약관 조회 요청 - 유형: {}, 버전: {}", type, version);
-
-            TermsResponse terms = TermsResponse.builder()
-                    .type(type)
-                    .version(version)
-                    .build();
-
-            log.info("✅ 특정 버전 약관 조회 완료 - 유형: {}, 버전: {}", type, version);
-
-            return ResponseEntity.ok(ApiResponse.success(terms));
-        } catch (Exception e) {
-            log.error("❌ 특정 버전 약관 조회 중 오류 발생", e);
-            throw e;
-        }
+            @PathVariable @Parameter(description = "약관 유형") String type,
+            @PathVariable @Parameter(description = "버전 (예: 1.0.0)") String version) {
+        TermsResponse terms = termsService.getTermsByVersion(type, version);
+        return ResponseEntity.ok(ApiResponse.success(terms));
     }
 }
