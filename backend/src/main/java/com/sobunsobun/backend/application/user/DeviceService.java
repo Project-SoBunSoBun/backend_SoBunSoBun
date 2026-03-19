@@ -36,7 +36,7 @@ public class DeviceService {
         // 다른 사용자에게 같은 FCM 토큰이 등록된 경우 삭제 (기기 이전)
         userDeviceRepository.findByFcmToken(request.getFcmToken()).ifPresent(existing -> {
             if (!existing.getUser().getId().equals(userId)) {
-                log.info("📵 기기 이전: 기존 토큰 삭제 - userId: {}, deviceId: {}",
+                log.info(" 기기 이전: 기존 토큰 삭제 - userId: {}, deviceId: {}",
                         existing.getUser().getId(), existing.getDeviceId());
                 userDeviceRepository.delete(existing);
             }
@@ -65,7 +65,7 @@ public class DeviceService {
                 });
 
         UserDevice saved = userDeviceRepository.save(device);
-        log.info("✅ FCM 토큰 등록/갱신 완료 - userId: {}, deviceId: {}", userId, saved.getDeviceId());
+        log.info(" FCM 토큰 등록/갱신 완료 - userId: {}, deviceId: {}", userId, saved.getDeviceId());
 
         return DeviceRegistrationResponse.builder()
                 .deviceId(saved.getDeviceId())
@@ -81,7 +81,7 @@ public class DeviceService {
     public DeviceDeleteResponse deleteDevice(Long userId, String deviceId) {
         userDeviceRepository.findByUserIdAndDeviceId(userId, deviceId).ifPresent(device -> {
             userDeviceRepository.delete(device);
-            log.info("✅ FCM 토큰 삭제 완료 - userId: {}, deviceId: {}", userId, deviceId);
+            log.info(" FCM 토큰 삭제 완료 - userId: {}, deviceId: {}", userId, deviceId);
         });
 
         return DeviceDeleteResponse.builder()
@@ -100,7 +100,7 @@ public class DeviceService {
 
         device.setEnabled(request.getIsEnabled());
         UserDevice saved = userDeviceRepository.save(device);
-        log.info("✅ FCM 토큰 상태 변경 완료 - userId: {}, deviceId: {}, enabled: {}",
+        log.info(" FCM 토큰 상태 변경 완료 - userId: {}, deviceId: {}, enabled: {}",
                 userId, deviceId, request.getIsEnabled());
 
         return DeviceUpdateResponse.builder()

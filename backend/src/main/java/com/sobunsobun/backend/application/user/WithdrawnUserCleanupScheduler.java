@@ -38,7 +38,7 @@ public class WithdrawnUserCleanupScheduler {
     @Scheduled(cron = "0 0 3 * * *")
     @Transactional
     public void cleanupWithdrawnUsers() {
-        log.info("🧹 탈퇴 사용자 데이터 정리 스케줄러 시작");
+        log.info(" 탈퇴 사용자 데이터 정리 스케줄러 시작");
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -47,11 +47,11 @@ public class WithdrawnUserCleanupScheduler {
                 UserStatus.DELETED, now);
 
         if (expiredUsers.isEmpty()) {
-            log.info("🧹 정리 대상 탈퇴 사용자 없음");
+            log.info(" 정리 대상 탈퇴 사용자 없음");
             return;
         }
 
-        log.info("🧹 정리 대상 탈퇴 사용자 {}명 발견", expiredUsers.size());
+        log.info(" 정리 대상 탈퇴 사용자 {}명 발견", expiredUsers.size());
 
         int successCount = 0;
         int failCount = 0;
@@ -59,7 +59,7 @@ public class WithdrawnUserCleanupScheduler {
         for (User user : expiredUsers) {
             try {
                 Long userId = user.getId();
-                log.info("🧹 탈퇴 사용자 데이터 삭제 시작 - 사용자 ID: {}, 탈퇴일: {}, 재가입 가능일: {}",
+                log.info(" 탈퇴 사용자 데이터 삭제 시작 - 사용자 ID: {}, 탈퇴일: {}, 재가입 가능일: {}",
                         userId, user.getWithdrawnAt(), user.getReactivatableAt());
 
                 // 1. WithdrawalReason 삭제 (User FK 참조)
@@ -69,14 +69,14 @@ public class WithdrawnUserCleanupScheduler {
                 userRepository.delete(user);
 
                 successCount++;
-                log.info("✅ 탈퇴 사용자 데이터 삭제 완료 - 사용자 ID: {}", userId);
+                log.info(" 탈퇴 사용자 데이터 삭제 완료 - 사용자 ID: {}", userId);
             } catch (Exception e) {
                 failCount++;
-                log.error("❌ 탈퇴 사용자 데이터 삭제 실패 - 사용자 ID: {}, 오류: {}",
+                log.error(" 탈퇴 사용자 데이터 삭제 실패 - 사용자 ID: {}, 오류: {}",
                         user.getId(), e.getMessage(), e);
             }
         }
 
-        log.info("🧹 탈퇴 사용자 데이터 정리 완료 - 성공: {}건, 실패: {}건", successCount, failCount);
+        log.info(" 탈퇴 사용자 데이터 정리 완료 - 성공: {}건, 실패: {}건", successCount, failCount);
     }
 }

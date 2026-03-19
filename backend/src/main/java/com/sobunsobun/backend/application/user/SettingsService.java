@@ -68,7 +68,7 @@ public class SettingsService {
         }
 
         UserNotificationSetting saved = userNotificationSettingRepository.save(setting);
-        log.info("✅ 알림 설정 변경 완료 - userId: {}", userId);
+        log.info(" 알림 설정 변경 완료 - userId: {}", userId);
 
         return NotificationSettingResponse.builder()
                 .pushEnabled(saved.getPushEnabled())

@@ -411,7 +411,7 @@ public class UserService {
         }
 
         // 3. 사용자 관련 데이터 모두 삭제 (FK 의존성 역순으로 삭제)
-        log.info("🗑️ 사용자 관련 데이터 삭제 시작 - 사용자 ID: {}", userId);
+        log.info(" 사용자 관련 데이터 삭제 시작 - 사용자 ID: {}", userId);
 
         try {
             // 3-1. 알림 삭제
@@ -477,9 +477,9 @@ public class UserService {
             log.debug("디바이스 정보 삭제 중...");
             userDeviceRepository.deleteByUserId(userId);
 
-            log.info("✅ 사용자 관련 데이터 삭제 완료 - 사용자 ID: {}", userId);
+            log.info(" 사용자 관련 데이터 삭제 완료 - 사용자 ID: {}", userId);
         } catch (Exception e) {
-            log.error("❌ 사용자 관련 데이터 삭제 중 오류 발생 - 사용자 ID: {}", userId, e);
+            log.error(" 사용자 관련 데이터 삭제 중 오류 발생 - 사용자 ID: {}", userId, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "데이터 삭제 중 오류가 발생했습니다.");
         }
 
@@ -491,10 +491,10 @@ public class UserService {
                     appleOAuthClient.revokeToken(refreshToken);
                     appleProvider.setRefreshToken(null);
                     authProviderRepository.save(appleProvider);
-                    log.info("✅ Apple Revoke 완료 - 사용자 ID: {}", userId);
+                    log.info(" Apple Revoke 완료 - 사용자 ID: {}", userId);
                 } catch (Exception e) {
                     // Revoke 실패는 탈퇴 자체를 막지 않음
-                    log.warn("⚠️ Apple Revoke 실패 (탈퇴 계속 진행) - 사용자 ID: {}, 오류: {}", userId, e.getMessage());
+                    log.warn(" Apple Revoke 실패 (탈퇴 계속 진행) - 사용자 ID: {}, 오류: {}", userId, e.getMessage());
                 }
             }
         });
@@ -522,7 +522,7 @@ public class UserService {
                 .build();
 
         withdrawalReasonRepository.saveAndFlush(withdrawalReason);
-        log.info("✅ 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
+        log.info(" 탈퇴 사유 저장 완료 - 사용자 ID: {}", userId);
 
         // 8. 사용자 상태 변경 및 탈퇴 일시 저장 + 개인정보 익명화
         LocalDateTime withdrawnAt = LocalDateTime.now();
@@ -541,7 +541,7 @@ public class UserService {
 
         userRepository.saveAndFlush(user);
 
-        log.info("✅ 사용자 상태 변경 및 개인정보 익명화 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
+        log.info(" 사용자 상태 변경 및 개인정보 익명화 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
                 userId, withdrawnAt, reactivatableAt);
 
 
@@ -580,7 +580,7 @@ public class UserService {
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "탈퇴 사유 정보를 찾을 수 없습니다.");
                 });
 
-        log.info("✅ 탈퇴 사유 조회 완료 - 사용자 ID: {}, 사유: {}", userId, reason.getReasonCode());
+        log.info(" 탈퇴 사유 조회 완료 - 사용자 ID: {}, 사유: {}", userId, reason.getReasonCode());
 
         return com.sobunsobun.backend.dto.account.WithdrawalReasonResponse.builder()
                 .id(reason.getId())

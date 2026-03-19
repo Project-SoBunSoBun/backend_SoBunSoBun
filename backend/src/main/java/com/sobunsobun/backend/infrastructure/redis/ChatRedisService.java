@@ -59,23 +59,23 @@ public class ChatRedisService {
         if (redisAvailable) {
             try {
                 this.redisTemplate.get().opsForValue().get("connection-test");
-                log.info("✅ ChatRedisService - Redis 연결 확인됨");
+                log.info(" ChatRedisService - Redis 연결 확인됨");
             } catch (Exception e) {
-                log.warn("⚠️ ChatRedisService - Redis 연결 실패: {}", e.getMessage());
+                log.warn(" ChatRedisService - Redis 연결 실패: {}", e.getMessage());
                 this.redisAvailable = false;
             }
         } else {
-            log.warn("⚠️ ═══════════════════════════════════════════════════════");
-            log.warn("⚠️ Redis 서버가 연결되지 않았습니다!");
-            log.warn("⚠️ 채팅 기능을 사용하려면 Redis 서버를 시작해주세요.");
-            log.warn("⚠️ 다른 API는 정상적으로 작동합니다.");
-            log.warn("⚠️ ═══════════════════════════════════════════════════════");
+            log.warn(" ═══════════════════════════════════════════════════════");
+            log.warn(" Redis 서버가 연결되지 않았습니다!");
+            log.warn(" 채팅 기능을 사용하려면 Redis 서버를 시작해주세요.");
+            log.warn(" 다른 API는 정상적으로 작동합니다.");
+            log.warn(" ═══════════════════════════════════════════════════════");
         }
     }
 
     private boolean isRedisAvailable() {
         if (!redisAvailable) {
-            log.warn("⚠️ Redis가 사용 불가능합니다. 채팅 기능이 제한됩니다.");
+            log.warn(" Redis가 사용 불가능합니다. 채팅 기능이 제한됩니다.");
             return false;
         }
         return true;
@@ -93,12 +93,12 @@ public class ChatRedisService {
     @Transactional
     public void enterRoom(Long userId, Long roomId) {
         if (!isRedisAvailable()) {
-            log.warn("⚠️ Redis 미사용: enterRoom 작업 건너뜀");
+            log.warn(" Redis 미사용: enterRoom 작업 건너뜀");
             return;
         }
 
         try {
-            log.info("🚪 [채팅방 입장] userId: {}, roomId: {}", userId, roomId);
+            log.info(" [채팅방 입장] userId: {}, roomId: {}", userId, roomId);
 
             // 1. 현재 접속 방 저장
             String activeRoomKey = buildActiveRoomKey(userId);
@@ -115,15 +115,15 @@ public class ChatRedisService {
             // 3. DB lastReadAt 업데이트
             try {
                 chatMemberRepository.updateLastReadAtByRoomIdAndUserId(roomId, userId, LocalDateTime.now());
-                log.debug("✅ [DB] ChatMember.lastReadAt 업데이트 완료: roomId={}, userId={}", roomId, userId);
+                log.debug(" [DB] ChatMember.lastReadAt 업데이트 완료: roomId={}, userId={}", roomId, userId);
             } catch (Exception e) {
-                log.warn("⚠️ [DB 경고] lastReadAt 업데이트 실패: {}", e.getMessage());
+                log.warn(" [DB 경고] lastReadAt 업데이트 실패: {}", e.getMessage());
             }
 
-            log.info("✅ [채팅방 입장 완료] userId: {}, roomId: {}", userId, roomId);
+            log.info(" [채팅방 입장 완료] userId: {}, roomId: {}", userId, roomId);
 
         } catch (Exception e) {
-            log.error("❌ [채팅방 입장 오류] userId: {}, roomId: {}, error: {}", userId, roomId, e.getMessage(), e);
+            log.error(" [채팅방 입장 오류] userId: {}, roomId: {}, error: {}", userId, roomId, e.getMessage(), e);
             throw new RuntimeException("Redis enterRoom 실패", e);
         }
     }
@@ -139,9 +139,9 @@ public class ChatRedisService {
         try {
             String activeRoomKey = buildActiveRoomKey(userId);
             redisTemplate.get().delete(activeRoomKey);
-            log.info("✅ [채팅방 퇴장 완료] userId: {}", userId);
+            log.info(" [채팅방 퇴장 완료] userId: {}", userId);
         } catch (Exception e) {
-            log.error("❌ [채팅방 퇴장 오류] userId: {}, error: {}", userId, e.getMessage());
+            log.error(" [채팅방 퇴장 오류] userId: {}, error: {}", userId, e.getMessage());
         }
     }
 
@@ -159,12 +159,12 @@ public class ChatRedisService {
      */
     public void addUnreadMessageCount(Long roomId, Long senderId, List<Long> memberIds) {
         if (!isRedisAvailable()) {
-            log.warn("⚠️ Redis 미사용: addUnreadMessageCount 작업 건너뜀");
+            log.warn(" Redis 미사용: addUnreadMessageCount 작업 건너뜀");
             return;
         }
 
         try {
-            log.info("🔔 [unread count 증가] roomId: {}, senderId: {}, memberCount: {}",
+            log.info(" [unread count 증가] roomId: {}, senderId: {}, memberCount: {}",
                     roomId, senderId, memberIds.size());
 
             for (Long memberId : memberIds) {
@@ -173,7 +173,7 @@ public class ChatRedisService {
                 // 현재 해당 방에 접속 중인 유저는 카운트 증가하지 않음
                 String activeRoom = redisTemplate.get().opsForValue().get(buildActiveRoomKey(memberId));
                 if (String.valueOf(roomId).equals(activeRoom)) {
-                    log.debug("⏭️ [스킵] 현재 방 접속 중: userId={}", memberId);
+                    log.debug("⏭ [스킵] 현재 방 접속 중: userId={}", memberId);
                     continue;
                 }
 
@@ -183,11 +183,11 @@ public class ChatRedisService {
                 redisTemplate.get().opsForHash().increment(hashKey, field, 1);
                 redisTemplate.get().expire(hashKey, REDIS_EXPIRE_TIME, REDIS_EXPIRE_UNIT);
 
-                log.debug("✅ [HINCRBY] hashKey={}, field={}", hashKey, field);
+                log.debug(" [HINCRBY] hashKey={}, field={}", hashKey, field);
             }
 
         } catch (Exception e) {
-            log.error("❌ [unread count 증가 오류] roomId: {}, error: {}", roomId, e.getMessage(), e);
+            log.error(" [unread count 증가 오류] roomId: {}, error: {}", roomId, e.getMessage(), e);
         }
     }
 
@@ -224,17 +224,17 @@ public class ChatRedisService {
             }
 
             // ── Cache Miss: DB에서 계산 후 Write-through 캐싱 ──────────────────
-            log.debug("🔄 [Cache Miss] DB에서 unread count 계산 후 캐싱: roomId={}, userId={}", roomId, userId);
+            log.debug(" [Cache Miss] DB에서 unread count 계산 후 캐싱: roomId={}, userId={}", roomId, userId);
             long dbCount = chatMemberRepository.countUnreadMessages(roomId, userId);
 
             redisTemplate.get().opsForHash().put(hashKey, field, String.valueOf(dbCount));
             redisTemplate.get().expire(hashKey, REDIS_EXPIRE_TIME, REDIS_EXPIRE_UNIT);
 
-            log.debug("✅ [Write-through] hashKey={}, field={}, count={}", hashKey, field, dbCount);
+            log.debug(" [Write-through] hashKey={}, field={}, count={}", hashKey, field, dbCount);
             return dbCount;
 
         } catch (Exception e) {
-            log.warn("⚠️ [unread count 조회 실패] roomId: {}, userId: {}, error: {}", roomId, userId, e.getMessage(), e);
+            log.warn(" [unread count 조회 실패] roomId: {}, userId: {}, error: {}", roomId, userId, e.getMessage(), e);
             return 0L;
         }
     }
@@ -253,9 +253,9 @@ public class ChatRedisService {
             String field   = String.valueOf(roomId);
             redisTemplate.get().opsForHash().put(hashKey, field, "0");
             redisTemplate.get().expire(hashKey, REDIS_EXPIRE_TIME, REDIS_EXPIRE_UNIT);
-            log.debug("✅ [unread 초기화] hashKey={}, field={}", hashKey, field);
+            log.debug(" [unread 초기화] hashKey={}, field={}", hashKey, field);
         } catch (Exception e) {
-            log.warn("⚠️ [unread count 초기화 실패] roomId: {}, userId: {}", roomId, userId);
+            log.warn(" [unread count 초기화 실패] roomId: {}, userId: {}", roomId, userId);
         }
     }
 
@@ -271,7 +271,7 @@ public class ChatRedisService {
             String activeRoom = redisTemplate.get().opsForValue().get(buildActiveRoomKey(userId));
             return activeRoom != null ? Long.parseLong(activeRoom) : null;
         } catch (Exception e) {
-            log.warn("⚠️ [현재 접속 방 조회 실패] userId: {}", userId);
+            log.warn(" [현재 접속 방 조회 실패] userId: {}", userId);
             return null;
         }
     }

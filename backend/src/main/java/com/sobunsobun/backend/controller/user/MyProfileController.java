@@ -53,15 +53,15 @@ public class MyProfileController {
     public ResponseEntity<ApiResponse<MyProfileResponse>> getProfile(Authentication authentication) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("📋 프로필 조회 요청 - 사용자 ID: {}", principal.id());
+            log.info(" 프로필 조회 요청 - 사용자 ID: {}", principal.id());
 
             MyProfileResponse profile = myProfileService.getProfile(principal.id());
 
-            log.info("✅ 프로필 조회 완료 - 사용자 ID: {}", principal.id());
+            log.info(" 프로필 조회 완료 - 사용자 ID: {}", principal.id());
 
             return ResponseEntity.ok(ApiResponse.success(profile));
         } catch (Exception e) {
-            log.error("❌ 프로필 조회 중 오류 발생", e);
+            log.error(" 프로필 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -87,15 +87,15 @@ public class MyProfileController {
 //            @Valid @RequestBody ProfileUpdateRequestDto request) {
 //        try {
 //            JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-//            log.info("✏️ 프로필 수정 요청 - 사용자 ID: {}, 닉네임: {}", principal.id(), request.getNickname());
+//            log.info(" 프로필 수정 요청 - 사용자 ID: {}, 닉네임: {}", principal.id(), request.getNickname());
 //
 //            ProfileUpdateResponse response = myProfileService.updateProfile(principal.id(), request);
 //
-//            log.info("✅ 프로필 수정 완료 - 사용자 ID: {}", principal.id());
+//            log.info(" 프로필 수정 완료 - 사용자 ID: {}", principal.id());
 //
 //            return ResponseEntity.ok(ApiResponse.success(response));
 //        } catch (Exception e) {
-//            log.error("❌ 프로필 수정 중 오류 발생", e);
+//            log.error(" 프로필 수정 중 오류 발생", e);
 //            throw e;
 //        }
 //    }

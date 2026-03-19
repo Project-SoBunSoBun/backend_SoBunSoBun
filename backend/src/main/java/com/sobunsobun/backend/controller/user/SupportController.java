@@ -64,17 +64,17 @@ public class SupportController {
     @GetMapping("/inquiry-types")
     public ResponseEntity<ApiResponse<InquiryTypeListResponse>> getInquiryTypes() {
         try {
-            log.info("📋 문의 유형 목록 조회 요청");
+            log.info(" 문의 유형 목록 조회 요청");
 
             // 임시 응답
             InquiryTypeListResponse types = InquiryTypeListResponse.builder()
                     .build();
 
-            log.info("✅ 문의 유형 목록 조회 완료");
+            log.info(" 문의 유형 목록 조회 완료");
 
             return ResponseEntity.ok(ApiResponse.success(types));
         } catch (Exception e) {
-            log.error("❌ 문의 유형 목록 조회 중 오류 발생", e);
+            log.error(" 문의 유형 목록 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -91,17 +91,17 @@ public class SupportController {
     @GetMapping("/bug-types")
     public ResponseEntity<ApiResponse<InquiryTypeListResponse>> getBugTypes() {
         try {
-            log.info("🐛 버그 신고 유형 목록 조회 요청");
+            log.info(" 버그 신고 유형 목록 조회 요청");
 
             // 임시 응답
             InquiryTypeListResponse types = InquiryTypeListResponse.builder()
                     .build();
 
-            log.info("✅ 버그 신고 유형 목록 조회 완료");
+            log.info(" 버그 신고 유형 목록 조회 완료");
 
             return ResponseEntity.ok(ApiResponse.success(types));
         } catch (Exception e) {
-            log.error("❌ 버그 신고 유형 목록 조회 중 오류 발생", e);
+            log.error(" 버그 신고 유형 목록 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -131,8 +131,8 @@ public class SupportController {
             @RequestParam(value = "screenshots", required = false) List<MultipartFile> screenshots,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        log.info("📝 [submitInquiry API] 1:1 문의 제출 - userId: {}", principal.id());
-        log.info("📝 [submitInquiry API] 요청 파라미터 검증");
+        log.info(" [submitInquiry API] 1:1 문의 제출 - userId: {}", principal.id());
+        log.info(" [submitInquiry API] 요청 파라미터 검증");
         log.info("  - typeCode: '{}' (null: {})", typeCode, typeCode == null);
         log.info("  - content: '{}' (null: {}, length: {})",
                 content, content == null, content != null ? content.length() : 0);
@@ -186,7 +186,7 @@ public class SupportController {
             @Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size
     ) {
-        log.info("📋 [getUserInquiries API] 문의 목록 조회 - userId: {}, page: {}, size: {}",
+        log.info(" [getUserInquiries API] 문의 목록 조회 - userId: {}, page: {}, size: {}",
                 principal.id(), page, size);
 
         User user = new User();
@@ -216,7 +216,7 @@ public class SupportController {
             @PathVariable Long inquiryId,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        log.info("🔍 [getInquiry API] 문의 상세 조회 - inquiryId: {}, userId: {}",
+        log.info(" [getInquiry API] 문의 상세 조회 - inquiryId: {}, userId: {}",
                 inquiryId, principal.id());
 
         User user = new User();
@@ -244,7 +244,7 @@ public class SupportController {
             @PathVariable Long inquiryId,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        log.info("📷 [getInquiryImages API] 문의 이미지 조회 - inquiryId: {}", inquiryId);
+        log.info(" [getInquiryImages API] 문의 이미지 조회 - inquiryId: {}", inquiryId);
 
         User user = new User();
         user.setId(principal.id());
@@ -279,8 +279,8 @@ public class SupportController {
             @RequestParam(required = false) String deviceInfo,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        log.info("🐛 [submitBugReport API] 버그 신고 제출 - userId: {}", principal.id());
-        log.info("🐛 [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}, deviceInfo: {}",
+        log.info(" [submitBugReport API] 버그 신고 제출 - userId: {}", principal.id());
+        log.info(" [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}, deviceInfo: {}",
                 typeCode, content, deviceInfo);
 
         // BugReportRequest 객체 생성
@@ -320,7 +320,7 @@ public class SupportController {
             @Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size
     ) {
-        log.info("📋 [getUserBugReports API] 버그 신고 목록 조회 - userId: {}, page: {}, size: {}",
+        log.info(" [getUserBugReports API] 버그 신고 목록 조회 - userId: {}, page: {}, size: {}",
                 principal.id(), page, size);
 
         User user = new User();
@@ -350,7 +350,7 @@ public class SupportController {
             @PathVariable Long bugReportId,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        log.info("🔍 [getBugReport API] 버그 신고 상세 조회 - bugReportId: {}, userId: {}",
+        log.info(" [getBugReport API] 버그 신고 상세 조회 - bugReportId: {}, userId: {}",
                 bugReportId, principal.id());
 
         User user = new User();
@@ -378,7 +378,7 @@ public class SupportController {
             @PathVariable Long bugReportId,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        log.info("📷 [getBugReportImages API] 버그 신고 이미지 조회 - bugReportId: {}", bugReportId);
+        log.info(" [getBugReportImages API] 버그 신고 이미지 조회 - bugReportId: {}", bugReportId);
 
         User user = new User();
         user.setId(principal.id());

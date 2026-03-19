@@ -31,7 +31,7 @@ public interface UserTagStatsRepository extends JpaRepository<UserTagStats, Long
      * [선택 이유]
      * - Dirty Checking: SELECT + UPDATE 2쿼리, 동시 요청 시 race condition 위험
      * - JPQL Bulk UPDATE: 행이 존재해야만 동작 (사전 INSERT 필요)
-     * - 네이티브 UPSERT: 단 1쿼리, 원자적(atomic), race condition 없음 ✅
+     * - 네이티브 UPSERT: 단 1쿼리, 원자적(atomic), race condition 없음 
      *
      * UNIQUE(receiver_id, tag_code) 제약 조건을 기준으로 동작:
      * - 해당 (receiver_id, tag_code) 행이 없으면 count=1로 INSERT

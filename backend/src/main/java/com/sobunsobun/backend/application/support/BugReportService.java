@@ -38,33 +38,33 @@ public class BugReportService {
      * @return 버그 신고 응답
      */
     public BugReportResponse submitBugReport(BugReportRequest request, User user) {
-        log.info("🐛 [submitBugReport] 버그 신고 제출 시작 - userId: {}, typeCode: {}", user.getId(), request.getTypeCode());
+        log.info(" [submitBugReport] 버그 신고 제출 시작 - userId: {}, typeCode: {}", user.getId(), request.getTypeCode());
 
         try {
             // 필드 검증
             if (request.getContent() == null || request.getContent().isBlank()) {
-                log.warn("⚠️ [submitBugReport] content 필드가 null 또는 빈 문자열입니다");
+                log.warn(" [submitBugReport] content 필드가 null 또는 빈 문자열입니다");
                 throw new IllegalArgumentException("버그 내용은 필수입니다.");
             }
             if (request.getTypeCode() == null || request.getTypeCode().isBlank()) {
-                log.warn("⚠️ [submitBugReport] typeCode 필드가 null 또는 빈 문자열입니다");
+                log.warn(" [submitBugReport] typeCode 필드가 null 또는 빈 문자열입니다");
                 throw new IllegalArgumentException("버그 유형은 필수입니다.");
             }
 
             // 스크린샷 파일 저장
             List<String> imageUrls = new ArrayList<>();
             if (request.getScreenshots() != null && !request.getScreenshots().isEmpty()) {
-                log.info("📷 [submitBugReport] 스크린샷 {} 개 저장 시작", request.getScreenshots().size());
+                log.info(" [submitBugReport] 스크린샷 {} 개 저장 시작", request.getScreenshots().size());
                 for (MultipartFile screenshot : request.getScreenshots()) {
                     if (screenshot != null && !screenshot.isEmpty()) {
                         try {
                             String imageUrl = fileStorageService.saveImage(screenshot);
                             if (imageUrl != null) {
                                 imageUrls.add(imageUrl);
-                                log.info("✅ [submitBugReport] 스크린샷 저장 성공: {}", imageUrl);
+                                log.info(" [submitBugReport] 스크린샷 저장 성공: {}", imageUrl);
                             }
                         } catch (Exception e) {
-                            log.warn("⚠️ [submitBugReport] 스크린샷 저장 실패: {}", e.getMessage());
+                            log.warn(" [submitBugReport] 스크린샷 저장 실패: {}", e.getMessage());
                         }
                     }
                 }
@@ -74,7 +74,7 @@ public class BugReportService {
             String imageUrlsJson = null;
             if (!imageUrls.isEmpty()) {
                 imageUrlsJson = objectMapper.writeValueAsString(imageUrls);
-                log.info("📦 [submitBugReport] 이미지 URL JSON: {}", imageUrlsJson);
+                log.info(" [submitBugReport] 이미지 URL JSON: {}", imageUrlsJson);
             }
 
             // 버그 신고 엔티티 생성
@@ -89,7 +89,7 @@ public class BugReportService {
 
             // 저장
             BugReport savedBugReport = bugReportRepository.save(bugReport);
-            log.info("✅ [submitBugReport] 버그 신고 저장 완료 - bugReportId: {}", savedBugReport.getId());
+            log.info(" [submitBugReport] 버그 신고 저장 완료 - bugReportId: {}", savedBugReport.getId());
 
             return BugReportResponse.builder()
                     .bugReportId(savedBugReport.getId())
@@ -99,7 +99,7 @@ public class BugReportService {
                     .build();
 
         } catch (Exception e) {
-            log.error("❌ [submitBugReport] 버그 신고 제출 실패: {}", e.getMessage(), e);
+            log.error(" [submitBugReport] 버그 신고 제출 실패: {}", e.getMessage(), e);
             throw new RuntimeException("버그 신고 제출 중 오류가 발생했습니다.", e);
         }
     }
@@ -112,7 +112,7 @@ public class BugReportService {
      */
     @Transactional(readOnly = true)
     public Page<BugReport> getUserBugReports(User user, Pageable pageable) {
-        log.info("📋 [getUserBugReports] 버그 신고 목록 조회 - userId: {}", user.getId());
+        log.info(" [getUserBugReports] 버그 신고 목록 조회 - userId: {}", user.getId());
         return bugReportRepository.findByUserOrderByCreatedAtDesc(user, pageable);
     }
 
@@ -124,13 +124,13 @@ public class BugReportService {
      */
     @Transactional(readOnly = true)
     public BugReport getBugReport(Long bugReportId, User user) {
-        log.info("🔍 [getBugReport] 버그 신고 상세 조회 - bugReportId: {}, userId: {}", bugReportId, user.getId());
+        log.info(" [getBugReport] 버그 신고 상세 조회 - bugReportId: {}, userId: {}", bugReportId, user.getId());
         BugReport bugReport = bugReportRepository.findById(bugReportId)
                 .orElseThrow(() -> new IllegalArgumentException("버그 신고를 찾을 수 없습니다."));
 
         // 신고자만 조회 가능 또는 관리자
         if (!bugReport.getUser().getId().equals(user.getId())) {
-            log.warn("⚠️ [getBugReport] 권한 없음 - userId: {}, reportUser: {}", user.getId(), bugReport.getUser().getId());
+            log.warn(" [getBugReport] 권한 없음 - userId: {}, reportUser: {}", user.getId(), bugReport.getUser().getId());
             throw new IllegalArgumentException("자신의 버그 신고만 조회할 수 있습니다.");
         }
 
@@ -150,10 +150,10 @@ public class BugReportService {
 
         try {
             List<String> urls = objectMapper.readValue(bugReport.getImageUrls(), List.class);
-            log.info("📷 [getBugReportImageUrls] 이미지 URL 조회 - count: {}", urls.size());
+            log.info(" [getBugReportImageUrls] 이미지 URL 조회 - count: {}", urls.size());
             return urls;
         } catch (Exception e) {
-            log.warn("⚠️ [getBugReportImageUrls] 이미지 URL 파싱 실패: {}", e.getMessage());
+            log.warn(" [getBugReportImageUrls] 이미지 URL 파싱 실패: {}", e.getMessage());
             return new ArrayList<>();
         }
     }

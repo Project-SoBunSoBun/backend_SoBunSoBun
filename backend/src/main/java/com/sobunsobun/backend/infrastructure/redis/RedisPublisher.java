@@ -39,7 +39,7 @@ public class RedisPublisher {
         this.redisAvailable = this.redisTemplate.isPresent();
 
         if (!redisAvailable) {
-            log.warn("⚠️ RedisPublisher - Redis가 사용 불가능합니다. 실시간 채팅이 제한됩니다.");
+            log.warn(" RedisPublisher - Redis가 사용 불가능합니다. 실시간 채팅이 제한됩니다.");
         }
     }
 
@@ -51,7 +51,7 @@ public class RedisPublisher {
      */
     public void publish(Long roomId, ChatMessageDto chatMessageDto) {
         if (!redisAvailable) {
-            log.warn("⚠️ Redis 미사용: 메시지 발행 건너뜀 - roomId: {}", roomId);
+            log.warn(" Redis 미사용: 메시지 발행 건너뜀 - roomId: {}", roomId);
             return;
         }
 

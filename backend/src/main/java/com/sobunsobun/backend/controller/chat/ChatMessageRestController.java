@@ -96,7 +96,7 @@ public class ChatMessageRestController {
             Authentication authentication
     ) {
         Long userId = extractUserId(authentication);
-        log.info("📤 [메시지 전송 요청] userId: {}, roomId: {}", userId, request.getGroupChatRoomId());
+        log.info(" [메시지 전송 요청] userId: {}, roomId: {}", userId, request.getGroupChatRoomId());
 
         // settlementId가 있으면 SETTLEMENT_CARD, 없으면 TEXT (content 필수)
         String cardPayload = null;
@@ -126,7 +126,7 @@ public class ChatMessageRestController {
                 cardPayload
         );
 
-        log.info("✅ [메시지 전송 완료] messageId: {}", response.getId());
+        log.info(" [메시지 전송 완료] messageId: {}", response.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 
@@ -175,11 +175,11 @@ public class ChatMessageRestController {
             Authentication authentication
     ) {
         Long userId = extractUserId(authentication);
-        log.info("📋 [메시지 목록 조회] roomId: {}, userId: {}, page: {}, size: {}", groupChatRoomId, userId, page, size);
+        log.info(" [메시지 목록 조회] roomId: {}, userId: {}, page: {}, size: {}", groupChatRoomId, userId, page, size);
 
         // 채팅방 멤버 검증
         if (!chatMemberRepository.isActiveMember(groupChatRoomId, userId)) {
-            log.warn("❌ [메시지 목록 조회 실패] 접근 권한 없음 - roomId: {}, userId: {}", groupChatRoomId, userId);
+            log.warn(" [메시지 목록 조회 실패] 접근 권한 없음 - roomId: {}, userId: {}", groupChatRoomId, userId);
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("FORBIDDEN", "채팅방에 접근 권한이 없습니다."));
         }
@@ -240,7 +240,7 @@ public class ChatMessageRestController {
                 .size(size)
                 .build();
 
-        log.info("✅ [메시지 목록 조회 완료] roomId: {}, count: {}", groupChatRoomId, content.size());
+        log.info(" [메시지 목록 조회 완료] roomId: {}, count: {}", groupChatRoomId, content.size());
         return ResponseEntity.ok(ApiResponse.success(pageResponse));
     }
 
@@ -282,11 +282,11 @@ public class ChatMessageRestController {
             Authentication authentication
     ) {
         Long userId = extractUserId(authentication);
-        log.info("👁 [읽음 처리 요청] messageId: {}, userId: {}", id, userId);
+        log.info(" [읽음 처리 요청] messageId: {}, userId: {}", id, userId);
 
         MessageResponse response = chatMessageService.readMessage(id, userId);
 
-        log.info("✅ [읽음 처리 완료] messageId: {}, readCount: {}", id, response.getReadCount());
+        log.info(" [읽음 처리 완료] messageId: {}, readCount: {}", id, response.getReadCount());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

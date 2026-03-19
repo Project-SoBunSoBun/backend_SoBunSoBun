@@ -44,39 +44,39 @@ public class InquiryService {
      * @return 문의 응답
      */
     public InquiryResponse submitInquiry(InquiryRequest request, User user) {
-        log.info("📝 [submitInquiry] 문의 제출 시작 - userId: {}, typeCode: {}", user.getId(), request.getTypeCode());
-        log.info("📝 [submitInquiry] 요청 필드 검증 - typeCode: '{}', content: '{}', replyEmail: '{}'",
+        log.info(" [submitInquiry] 문의 제출 시작 - userId: {}, typeCode: {}", user.getId(), request.getTypeCode());
+        log.info(" [submitInquiry] 요청 필드 검증 - typeCode: '{}', content: '{}', replyEmail: '{}'",
                 request.getTypeCode(), request.getContent(), request.getReplyEmail());
 
         try {
             // 필드 검증
             if (request.getContent() == null || request.getContent().isBlank()) {
-                log.warn("⚠️ [submitInquiry] content 필드가 null 또는 빈 문자열입니다");
+                log.warn(" [submitInquiry] content 필드가 null 또는 빈 문자열입니다");
                 throw new IllegalArgumentException("문의 내용은 필수입니다.");
             }
             if (request.getTypeCode() == null || request.getTypeCode().isBlank()) {
-                log.warn("⚠️ [submitInquiry] typeCode 필드가 null 또는 빈 문자열입니다");
+                log.warn(" [submitInquiry] typeCode 필드가 null 또는 빈 문자열입니다");
                 throw new IllegalArgumentException("문의 유형은 필수입니다.");
             }
             if (request.getReplyEmail() == null || request.getReplyEmail().isBlank()) {
-                log.warn("⚠️ [submitInquiry] replyEmail 필드가 null 또는 빈 문자열입니다");
+                log.warn(" [submitInquiry] replyEmail 필드가 null 또는 빈 문자열입니다");
                 throw new IllegalArgumentException("답변 받을 이메일은 필수입니다.");
             }
 
             // 이메일 형식 검증
             if (!isValidEmail(request.getReplyEmail())) {
-                log.warn("⚠️ [submitInquiry] 잘못된 이메일 형식: '{}'", request.getReplyEmail());
+                log.warn(" [submitInquiry] 잘못된 이메일 형식: '{}'", request.getReplyEmail());
                 throw new IllegalArgumentException("올바른 이메일 형식이 아닙니다: " + request.getReplyEmail());
             }
-            log.info("✅ [submitInquiry] 이메일 형식 검증 통과: '{}'", request.getReplyEmail());
+            log.info(" [submitInquiry] 이메일 형식 검증 통과: '{}'", request.getReplyEmail());
 
             // 스크린샷 파일 저장
             List<String> imageUrls = new ArrayList<>();
             if (request.getScreenshots() != null && !request.getScreenshots().isEmpty()) {
-                log.info("📷 [submitInquiry] 스크린샷 {} 개 저장 시작", request.getScreenshots().size());
+                log.info(" [submitInquiry] 스크린샷 {} 개 저장 시작", request.getScreenshots().size());
                 for (int i = 0; i < request.getScreenshots().size(); i++) {
                     MultipartFile screenshot = request.getScreenshots().get(i);
-                    log.info("📷 [submitInquiry] 처리 중: screenshot[{}] - name='{}', originalFilename='{}', size={}, contentType='{}', empty={}",
+                    log.info(" [submitInquiry] 처리 중: screenshot[{}] - name='{}', originalFilename='{}', size={}, contentType='{}', empty={}",
                             i, screenshot.getName(), screenshot.getOriginalFilename(),
                             screenshot.getSize(), screenshot.getContentType(), screenshot.isEmpty());
 
@@ -85,19 +85,19 @@ public class InquiryService {
                             String imageUrl = fileStorageService.saveImage(screenshot);
                             if (imageUrl != null && !imageUrl.isBlank()) {
                                 imageUrls.add(imageUrl);
-                                log.info("✅ [submitInquiry] 스크린샷[{}] 저장 성공: {}", i, imageUrl);
+                                log.info(" [submitInquiry] 스크린샷[{}] 저장 성공: {}", i, imageUrl);
                             } else {
-                                log.warn("⚠️ [submitInquiry] 스크린샷[{}] 저장 실패: imageUrl이 null 또는 빈 문자열", i);
+                                log.warn(" [submitInquiry] 스크린샷[{}] 저장 실패: imageUrl이 null 또는 빈 문자열", i);
                             }
                         } catch (Exception e) {
-                            log.error("❌ [submitInquiry] 스크린샷[{}] 저장 중 예외 발생: {}", i, e.getMessage(), e);
+                            log.error(" [submitInquiry] 스크린샷[{}] 저장 중 예외 발생: {}", i, e.getMessage(), e);
                         }
                     } else {
-                        log.warn("⚠️ [submitInquiry] 스크린샷[{}]이 null 또는 비어있음", i);
+                        log.warn(" [submitInquiry] 스크린샷[{}]이 null 또는 비어있음", i);
                     }
                 }
             } else {
-                log.info("📷 [submitInquiry] 첨부된 스크린샷 없음 (screenshots: {})",
+                log.info(" [submitInquiry] 첨부된 스크린샷 없음 (screenshots: {})",
                         request.getScreenshots() == null ? "null" : "empty list");
             }
 
@@ -106,13 +106,13 @@ public class InquiryService {
             if (!imageUrls.isEmpty()) {
                 try {
                     imageUrlsJson = objectMapper.writeValueAsString(imageUrls);
-                    log.info("📦 [submitInquiry] 이미지 URL JSON 변환 성공: {} (총 {} 개)", imageUrlsJson, imageUrls.size());
+                    log.info(" [submitInquiry] 이미지 URL JSON 변환 성공: {} (총 {} 개)", imageUrlsJson, imageUrls.size());
                 } catch (Exception e) {
-                    log.error("❌ [submitInquiry] 이미지 URL JSON 변환 실패: {}", e.getMessage(), e);
+                    log.error(" [submitInquiry] 이미지 URL JSON 변환 실패: {}", e.getMessage(), e);
                     imageUrlsJson = null;
                 }
             } else {
-                log.info("📦 [submitInquiry] 저장된 이미지 URL 없음, imageUrls 필드는 null로 저장됨");
+                log.info(" [submitInquiry] 저장된 이미지 URL 없음, imageUrls 필드는 null로 저장됨");
             }
 
             // 문의 엔티티 생성
@@ -125,12 +125,12 @@ public class InquiryService {
                     .status("RECEIVED")
                     .build();
 
-            log.info("📝 [submitInquiry] 문의 엔티티 생성 - typeCode: '{}', content: '{}', replyEmail: '{}'",
+            log.info(" [submitInquiry] 문의 엔티티 생성 - typeCode: '{}', content: '{}', replyEmail: '{}'",
                     inquiry.getTypeCode(), inquiry.getContent(), inquiry.getReplyEmail());
 
             // 저장
             Inquiry savedInquiry = inquiryRepository.save(inquiry);
-            log.info("✅ [submitInquiry] 문의 저장 완료 - inquiryId: {}", savedInquiry.getId());
+            log.info(" [submitInquiry] 문의 저장 완료 - inquiryId: {}", savedInquiry.getId());
 
             return InquiryResponse.builder()
                     .inquiryId(savedInquiry.getId())
@@ -140,7 +140,7 @@ public class InquiryService {
                     .build();
 
         } catch (Exception e) {
-            log.error("❌ [submitInquiry] 문의 제출 실패: {}", e.getMessage(), e);
+            log.error(" [submitInquiry] 문의 제출 실패: {}", e.getMessage(), e);
             throw new RuntimeException("문의 제출 중 오류가 발생했습니다.", e);
         }
     }
@@ -153,7 +153,7 @@ public class InquiryService {
      */
     @Transactional(readOnly = true)
     public Page<Inquiry> getUserInquiries(User user, Pageable pageable) {
-        log.info("📋 [getUserInquiries] 문의 목록 조회 - userId: {}", user.getId());
+        log.info(" [getUserInquiries] 문의 목록 조회 - userId: {}", user.getId());
         return inquiryRepository.findByUserOrderByCreatedAtDesc(user, pageable);
     }
 
@@ -165,13 +165,13 @@ public class InquiryService {
      */
     @Transactional(readOnly = true)
     public Inquiry getInquiry(Long inquiryId, User user) {
-        log.info("🔍 [getInquiry] 문의 상세 조회 - inquiryId: {}, userId: {}", inquiryId, user.getId());
+        log.info(" [getInquiry] 문의 상세 조회 - inquiryId: {}, userId: {}", inquiryId, user.getId());
         Inquiry inquiry = inquiryRepository.findById(inquiryId)
                 .orElseThrow(() -> new IllegalArgumentException("문의를 찾을 수 없습니다."));
 
         // 문의자만 조회 가능 또는 관리자
         if (!inquiry.getUser().getId().equals(user.getId())) {
-            log.warn("⚠️ [getInquiry] 권한 없음 - userId: {}, inquiryUser: {}", user.getId(), inquiry.getUser().getId());
+            log.warn(" [getInquiry] 권한 없음 - userId: {}, inquiryUser: {}", user.getId(), inquiry.getUser().getId());
             throw new IllegalArgumentException("자신의 문의만 조회할 수 있습니다.");
         }
 
@@ -191,10 +191,10 @@ public class InquiryService {
 
         try {
             List<String> urls = objectMapper.readValue(inquiry.getImageUrls(), List.class);
-            log.info("📷 [getInquiryImageUrls] 이미지 URL 조회 - count: {}", urls.size());
+            log.info(" [getInquiryImageUrls] 이미지 URL 조회 - count: {}", urls.size());
             return urls;
         } catch (Exception e) {
-            log.warn("⚠️ [getInquiryImageUrls] 이미지 URL 파싱 실패: {}", e.getMessage());
+            log.warn(" [getInquiryImageUrls] 이미지 URL 파싱 실패: {}", e.getMessage());
             return new ArrayList<>();
         }
     }

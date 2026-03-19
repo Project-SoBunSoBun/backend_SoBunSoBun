@@ -22,11 +22,11 @@ public class RedisAvailableCondition implements Condition {
 
         // Redis 호스트가 설정되지 않았거나 플레이스홀더인 경우
         if (redisHost == null || redisHost.isEmpty() || redisHost.equals("${redisHost}")) {
-            log.warn("⚠️ ═══════════════════════════════════════════════════════");
-            log.warn("⚠️ Redis 호스트가 설정되지 않았습니다!");
-            log.warn("⚠️ 환경 변수 'redisHost'를 설정하면 Redis를 사용할 수 있습니다.");
-            log.warn("⚠️ 채팅 기능을 제외한 다른 API는 정상 작동합니다.");
-            log.warn("⚠️ ═══════════════════════════════════════════════════════");
+            log.warn(" ═══════════════════════════════════════════════════════");
+            log.warn(" Redis 호스트가 설정되지 않았습니다!");
+            log.warn(" 환경 변수 'redisHost'를 설정하면 Redis를 사용할 수 있습니다.");
+            log.warn(" 채팅 기능을 제외한 다른 API는 정상 작동합니다.");
+            log.warn(" ═══════════════════════════════════════════════════════");
             return false;
         }
 
@@ -34,7 +34,7 @@ public class RedisAvailableCondition implements Condition {
         try {
             redisPort = Integer.parseInt(redisPortStr);
         } catch (NumberFormatException e) {
-            log.warn("⚠️ Redis 포트 파싱 실패: {}", redisPortStr);
+            log.warn(" Redis 포트 파싱 실패: {}", redisPortStr);
             return false;
         }
 
@@ -51,15 +51,15 @@ public class RedisAvailableCondition implements Condition {
             factory.getConnection().ping();
             factory.destroy();
 
-            log.info("✅ Redis 사용 가능: {}:{}", redisHost, redisPort);
+            log.info(" Redis 사용 가능: {}:{}", redisHost, redisPort);
             return true;
         } catch (Exception e) {
-            log.warn("⚠️ ═══════════════════════════════════════════════════════");
-            log.warn("⚠️ Redis 서버에 연결할 수 없습니다: {}:{}", redisHost, redisPort);
-            log.warn("⚠️ 에러: {}", e.getMessage());
-            log.warn("⚠️ 채팅 기능을 사용하려면 Redis 서버를 시작해주세요.");
-            log.warn("⚠️ 다른 API는 정상적으로 작동합니다.");
-            log.warn("⚠️ ═══════════════════════════════════════════════════════");
+            log.warn(" ═══════════════════════════════════════════════════════");
+            log.warn(" Redis 서버에 연결할 수 없습니다: {}:{}", redisHost, redisPort);
+            log.warn(" 에러: {}", e.getMessage());
+            log.warn(" 채팅 기능을 사용하려면 Redis 서버를 시작해주세요.");
+            log.warn(" 다른 API는 정상적으로 작동합니다.");
+            log.warn(" ═══════════════════════════════════════════════════════");
             return false;
         }
     }

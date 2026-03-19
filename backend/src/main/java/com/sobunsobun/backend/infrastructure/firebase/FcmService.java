@@ -44,12 +44,12 @@ public class FcmService {
             }
 
             String response = FirebaseMessaging.getInstance().send(builder.build());
-            log.debug("✅ FCM 발송 성공: messageId={}", response);
+            log.debug(" FCM 발송 성공: messageId={}", response);
 
         } catch (FirebaseMessagingException e) {
             handleFirebaseException(fcmToken, e);
         } catch (Exception e) {
-            log.warn("⚠️ FCM 발송 중 예외 발생: token={}, error={}", fcmToken, e.getMessage());
+            log.warn(" FCM 발송 중 예외 발생: token={}, error={}", fcmToken, e.getMessage());
         }
     }
 
@@ -62,11 +62,11 @@ public class FcmService {
 
         List<UserDevice> devices = userDeviceRepository.findByUserIdAndIsEnabledTrue(userId);
         if (devices.isEmpty()) {
-            log.info("📱 활성 디바이스 없음 - userId: {}", userId);
+            log.info(" 활성 디바이스 없음 - userId: {}", userId);
             return;
         }
 
-        log.info("📱 FCM 발송 시작 - userId: {}, deviceCount: {}", userId, devices.size());
+        log.info(" FCM 발송 시작 - userId: {}, deviceCount: {}", userId, devices.size());
 
         for (UserDevice device : devices) {
             try {
@@ -82,13 +82,13 @@ public class FcmService {
                 }
 
                 String response = FirebaseMessaging.getInstance().send(builder.build());
-                log.info("✅ FCM 발송 성공: userId={}, deviceId={}, messageId={}",
+                log.info(" FCM 발송 성공: userId={}, deviceId={}, messageId={}",
                         userId, device.getDeviceId(), response);
 
             } catch (FirebaseMessagingException e) {
                 handleFirebaseExceptionForDevice(device, e);
             } catch (Exception e) {
-                log.warn("⚠️ FCM 발송 중 예외: userId={}, deviceId={}, error={}",
+                log.warn(" FCM 발송 중 예외: userId={}, deviceId={}, error={}",
                         userId, device.getDeviceId(), e.getMessage());
             }
         }
@@ -96,24 +96,24 @@ public class FcmService {
 
     private void handleFirebaseException(String fcmToken, FirebaseMessagingException e) {
         if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
-            log.warn("⚠️ FCM 토큰 만료됨 - token={}", fcmToken);
+            log.warn(" FCM 토큰 만료됨 - token={}", fcmToken);
             userDeviceRepository.findByFcmToken(fcmToken).ifPresent(device -> {
                 device.setEnabled(false);
                 userDeviceRepository.save(device);
-                log.info("📵 디바이스 비활성화 완료 - deviceId={}", device.getDeviceId());
+                log.info(" 디바이스 비활성화 완료 - deviceId={}", device.getDeviceId());
             });
         } else {
-            log.warn("⚠️ FCM 발송 실패: errorCode={}, message={}", e.getMessagingErrorCode(), e.getMessage());
+            log.warn(" FCM 발송 실패: errorCode={}, message={}", e.getMessagingErrorCode(), e.getMessage());
         }
     }
 
     private void handleFirebaseExceptionForDevice(UserDevice device, FirebaseMessagingException e) {
         if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
-            log.warn("⚠️ FCM 토큰 만료 - userId={}, deviceId={}", device.getUser().getId(), device.getDeviceId());
+            log.warn(" FCM 토큰 만료 - userId={}, deviceId={}", device.getUser().getId(), device.getDeviceId());
             device.setEnabled(false);
             userDeviceRepository.save(device);
         } else {
-            log.warn("⚠️ FCM 발송 실패: userId={}, deviceId={}, errorCode={}, message={}",
+            log.warn(" FCM 발송 실패: userId={}, deviceId={}, errorCode={}, message={}",
                     device.getUser().getId(), device.getDeviceId(), e.getMessagingErrorCode(), e.getMessage());
         }
     }

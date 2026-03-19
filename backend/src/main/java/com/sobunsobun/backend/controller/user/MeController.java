@@ -55,17 +55,17 @@ public class MeController {
     public ResponseEntity<AuthResponse.UserSummary> me(Authentication authentication) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("👤 사용자 정보 조회 요청 - 사용자 ID: {}", principal.id());
+            log.info(" 사용자 정보 조회 요청 - 사용자 ID: {}", principal.id());
 
             User user = users.findById(principal.id())
                     .orElseThrow(() -> {
-                        log.warn("⚠️ 사용자를 찾을 수 없음 - 사용자 ID: {}", principal.id());
+                        log.warn(" 사용자를 찾을 수 없음 - 사용자 ID: {}", principal.id());
                         return new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
                                 "사용자를 찾을 수 없습니다");
                     });
 
-            log.info("✅ 사용자 정보 조회 완료 - 사용자 ID: {}, 닉네임: {}", principal.id(), user.getNickname());
+            log.info(" 사용자 정보 조회 완료 - 사용자 ID: {}, 닉네임: {}", principal.id(), user.getNickname());
 
             return ResponseEntity.ok(
                     AuthResponse.UserSummary.builder()
@@ -78,7 +78,7 @@ public class MeController {
                             .build()
             );
         } catch (Exception e) {
-            log.error("❌ 사용자 정보 조회 중 오류 발생", e);
+            log.error(" 사용자 정보 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -103,16 +103,16 @@ public class MeController {
     public ResponseEntity<LocationVerificationResponse> getLocationVerification(Authentication authentication) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("📍 위치 인증 정보 조회 요청 - 사용자 ID: {}", principal.id());
+            log.info(" 위치 인증 정보 조회 요청 - 사용자 ID: {}", principal.id());
 
             LocationVerificationResponse response = userService.getLocationVerification(principal.id());
 
-            log.info("✅ 위치 인증 정보 조회 완료 - 사용자 ID: {}, 인증여부: {}",
+            log.info(" 위치 인증 정보 조회 완료 - 사용자 ID: {}, 인증여부: {}",
                     principal.id(), response.isVerified());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("❌ 위치 인증 정보 조회 중 오류 발생", e);
+            log.error(" 위치 인증 정보 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -139,7 +139,7 @@ public class MeController {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
             String address = request.getAddress();
 
-            log.info("📍 위치 인증 업데이트 요청 - 사용자 ID: {}, 주소: {}", principal.id(), address);
+            log.info(" 위치 인증 업데이트 요청 - 사용자 ID: {}, 주소: {}", principal.id(), address);
 
             // 위치 인증 업데이트
             userService.updateLocationVerification(principal.id(), address);
@@ -147,11 +147,11 @@ public class MeController {
             // 업데이트된 정보 조회 후 반환
             LocationVerificationResponse response = userService.getLocationVerification(principal.id());
 
-            log.info("✅ 위치 인증 업데이트 완료 - 사용자 ID: {}, 주소: {}", principal.id(), address);
+            log.info(" 위치 인증 업데이트 완료 - 사용자 ID: {}, 주소: {}", principal.id(), address);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("❌ 위치 인증 업데이트 중 오류 발생", e);
+            log.error(" 위치 인증 업데이트 중 오류 발생", e);
             throw e;
         }
     }

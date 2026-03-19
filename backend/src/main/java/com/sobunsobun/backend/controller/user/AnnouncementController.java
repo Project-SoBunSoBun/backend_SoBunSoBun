@@ -66,15 +66,15 @@ public class AnnouncementController {
                 Sort.by(Sort.Direction.DESC, "createdAt")
             );
 
-            log.info("📢 공지사항 목록 조회 요청 - 페이지: {}, 사이즈: {}", page, size);
+            log.info(" 공지사항 목록 조회 요청 - 페이지: {}, 사이즈: {}", page, size);
 
             PageResponse<AnnouncementListItemResponse> announcements = announcementService.getAnnouncements(pageable);
 
-            log.info("✅ 공지사항 목록 조회 완료");
+            log.info(" 공지사항 목록 조회 완료");
 
             return ResponseEntity.ok(ApiResponse.success(announcements));
         } catch (Exception e) {
-            log.error("❌ 공지사항 목록 조회 중 오류 발생", e);
+            log.error(" 공지사항 목록 조회 중 오류 발생", e);
             log.error("오류 메시지: {}", e.getMessage());
             log.error("오류 클래스: {}", e.getClass().getName());
             e.printStackTrace();
@@ -96,15 +96,15 @@ public class AnnouncementController {
     public ResponseEntity<ApiResponse<AnnouncementDetailResponse>> getAnnouncementDetail(
             @PathVariable @Parameter(description = "공지사항 ID") Long id) {
         try {
-            log.info("📢 공지사항 상세 조회 요청 - ID: {}", id);
+            log.info(" 공지사항 상세 조회 요청 - ID: {}", id);
 
             AnnouncementDetailResponse announcement = announcementService.getAnnouncementDetail(id);
 
-            log.info("✅ 공지사항 상세 조회 완료 - ID: {}", id);
+            log.info(" 공지사항 상세 조회 완료 - ID: {}", id);
 
             return ResponseEntity.ok(ApiResponse.success(announcement));
         } catch (Exception e) {
-            log.error("❌ 공지사항 상세 조회 중 오류 발생", e);
+            log.error(" 공지사항 상세 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -116,10 +116,10 @@ public class AnnouncementController {
     public ResponseEntity<String> debugCount() {
         try {
             long count = announcementService.getAnnouncementCount();
-            log.info("📊 공지사항 총 개수: {}", count);
+            log.info(" 공지사항 총 개수: {}", count);
             return ResponseEntity.ok("공지사항 총 개수: " + count);
         } catch (Exception e) {
-            log.error("❌ 디버그 조회 실패", e);
+            log.error(" 디버그 조회 실패", e);
             e.printStackTrace();
             return ResponseEntity.ok("오류: " + e.getMessage());
         }
@@ -131,7 +131,7 @@ public class AnnouncementController {
     @GetMapping("/debug/page")
     public ResponseEntity<String> debugPage() {
         try {
-            log.info("📊 디버그 페이지 조회 시작");
+            log.info(" 디버그 페이지 조회 시작");
             org.springframework.data.domain.PageRequest pageable =
                 org.springframework.data.domain.PageRequest.of(0, 20,
                     org.springframework.data.domain.Sort.Direction.DESC, "createdAt");
@@ -154,7 +154,7 @@ public class AnnouncementController {
 
             return ResponseEntity.ok(sb.toString());
         } catch (Exception e) {
-            log.error("❌ 디버그 페이지 조회 실패", e);
+            log.error(" 디버그 페이지 조회 실패", e);
             e.printStackTrace();
             return ResponseEntity.ok("오류: " + e.getMessage());
         }

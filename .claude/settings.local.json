@@ -8,7 +8,8 @@
       "Bash(./gradlew compileTestJava:*)",
       "Bash(./gradlew testClasses:*)",
       "Bash(./gradlew compileJava:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(python3:*)"
     ]
   }
 }

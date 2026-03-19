@@ -45,40 +45,40 @@ public class RedisSubscriber implements MessageListener {
             String topic = new String(pattern, "UTF-8");
 
             log.info("═══════════════════════════════════════════════════════════");
-            log.info("📨 [Redis Subscribe] Topic: {}", topic);
-            log.info("📝 [Raw Message Body] {}", messageBody);
+            log.info(" [Redis Subscribe] Topic: {}", topic);
+            log.info(" [Raw Message Body] {}", messageBody);
 
             // JSON 문자열을 ChatMessageDto로 역직렬화
             ChatMessageDto chatMessage = objectMapper.readValue(
                     messageBody,
                     ChatMessageDto.class
             );
-            log.info("✅ [파싱 완료] ChatMessageDto 변환됨");
+            log.info(" [파싱 완료] ChatMessageDto 변환됨");
             log.info("   - type: {}, roomId: {}, senderId: {}, message: {}",
                     chatMessage.getType(), chatMessage.getRoomId(),
                     chatMessage.getSenderId(), chatMessage.getMessage());
 
             // 채팅방 ID를 Topic에서 추출
             Long roomId = chatMessage.getRoomId();
-            String destination = "/topic/chat/room/" + roomId;  // ✅ /topic으로 변경
+            String destination = "/topic/chat/room/" + roomId;  //  /topic으로 변경
 
-            log.info("🚀 [브로드캐스트 시작] destination: {}", destination);
-            log.info("📤 [메시지 내용] {}", chatMessage);
+            log.info(" [브로드캐스트 시작] destination: {}", destination);
+            log.info(" [메시지 내용] {}", chatMessage);
 
             // WebSocket 구독자에게 브로드캐스트
             try {
                 messagingTemplate.convertAndSend(destination, chatMessage);
-                log.info("✅ [브로드캐스트 성공] 메시지 전송 완료");
+                log.info(" [브로드캐스트 성공] 메시지 전송 완료");
                 log.info("   - 대상: {}", destination);
                 log.info("   - 내용: {}", chatMessage.getMessage());
             } catch (Exception broadcastException) {
-                log.error("❌ [브로드캐스트 실패] {}", broadcastException.getMessage(), broadcastException);
+                log.error(" [브로드캐스트 실패] {}", broadcastException.getMessage(), broadcastException);
             }
 
             log.info("═══════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
-            log.error("❌ [Redis Subscribe Error] {}", e.getMessage(), e);
+            log.error(" [Redis Subscribe Error] {}", e.getMessage(), e);
         }
     }
 }

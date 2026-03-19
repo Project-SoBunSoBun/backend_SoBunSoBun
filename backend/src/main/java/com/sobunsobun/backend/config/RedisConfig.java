@@ -47,7 +47,7 @@ public class RedisConfig {
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
         factory.afterPropertiesSet();
 
-        log.info("✅ Redis ConnectionFactory 생성 완료: {}:{}", redisHost, redisPort);
+        log.info(" Redis ConnectionFactory 생성 완료: {}:{}", redisHost, redisPort);
 
         return factory;
     }
@@ -69,7 +69,7 @@ public class RedisConfig {
 
         redisTemplate.afterPropertiesSet();
 
-        log.info("✅ RedisTemplate<String, Object> 생성 완료");
+        log.info(" RedisTemplate<String, Object> 생성 완료");
 
         return redisTemplate;
     }
@@ -93,7 +93,7 @@ public class RedisConfig {
 
         redisTemplate.afterPropertiesSet();
 
-        log.info("✅ RedisTemplate<String, String> 생성 완료");
+        log.info(" RedisTemplate<String, String> 생성 완료");
 
         return redisTemplate;
     }
@@ -115,7 +115,7 @@ public class RedisConfig {
         // RedisSubscriber를 Topic 패턴에 등록
         container.addMessageListener(redisSubscriber, new PatternTopic("chat:room:*"));
 
-        log.info("✅ Redis Pub/Sub 리스너 등록 완료");
+        log.info(" Redis Pub/Sub 리스너 등록 완료");
 
         return container;
     }

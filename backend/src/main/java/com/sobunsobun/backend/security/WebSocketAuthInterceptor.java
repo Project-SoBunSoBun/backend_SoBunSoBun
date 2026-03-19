@@ -43,14 +43,14 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         }
 
         try {
-            log.info("🔐 STOMP CONNECT 프레임 수신");
+            log.info(" STOMP CONNECT 프레임 수신");
 
             // 1. Authorization 헤더에서 토큰 추출
             List<String> authorization = accessor.getNativeHeader("Authorization");
 
             // Authorization 헤더가 없는 경우: 테스트 모드에서는 클라이언트에서 전달한 userId 사용
             if (authorization == null || authorization.isEmpty()) {
-                log.info("⚠️ Authorization 헤더 없음 - 테스트 모드로 진행");
+                log.info(" Authorization 헤더 없음 - 테스트 모드로 진행");
 
                 // 세션 속성에서 userId 추출 시도
                 Long userId = null;
@@ -64,10 +64,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
                 // userId가 없으면 기본값 사용
                 if (userId == null) {
                     userId = 999L;
-                    log.info("📝 기본 userId 사용: {}", userId);
+                    log.info(" 기본 userId 사용: {}", userId);
                 }
 
-                log.info("✅ 테스트 토큰 없이 연결 허용 - userId: {}", userId);
+                log.info(" 테스트 토큰 없이 연결 허용 - userId: {}", userId);
 
                 // Principal 설정
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -87,12 +87,12 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             }
 
             String token = authorization.get(0);
-            log.info("📥 Authorization 헤더 발견 (길이: {})", token.length());
+            log.info(" Authorization 헤더 발견 (길이: {})", token.length());
 
             // 2. Bearer 접두사 제거
             if (token.startsWith("Bearer ")) {
                 token = token.substring(7);
-                log.debug("✅ Bearer 접두사 제거됨");
+                log.debug(" Bearer 접두사 제거됨");
             }
 
             // 3. 토큰 검증 및 파싱
@@ -100,7 +100,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
             // test-token은 개발/테스트 환경에서만 허용
             if ("test-token".equals(token)) {
-                log.info("✅ 테스트 토큰 사용 (개발 환경)");
+                log.info(" 테스트 토큰 사용 (개발 환경)");
                 // 테스트 환경에서는 기본 사용자로 설정
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                         new JwtUserPrincipal(999L, com.sobunsobun.backend.domain.Role.USER),
@@ -121,14 +121,14 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             try {
                 claims = jwtTokenProvider.parse(token).getBody();
             } catch (JwtException e) {
-                log.error("❌ JWT 토큰 검증 실패: {}", e.getMessage());
+                log.error(" JWT 토큰 검증 실패: {}", e.getMessage());
                 throw e;
             }
 
             // 5. 토큰 타입 확인 (access 토큰만 허용)
             String tokenType = claims.get("type", String.class);
             if (!"access".equals(tokenType)) {
-                log.error("❌ 잘못된 토큰 타입: {} - 연결 거부", tokenType);
+                log.error(" 잘못된 토큰 타입: {} - 연결 거부", tokenType);
                 throw new JwtException("잘못된 토큰 타입입니다");
             }
 
@@ -136,7 +136,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             Long userId = Long.valueOf(claims.getSubject());
             String role = claims.get("role", String.class);
 
-            log.info("✅ WebSocket 인증 성공 - userId: {}, role: {}", userId, role);
+            log.info(" WebSocket 인증 성공 - userId: {}, role: {}", userId, role);
 
             // 7. Principal 설정
             Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -153,10 +153,10 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
             }
 
         } catch (JwtException e) {
-            log.error("❌ WebSocket 인증 실패: {}", e.getMessage());
+            log.error(" WebSocket 인증 실패: {}", e.getMessage());
             throw new RuntimeException("WebSocket 인증 실패: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("❌ WebSocket 처리 중 에러: {}", e.getMessage(), e);
+            log.error(" WebSocket 처리 중 에러: {}", e.getMessage(), e);
             throw new RuntimeException("WebSocket 처리 중 에러 발생", e);
         }
 
