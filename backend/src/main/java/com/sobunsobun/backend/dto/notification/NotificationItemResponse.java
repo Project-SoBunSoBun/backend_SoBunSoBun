@@ -40,6 +40,11 @@ public class NotificationItemResponse {
     private Long postId;
 
     /**
+     * 관련 정산 ID (SETTLEMENT 타입인 경우)
+     */
+    private Long settlementId;
+
+    /**
      * 읽음 여부
      */
     private Boolean isRead;
@@ -56,17 +61,22 @@ public class NotificationItemResponse {
                 .type(notification.getType())
                 .nickname(extractField(payload, "nickname"))
                 .postId(extractPostId(payload))
+                .settlementId(extractLongField(payload, "settlementId"))
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();
     }
 
     private static Long extractPostId(String dataPayload) {
+        return extractLongField(dataPayload, "postId");
+    }
+
+    private static Long extractLongField(String dataPayload, String fieldName) {
         if (dataPayload == null || dataPayload.isBlank()) return null;
         try {
             JsonNode node = new ObjectMapper().readTree(dataPayload);
-            if (node.has("postId") && !node.get("postId").isNull()) {
-                return node.get("postId").asLong();
+            if (node.has(fieldName) && !node.get(fieldName).isNull()) {
+                return node.get(fieldName).asLong();
             }
         } catch (Exception ignored) {
         }

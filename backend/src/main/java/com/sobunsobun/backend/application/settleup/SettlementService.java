@@ -171,7 +171,7 @@ public class SettlementService {
                                     "SETTLEMENT",
                                     "정산 요청",
                                     "정산 요청이 도착했습니다.",
-                                    Map.of("type", "SETTLEMENT", "postId", String.valueOf(postId))
+                                    Map.of("type", "SETTLEMENT", "postId", String.valueOf(postId), "settlementId", String.valueOf(settlementId))
                             );
                         } catch (Exception e) {
                             log.warn("[정산 FCM 실패] userId={}, error={}", recipient.getId(), e.getMessage());
