@@ -167,45 +167,31 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 리소스 없음 처리 (404)
+     * 잘못된 URL 경로 요청 시
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleNoResourceFoundException(NoResourceFoundException e) {
+        log.warn("[NoResourceFoundException] {}", e.getMessage());
+
+        ApiResponse<?> response = ApiResponse.error(
+                HttpStatus.NOT_FOUND.value(),
+                ErrorCode.RESOURCE_NOT_FOUND.getCode(),
+                "요청한 리소스를 찾을 수 없습니다."
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
      * IllegalArgumentException 처리
-     * 비즈니스 로직 위반 (자신의 항목 신고, 중복 신고 등)
+     * 유효성 검증 실패 등 잘못된 인자 전달 시
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<?>> handleIllegalArgumentException(IllegalArgumentException e) {
         String message = e.getMessage();
         log.warn("[IllegalArgumentException] {}", message);
 
-        // 자신의 항목 신고 확인
-        if (message != null && (message.contains("자신의 게시글") || message.contains("자신의 댓글"))) {
-            ApiResponse<?> response = ApiResponse.error(
-                    HttpStatus.CONFLICT.value(),
-                    ErrorCode.DATA_INTEGRITY_VIOLATION.getCode(),
-                    message
-            );
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-        }
-
-        // 중복 신고 확인
-        if (message != null && message.contains("이미")) {
-            ApiResponse<?> response = ApiResponse.error(
-                    HttpStatus.BAD_REQUEST.value(),
-                    ErrorCode.INVALID_REQUEST.getCode(),
-                    message
-            );
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-        }
-
-        // 리소스 없음 확인
-        if (message != null && message.contains("찾을 수 없습니다")) {
-            ApiResponse<?> response = ApiResponse.error(
-                    HttpStatus.NOT_FOUND.value(),
-                    ErrorCode.RESOURCE_NOT_FOUND.getCode(),
-                    message
-            );
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-        }
-
-        // 기타 IllegalArgumentException
         ApiResponse<?> response = ApiResponse.error(
                 HttpStatus.BAD_REQUEST.value(),
                 ErrorCode.INVALID_REQUEST.getCode(),

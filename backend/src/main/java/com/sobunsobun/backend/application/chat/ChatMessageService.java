@@ -13,6 +13,8 @@ import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.support.exception.ChatException;
+import com.sobunsobun.backend.support.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -392,7 +394,7 @@ public class ChatMessageService {
 
             if (!isMember) {
                 log.error(" [권한 검증 실패] userId {}는 roomId {} 멤버가 아님", userId, roomId);
-                throw new IllegalArgumentException("이 채팅방에 접근 권한이 없습니다");
+                throw new ChatException(ErrorCode.CHAT_ROOM_ACCESS_DENIED);
             }
             log.debug(" [단계1] 권한 검증 성공");
 
@@ -480,7 +482,7 @@ public class ChatMessageService {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> {
                     log.error(" 메시지를 찾을 수 없음 - messageId: {}", messageId);
-                    return new IllegalArgumentException("존재하지 않는 메시지입니다.");
+                    return new ChatException(ErrorCode.CHAT_MESSAGE_NOT_FOUND);
                 });
 
         Long roomId = message.getChatRoom().getId();
@@ -488,7 +490,7 @@ public class ChatMessageService {
         // 2. 채팅방 멤버 확인
         if (!chatMemberRepository.isActiveMember(roomId, userId)) {
             log.error(" [읽음 처리 실패] 채팅방 접근 권한 없음 - roomId: {}, userId: {}", roomId, userId);
-            throw new IllegalArgumentException("채팅방에 접근 권한이 없습니다.");
+            throw new ChatException(ErrorCode.CHAT_ROOM_ACCESS_DENIED);
         }
 
         // 3. readCount 증가 (벌크 UPDATE - dirty checking 대신 원자적 처리)
@@ -501,7 +503,7 @@ public class ChatMessageService {
 
         // 5. 최신 readCount를 반영하기 위해 재조회
         ChatMessage updated = chatMessageRepository.findById(messageId)
-                .orElseThrow(() -> new IllegalArgumentException("메시지 조회 실패"));
+                .orElseThrow(() -> new ChatException(ErrorCode.CHAT_MESSAGE_NOT_FOUND));
 
         log.info(" [읽음 처리 완료] messageId: {}, readCount: {}", messageId, updated.getReadCount());
 

@@ -66,5 +66,12 @@ public class PostException extends BusinessException {
     public static PostException ongoingPostExists() {
         return new PostException(ErrorCode.ONGOING_POST_EXISTS);
     }
+
+    /**
+     * 자신의 게시글 저장 불가
+     */
+    public static PostException selfSaveNotAllowed() {
+        return new PostException(ErrorCode.POST_SELF_SAVE_NOT_ALLOWED);
+    }
 }
 

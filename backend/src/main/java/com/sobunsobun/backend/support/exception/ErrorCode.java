@@ -38,6 +38,7 @@ public enum ErrorCode {
     UNAUTHORIZED_POST_ACCESS("POST_004", "게시글 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
     INVALID_POST_DATA("POST_005", "유효하지 않은 게시글 데이터입니다.", HttpStatus.BAD_REQUEST),
     ONGOING_POST_EXISTS("POST_006", "진행 중인 공동구매가 있습니다. 기존 거래를 먼저 마무리해주세요.", HttpStatus.BAD_REQUEST),
+    POST_SELF_SAVE_NOT_ALLOWED("POST_007", "자신의 게시글은 저장할 수 없습니다.", HttpStatus.BAD_REQUEST),
 
     // 댓글 관련 (4000~4099)
     COMMENT_NOT_FOUND("COMMENT_001", "댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
@@ -82,16 +83,18 @@ public enum ErrorCode {
     CHAT_MEMBER_ALREADY_LEFT("CHAT_016", "이미 퇴장한 멤버입니다.", HttpStatus.CONFLICT),
     CHAT_SETTLEMENT_IN_PROGRESS("CHAT_017", "정산이 진행 중인 채팅방은 퇴장할 수 없습니다.", HttpStatus.FORBIDDEN),
     CHAT_SETTLEMENT_ALREADY_SENT("CHAT_018", "이미 처리된 정산입니다.", HttpStatus.CONFLICT),
+    CHAT_SELF_CHAT_NOT_ALLOWED("CHAT_019", "자신과의 1:1 채팅은 불가능합니다.", HttpStatus.BAD_REQUEST),
 
     // 차단 관련 (BLOCK_001~BLOCK_003)
     BLOCK_SELF_NOT_ALLOWED("BLOCK_001", "자기 자신을 차단할 수 없습니다.", HttpStatus.BAD_REQUEST),
     ALREADY_BLOCKED("BLOCK_002", "이미 차단된 사용자입니다.", HttpStatus.CONFLICT),
     BLOCK_NOT_FOUND("BLOCK_003", "차단 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
-    // 유저 신고 관련 (REPORT_001~REPORT_003)
+    // 유저 신고 관련 (REPORT_001~REPORT_004)
     REPORT_SELF_NOT_ALLOWED("REPORT_001", "자기 자신을 신고할 수 없습니다.", HttpStatus.BAD_REQUEST),
     REPORT_TARGET_NOT_FOUND("REPORT_002", "신고 대상 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     REPORT_ALREADY_REPORTED("REPORT_003", "이미 신고한 사용자입니다.", HttpStatus.CONFLICT),
+    REPORT_NOT_FOUND("REPORT_004", "신고 내역을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
     // 알림 관련 (NOTIFICATION_001~)
     NOTIFICATION_NOT_FOUND("NOTIFICATION_001", "알림을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

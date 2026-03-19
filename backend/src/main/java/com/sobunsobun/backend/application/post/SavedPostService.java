@@ -10,6 +10,8 @@ import com.sobunsobun.backend.dto.post.SavedPostDto;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.support.exception.PostException;
+import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -40,15 +42,15 @@ public class SavedPostService {
     public SavedPostDto.Response savePost(Long userId, Long postId) {
         // 사용자 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(UserException::notFound);
 
         // 게시글 조회
         GroupPost post = groupPostRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다"));
+                .orElseThrow(PostException::notFound);
 
         // 자신의 게시글 저장 방지
         if (post.getOwner().getId().equals(userId)) {
-            throw new IllegalArgumentException("자신의 게시글은 저장할 수 없습니다");
+            throw PostException.selfSaveNotAllowed();
         }
 
         // 이미 저장했는지 확인
