@@ -23,6 +23,7 @@ import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.SettlementRepository;
 import com.sobunsobun.backend.support.exception.ChatException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
+import com.sobunsobun.backend.support.exception.UserException;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
@@ -381,7 +382,7 @@ public class ChatRoomService {
             // 자신과의 채팅 방지
             if (myId.equals(targetId)) {
                 log.error(" 자신과의 1:1 채팅은 불가능합니다");
-                throw new IllegalArgumentException("자신과의 1:1 채팅은 불가능합니다");
+                throw new ChatException(ErrorCode.CHAT_SELF_CHAT_NOT_ALLOWED);
             }
 
             // ① ChatMemberRepository를 통해 기존 1:1 채팅방 확인
@@ -414,7 +415,7 @@ public class ChatRoomService {
             User myUser = userRepository.findById(myId)
                     .orElseThrow(() -> {
                         log.error(" [단계2 실패] 현재 사용자를 찾을 수 없음: myId={}", myId);
-                        return new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + myId + ")");
+                        return UserException.notFound();
                     });
             log.info(" [단계2] 현재 사용자 조회됨: {}", myUser.getNickname());
 
@@ -422,7 +423,7 @@ public class ChatRoomService {
             User targetUser = userRepository.findById(targetId)
                     .orElseThrow(() -> {
                         log.error(" [단계3 실패] 상대방 사용자를 찾을 수 없음: targetId={}", targetId);
-                        return new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + targetId + ")");
+                        return UserException.notFound();
                     });
             log.info(" [단계3] 상대방 사용자 조회됨: {}", targetUser.getNickname());
 
@@ -680,16 +681,16 @@ public class ChatRoomService {
             log.info(" [단체 채팅 멤버 초대] roomId: {}, inviter: {}, target: {}", roomId, userId, targetUserId);
 
             ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다 (roomId: " + roomId + ")"));
+                    .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
             // 단체 채팅방인지 확인
             if (chatRoom.getRoomType() != ChatRoomType.GROUP) {
-                throw new IllegalArgumentException("단체 채팅방에서만 멤버를 초대할 수 있습니다");
+                throw new ChatException(ErrorCode.CHAT_INVALID_ROOM_TYPE, "단체 채팅방에서만 멤버를 초대할 수 있습니다.");
             }
 
             // 요청자가 멤버인지 확인
             if (!chatRoom.isMember(userId)) {
-                throw new IllegalArgumentException("채팅방 멤버만 다른 사용자를 초대할 수 있습니다");
+                throw new ChatException(ErrorCode.CHAT_ROOM_ACCESS_DENIED);
             }
 
             // 이미 멤버인지 확인
@@ -699,7 +700,7 @@ public class ChatRoomService {
             }
 
             User targetUser = userRepository.findById(targetUserId)
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + targetUserId + ")"));
+                    .orElseThrow(UserException::notFound);
 
             ChatMember newMember = chatRoom.addMember(targetUser);
             chatMemberRepository.saveAndFlush(newMember);
@@ -714,7 +715,7 @@ public class ChatRoomService {
 
             log.info(" [단체 채팅 멤버 초대 완료] roomId: {}, targetUser: {}", roomId, targetUser.getNickname());
 
-        } catch (IllegalArgumentException e) {
+        } catch (ChatException | UserException e) {
             throw e;
         } catch (Exception e) {
             log.error(" 단체 채팅 멤버 초대 실패 - roomId: {}, targetUserId: {}", roomId, targetUserId, e);
@@ -734,14 +735,14 @@ public class ChatRoomService {
             log.info(" [단체 채팅 퇴장] roomId: {}, userId: {}", roomId, userId);
 
             ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다 (roomId: " + roomId + ")"));
+                    .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
             if (chatRoom.getRoomType() != ChatRoomType.GROUP) {
-                throw new IllegalArgumentException("단체 채팅방에서만 나갈 수 있습니다");
+                throw new ChatException(ErrorCode.CHAT_INVALID_ROOM_TYPE, "단체 채팅방에서만 나갈 수 있습니다.");
             }
 
             if (!chatRoom.isMember(userId)) {
-                throw new IllegalArgumentException("채팅방 멤버가 아닙니다");
+                throw new ChatException(ErrorCode.CHAT_MEMBER_NOT_FOUND);
             }
 
             // 정산 진행 중(PENDING) 퇴장 차단
@@ -756,7 +757,7 @@ public class ChatRoomService {
 
             // 퇴장 전에 유저 정보 미리 조회 (제거 후에는 멤버 조회 불가)
             User leavingUser = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다 (userId: " + userId + ")"));
+                    .orElseThrow(UserException::notFound);
 
             chatRoom.removeMember(userId);
             chatRoomRepository.save(chatRoom);
@@ -777,7 +778,7 @@ public class ChatRoomService {
 
             log.info(" [단체 채팅 퇴장 완료] roomId: {}, userId: {}", roomId, userId);
 
-        } catch (IllegalArgumentException e) {
+        } catch (ChatException | UserException e) {
             throw e;
         } catch (Exception e) {
             log.error(" 단체 채팅 퇴장 실패 - roomId: {}, userId: {}", roomId, userId, e);
@@ -805,11 +806,11 @@ public class ChatRoomService {
 
             // ① 채팅방 조회 (멤버 포함)
             ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
-                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방입니다 (roomId: " + roomId + ")"));
+                    .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
 
             // ② 멤버 권한 확인
             if (!chatRoom.isMember(userId)) {
-                throw new IllegalArgumentException("채팅방 멤버가 아닙니다");
+                throw new ChatException(ErrorCode.CHAT_MEMBER_NOT_FOUND);
             }
 
             // ③ 안 읽은 메시지 수

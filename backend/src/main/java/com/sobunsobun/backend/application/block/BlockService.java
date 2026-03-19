@@ -5,8 +5,7 @@ import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.dto.block.BlockedUserResponse;
 import com.sobunsobun.backend.repository.BlockedUserRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
-import com.sobunsobun.backend.support.exception.BusinessException;
-import com.sobunsobun.backend.support.exception.ErrorCode;
+import com.sobunsobun.backend.support.exception.BlockException;
 import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,17 +32,17 @@ public class BlockService {
     @Transactional
     public void blockUser(Long blockerId, Long blockedId) {
         if (blockerId.equals(blockedId)) {
-            throw new BusinessException(ErrorCode.BLOCK_SELF_NOT_ALLOWED);
+            throw BlockException.selfNotAllowed();
         }
 
         if (blockedUserRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId)) {
-            throw new BusinessException(ErrorCode.ALREADY_BLOCKED);
+            throw BlockException.alreadyBlocked();
         }
 
         User blocker = userRepository.findById(blockerId)
-            .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+            .orElseThrow(UserException::notFound);
         User blocked = userRepository.findById(blockedId)
-            .orElseThrow(() -> new UserException(ErrorCode.USER_NOT_FOUND));
+            .orElseThrow(UserException::notFound);
 
         blockedUserRepository.save(BlockedUser.of(blocker, blocked));
         log.info("사용자 차단 완료: blockerId={}, blockedId={}", blockerId, blockedId);
@@ -57,7 +56,7 @@ public class BlockService {
     @Transactional
     public void unblockUser(Long blockerId, Long blockedId) {
         if (!blockedUserRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId)) {
-            throw new BusinessException(ErrorCode.BLOCK_NOT_FOUND);
+            throw BlockException.notFound();
         }
 
         blockedUserRepository.deleteByBlockerIdAndBlockedId(blockerId, blockedId);

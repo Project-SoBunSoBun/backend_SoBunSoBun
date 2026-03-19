@@ -3,9 +3,9 @@ package com.sobunsobun.backend.controller.user;
 import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.dto.common.PageResponse;
 import com.sobunsobun.backend.dto.notification.NotificationItemResponse;
-import com.sobunsobun.backend.dto.notification.NotificationReadAllResponse;
-import com.sobunsobun.backend.dto.notification.NotificationReadResponse;
 import com.sobunsobun.backend.dto.notification.UnreadCountResponse;
+
+import java.util.Map;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import com.sobunsobun.backend.support.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,18 +46,18 @@ public class NotificationController {
 
     @Operation(summary = "단건 읽음 처리", description = "특정 알림을 읽음 처리합니다.")
     @PatchMapping("/{id}/read")
-    public ResponseEntity<ApiResponse<NotificationReadResponse>> readNotification(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> readNotification(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable Long id) {
-        NotificationReadResponse response = notificationService.readNotification(principal.id(), id);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        notificationService.readNotification(principal.id(), id);
+        return ResponseEntity.ok(ApiResponse.success(Map.of()));
     }
 
     @Operation(summary = "전체 읽음 처리", description = "모든 알림을 읽음 처리합니다.")
     @PatchMapping("/read-all")
-    public ResponseEntity<ApiResponse<NotificationReadAllResponse>> readAll(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> readAll(
             @AuthenticationPrincipal JwtUserPrincipal principal) {
-        NotificationReadAllResponse response = notificationService.readAll(principal.id());
-        return ResponseEntity.ok(ApiResponse.success(response));
+        notificationService.readAll(principal.id());
+        return ResponseEntity.ok(ApiResponse.success(Map.of()));
     }
 }

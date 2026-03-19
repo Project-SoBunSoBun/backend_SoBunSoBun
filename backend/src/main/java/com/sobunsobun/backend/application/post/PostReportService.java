@@ -8,6 +8,9 @@ import com.sobunsobun.backend.dto.post.PostReportDto;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.PostReportRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.support.exception.PostException;
+import com.sobunsobun.backend.support.exception.ReportException;
+import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,21 +40,21 @@ public class PostReportService {
     public PostReportDto.Response createReport(Long userId, PostReportDto.CreateRequest request) {
         // 사용자 조회
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(UserException::notFound);
 
         // 게시글 조회
         GroupPost post = groupPostRepository.findById(request.getPostId())
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다"));
+                .orElseThrow(PostException::notFound);
 
         // 중복 신고 확인
         Optional<PostReport> existingReport = postReportRepository.findByUserIdAndPostId(userId, request.getPostId());
         if (existingReport.isPresent()) {
-            throw new IllegalArgumentException("이미 이 게시글을 신고했습니다");
+            throw ReportException.alreadyReported();
         }
 
         // 자신의 게시글 신고 방지
         if (post.getOwner().getId().equals(userId)) {
-            throw new IllegalArgumentException("자신의 게시글은 신고할 수 없습니다");
+            throw ReportException.selfNotAllowed();
         }
 
         // 신고 생성
@@ -78,7 +81,7 @@ public class PostReportService {
     @Transactional(readOnly = true)
     public PostReportDto.Response getReport(Long reportId) {
         PostReport report = postReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다"));
+                .orElseThrow(ReportException::notFound);
 
         return convertToResponse(report);
     }
@@ -122,7 +125,7 @@ public class PostReportService {
      */
     public PostReportDto.Response updateReportStatus(Long reportId, Long adminId, PostReportDto.UpdateStatusRequest request) {
         PostReport report = postReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다"));
+                .orElseThrow(ReportException::notFound);
 
         report.setStatus(request.getStatus());
         report.setResolution(request.getResolution());
@@ -142,7 +145,7 @@ public class PostReportService {
      */
     public void deleteReport(Long reportId) {
         PostReport report = postReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다"));
+                .orElseThrow(ReportException::notFound);
 
         postReportRepository.delete(report);
 

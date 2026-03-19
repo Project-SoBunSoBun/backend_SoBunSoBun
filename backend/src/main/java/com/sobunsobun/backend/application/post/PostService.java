@@ -8,18 +8,16 @@ import com.sobunsobun.backend.dto.post.*;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
-import com.sobunsobun.backend.support.exception.BusinessException;
-import com.sobunsobun.backend.support.exception.ErrorCode;
+import com.sobunsobun.backend.support.exception.PostException;
+import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -57,7 +55,7 @@ public class PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
                     log.error("사용자를 찾을 수 없음 - ID: {}", userId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다");
+                    return UserException.notFound();
                 });
 
         // 2. 진행 중인 게시글 존재 여부 확인
@@ -72,7 +70,7 @@ public class PostService {
 
         if (hasOngoingPost) {
             log.warn("진행 중인 게시글이 이미 존재함 - 사용자 ID: {}", userId);
-            throw new BusinessException(ErrorCode.ONGOING_POST_EXISTS);
+            throw PostException.ongoingPostExists();
         }
 
         // 3. 게시글 엔티티 생성
@@ -112,12 +110,12 @@ public class PostService {
         GroupPost post = postRepository.findById(postId)
                 .orElseThrow(() -> {
                     log.error("게시글을 찾을 수 없음 - ID: {}", postId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
+                    return PostException.notFound();
                 });
 
         if (post.getStatus() == PostStatus.CANCELLED) {
             log.warn("취소된 게시글 조회 시도 - ID: {}", postId);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
+            throw PostException.notFound();
         }
 
         return convertToResponse(post);
@@ -170,7 +168,7 @@ public class PostService {
         try {
             PostStatus postStatus = PostStatus.valueOf(status.toUpperCase());
             if (postStatus == PostStatus.CANCELLED) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED)");
+                throw PostException.invalidStatus("올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED)");
             }
             Pageable pageable = PageRequest.of(page, size);
             Page<GroupPost> postPage = (viewerId != null)
@@ -180,7 +178,7 @@ public class PostService {
             return convertToListResponse(postPage);
         } catch (IllegalArgumentException e) {
             log.error("잘못된 상태 값 입력 {}: {}", e.getClass().getSimpleName(), status);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)");
+            throw PostException.invalidStatus("올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)");
         }
     }
 
@@ -284,13 +282,13 @@ public class PostService {
         GroupPost post = postRepository.findById(postId)
                 .orElseThrow(() -> {
                     log.error("게시글을 찾을 수 없음 - ID: {}", postId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
+                    return PostException.notFound();
                 });
 
         // 2. 작성자 확인
         if (!post.getOwner().getId().equals(userId)) {
             log.error("게시글 수정 권한 없음 - 게시글 작성자 ID: {}, 요청자 ID: {}", post.getOwner().getId(), userId);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글 수정 권한이 없습니다");
+            throw PostException.forbidden();
         }
 
         // 3. 수정 (null이 아닌 필드만 업데이트)
@@ -326,7 +324,7 @@ public class PostService {
                 post.setStatus(PostStatus.valueOf(request.getStatus().toUpperCase()));
             } catch (IllegalArgumentException e) {
                 log.error("잘못된 상태 값 입력 {}: {}", e.getClass().getSimpleName(), request.getStatus());
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)");
+                throw PostException.invalidStatus("올바른 상태를 입력하세요 (OPEN, CLOSED, PROCESSING, COMPLETED, CANCELLED)");
             }
         }
 
@@ -349,19 +347,19 @@ public class PostService {
         GroupPost post = postRepository.findById(postId)
                 .orElseThrow(() -> {
                     log.error("게시글을 찾을 수 없음 - ID: {}", postId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
+                    return PostException.notFound();
                 });
 
         // 2. 작성자 확인
         if (!post.getOwner().getId().equals(userId)) {
             log.error("게시글 삭제 권한 없음 - 게시글 작성자 ID: {}, 요청자 ID: {}", post.getOwner().getId(), userId);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "게시글 삭제 권한이 없습니다");
+            throw PostException.forbidden();
         }
 
         // 3. 이미 취소된 게시글인지 확인
         if (post.getStatus() == PostStatus.CANCELLED) {
             log.warn("이미 취소된 게시글 - 게시글 ID: {}", postId);
-            throw new BusinessException(ErrorCode.POST_ALREADY_DELETED);
+            throw PostException.alreadyDeleted();
         }
 
         // 4. 상태를 CANCELLED로 변경 (소프트 삭제)

@@ -8,6 +8,9 @@ import com.sobunsobun.backend.dto.comment.CommentReportDto;
 import com.sobunsobun.backend.repository.CommentReportRepository;
 import com.sobunsobun.backend.repository.CommentRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+import com.sobunsobun.backend.support.exception.CommentException;
+import com.sobunsobun.backend.support.exception.ReportException;
+import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,18 +38,18 @@ public class CommentReportService {
         log.info("reason: {}", request.getReason());
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+                .orElseThrow(UserException::notFound);
 
         Comment comment = commentRepository.findById(request.getCommentId())
-                .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다"));
+                .orElseThrow(CommentException::notFound);
 
         if (comment.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("자신의 댓글은 신고할 수 없습니다");
+            throw ReportException.selfNotAllowed();
         }
 
         Optional<CommentReport> existingReport = commentReportRepository.findByUserIdAndCommentId(userId, request.getCommentId());
         if (existingReport.isPresent()) {
-            throw new IllegalArgumentException("이미 이 댓글을 신고했습니다");
+            throw ReportException.alreadyReported();
         }
 
         CommentReport report = CommentReport.builder()
@@ -67,7 +70,7 @@ public class CommentReportService {
     @Transactional(readOnly = true)
     public CommentReportDto.Response getReport(Long reportId) {
         CommentReport report = commentReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다"));
+                .orElseThrow(ReportException::notFound);
 
         return convertToResponse(report);
     }
@@ -92,7 +95,7 @@ public class CommentReportService {
 
     public CommentReportDto.Response updateReportStatus(Long reportId, Long adminId, CommentReportDto.UpdateStatusRequest request) {
         CommentReport report = commentReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다"));
+                .orElseThrow(ReportException::notFound);
 
         report.setStatus(request.getStatus());
         report.setResolution(request.getResolution());
@@ -104,7 +107,7 @@ public class CommentReportService {
 
     public void deleteReport(Long reportId) {
         CommentReport report = commentReportRepository.findById(reportId)
-                .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다"));
+                .orElseThrow(ReportException::notFound);
 
         commentReportRepository.delete(report);
     }

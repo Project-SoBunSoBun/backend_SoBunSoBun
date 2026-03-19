@@ -7,8 +7,9 @@ import com.sobunsobun.backend.dto.user.UserReportRequest;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.UserReportRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
-import com.sobunsobun.backend.support.exception.BusinessException;
-import com.sobunsobun.backend.support.exception.ErrorCode;
+import com.sobunsobun.backend.support.exception.PostException;
+import com.sobunsobun.backend.support.exception.ReportException;
+import com.sobunsobun.backend.support.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,29 +34,29 @@ public class ReportService {
      * @param reporterId   신고자 ID
      * @param targetUserId 신고 대상 ID
      * @param request      신고 사유 및 내용
-     * @throws BusinessException REPORT_SELF_NOT_ALLOWED  - 자기 자신 신고 시도
-     * @throws BusinessException REPORT_TARGET_NOT_FOUND  - 대상 사용자 없음
-     * @throws BusinessException REPORT_ALREADY_REPORTED  - 해당 게시글에서 이미 신고한 사용자
+     * @throws ReportException REPORT_SELF_NOT_ALLOWED  - 자기 자신 신고 시도
+     * @throws ReportException REPORT_TARGET_NOT_FOUND  - 대상 사용자 없음
+     * @throws ReportException REPORT_ALREADY_REPORTED  - 해당 게시글에서 이미 신고한 사용자
      */
     @Transactional
     public void reportUser(Long reporterId, Long targetUserId, UserReportRequest request) {
         if (reporterId.equals(targetUserId)) {
-            throw new BusinessException(ErrorCode.REPORT_SELF_NOT_ALLOWED);
+            throw ReportException.selfNotAllowed();
         }
 
         if (userReportRepository.existsByReporterIdAndTargetUserIdAndGroupPostId(
                 reporterId, targetUserId, request.getGroupPostId())) {
-            throw new BusinessException(ErrorCode.REPORT_ALREADY_REPORTED);
+            throw ReportException.alreadyReported();
         }
 
         User reporter = userRepository.findById(reporterId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(UserException::notFound);
 
         User targetUser = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_TARGET_NOT_FOUND));
+                .orElseThrow(ReportException::targetNotFound);
 
         GroupPost groupPost = groupPostRepository.findById(request.getGroupPostId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+                .orElseThrow(PostException::notFound);
 
         UserReport report = UserReport.of(reporter, targetUser, groupPost, request.getReason(), request.getDescription());
         userReportRepository.save(report);
