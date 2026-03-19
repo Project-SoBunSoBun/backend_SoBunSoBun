@@ -100,10 +100,28 @@ public class CommentService {
                         "COMMENT",
                         "새 댓글",
                         user.getNickname() + "님이 댓글을 남겼습니다.",
-                        Map.of("type", "COMMENT", "postId", String.valueOf(postId))
+                        Map.of("type", "COMMENT", "postId", String.valueOf(postId), "nickname", user.getNickname())
                 );
             } catch (Exception e) {
                 log.warn("댓글 FCM 알림 발송 실패 - postId: {}, error: {}", postId, e.getMessage());
+            }
+        }
+
+        // FCM 알림: 대댓글인 경우 부모 댓글 작성자에게 알림 (본인 제외, 게시글 작성자와 중복 방지)
+        if (parentComment != null) {
+            User parentAuthor = parentComment.getUser();
+            if (!parentAuthor.getId().equals(user.getId()) && !parentAuthor.getId().equals(postOwner.getId())) {
+                try {
+                    notificationService.createAndSend(
+                            parentAuthor,
+                            "COMMENT",
+                            "새 답글",
+                            user.getNickname() + "님이 답글을 남겼습니다.",
+                            Map.of("type", "COMMENT", "postId", String.valueOf(postId), "nickname", user.getNickname())
+                    );
+                } catch (Exception e) {
+                    log.warn("답글 FCM 알림 발송 실패 - postId: {}, error: {}", postId, e.getMessage());
+                }
             }
         }
 

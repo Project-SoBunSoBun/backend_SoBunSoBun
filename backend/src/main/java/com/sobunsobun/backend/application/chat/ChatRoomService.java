@@ -1,6 +1,8 @@
 package com.sobunsobun.backend.application.chat;
 
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.SettlementStatus;
 import com.sobunsobun.backend.domain.User;
 import com.sobunsobun.backend.domain.chat.ChatMember;
@@ -17,6 +19,7 @@ import com.sobunsobun.backend.dto.chat.LastMessageDto;
 import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.GroupPostRepository;
 import com.sobunsobun.backend.repository.MannerReviewRepository;
+import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.SettlementRepository;
 import com.sobunsobun.backend.support.exception.ChatException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
@@ -24,6 +27,8 @@ import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
 import com.sobunsobun.backend.repository.chat.ChatRoomRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
+
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,6 +56,8 @@ public class ChatRoomService {
     private final ChatMessageService chatMessageService;
     private final SettlementRepository settlementRepository;
     private final MannerReviewRepository mannerReviewRepository;
+    private final SavedPostRepository savedPostRepository;
+    private final NotificationService notificationService;
 
     /**
      * 채팅방 목록 조회
@@ -762,6 +769,12 @@ public class ChatRoomService {
                     leavingUser.getNickname() + "님이 퇴장했습니다."
             );
 
+            // 저장한 글 자리가 빌 때 알림
+            GroupPost groupPost = chatRoom.getGroupPost();
+            if (groupPost != null) {
+                notifySavedPostUsers(groupPost.getId(), userId);
+            }
+
             log.info("✅ [단체 채팅 퇴장 완료] roomId: {}, userId: {}", roomId, userId);
 
         } catch (IllegalArgumentException e) {
@@ -919,6 +932,32 @@ public class ChatRoomService {
         } catch (Exception e) {
             log.error("❌ 채팅방 상세 조회 실패 - roomId: {}, userId: {}", roomId, userId, e);
             throw new RuntimeException("채팅방 상세 조회 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 자리가 빌 때: 해당 게시글을 저장한 유저들에게 POST_UPDATE 알림 발송 (이탈자 제외)
+     */
+    private void notifySavedPostUsers(Long postId, Long excludeUserId) {
+        try {
+            List<SavedPost> savedPosts = savedPostRepository.findByPostId(postId);
+            for (SavedPost sp : savedPosts) {
+                if (sp.getUser().getId().equals(excludeUserId)) continue;
+                try {
+                    notificationService.createAndSend(
+                            sp.getUser(),
+                            "POST_UPDATE",
+                            "자리가 생겼어요!",
+                            "저장한 공동구매에 자리가 생겼습니다.",
+                            Map.of("type", "POST_UPDATE", "postId", String.valueOf(postId))
+                    );
+                } catch (Exception e) {
+                    log.warn("저장 게시글 자리 알림 실패 - postId: {}, userId: {}, error: {}",
+                            postId, sp.getUser().getId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("저장 게시글 자리 알림 전체 실패 - postId: {}, error: {}", postId, e.getMessage());
         }
     }
 }

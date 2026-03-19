@@ -30,14 +30,9 @@ public class NotificationItemResponse {
     private String type;
 
     /**
-     * 알림 제목
+     * 액션을 수행한 사용자 닉네임 (없는 경우 null)
      */
-    private String title;
-
-    /**
-     * 알림 내용
-     */
-    private String message;
+    private String nickname;
 
     /**
      * 관련 게시글 ID (있는 경우)
@@ -55,13 +50,12 @@ public class NotificationItemResponse {
     private LocalDateTime createdAt;
 
     public static NotificationItemResponse from(Notification notification) {
-        Long postId = extractPostId(notification.getDataPayload());
+        String payload = notification.getDataPayload();
         return NotificationItemResponse.builder()
                 .id(notification.getId())
                 .type(notification.getType())
-                .title(notification.getTitle())
-                .message(notification.getBody())
-                .postId(postId)
+                .nickname(extractField(payload, "nickname"))
+                .postId(extractPostId(payload))
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();
@@ -73,6 +67,18 @@ public class NotificationItemResponse {
             JsonNode node = new ObjectMapper().readTree(dataPayload);
             if (node.has("postId") && !node.get("postId").isNull()) {
                 return node.get("postId").asLong();
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private static String extractField(String dataPayload, String fieldName) {
+        if (dataPayload == null || dataPayload.isBlank()) return null;
+        try {
+            JsonNode node = new ObjectMapper().readTree(dataPayload);
+            if (node.has(fieldName) && !node.get(fieldName).isNull()) {
+                return node.get(fieldName).asText();
             }
         } catch (Exception ignored) {
         }
