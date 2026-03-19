@@ -15,9 +15,9 @@ import java.util.List;
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
     /**
-     * 사용자의 알림 목록 조회 (최신순, 페이징)
+     * 사용자의 알림 목록 조회 (최신순, 페이징) - 특정 타입 제외
      */
-    Page<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    Page<Notification> findByUserIdAndTypeNotOrderByCreatedAtDesc(Long userId, String type, Pageable pageable);
 
     /**
      * 사용자의 읽지 않은 알림 개수

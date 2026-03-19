@@ -40,8 +40,8 @@ public class NotificationService {
      * 알림 목록 조회 (페이징)
      */
     public PageResponse<NotificationItemResponse> getNotifications(Long userId, int page, int size) {
-        Page<Notification> result = notificationRepository.findByUserIdOrderByCreatedAtDesc(
-                userId, PageRequest.of(page, size));
+        Page<Notification> result = notificationRepository.findByUserIdAndTypeNotOrderByCreatedAtDesc(
+                userId, "CHAT", PageRequest.of(page, size));
 
         List<NotificationItemResponse> content = result.getContent().stream()
                 .map(NotificationItemResponse::from)
