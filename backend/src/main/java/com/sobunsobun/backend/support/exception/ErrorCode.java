@@ -93,6 +93,10 @@ public enum ErrorCode {
     REPORT_TARGET_NOT_FOUND("REPORT_002", "신고 대상 사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     REPORT_ALREADY_REPORTED("REPORT_003", "이미 신고한 사용자입니다.", HttpStatus.CONFLICT),
 
+    // 알림 관련 (NOTIFICATION_001~)
+    NOTIFICATION_NOT_FOUND("NOTIFICATION_001", "알림을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    NOTIFICATION_ACCESS_DENIED("NOTIFICATION_002", "알림에 접근 권한이 없습니다.", HttpStatus.FORBIDDEN),
+
     // 비즈니스 로직 (9000~9099)
     BUSINESS_RULE_VIOLATION("BIZ_001", "비즈니스 규칙 위반", HttpStatus.BAD_REQUEST),
     DATA_INTEGRITY_VIOLATION("BIZ_002", "데이터 무결성 위반", HttpStatus.CONFLICT),
