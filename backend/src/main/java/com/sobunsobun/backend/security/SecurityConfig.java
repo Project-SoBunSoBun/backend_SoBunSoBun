@@ -66,6 +66,9 @@ public class SecurityConfig {
         "/chatTest.html",
         "/apple-login-test.html",
 
+        // 약관 및 정책 (인증 불필요)
+        "/api/terms/**",
+
         // WebSocket (STOMP) - HTTP 레벨에서 인증 건너뜀
         // STOMP 레벨에서 JWT 검증 (WebSocketAuthInterceptor)
         "/ws-stomp",
