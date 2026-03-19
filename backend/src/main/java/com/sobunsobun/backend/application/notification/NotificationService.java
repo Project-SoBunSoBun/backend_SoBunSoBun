@@ -40,8 +40,8 @@ public class NotificationService {
      * 알림 목록 조회 (페이징)
      */
     public PageResponse<NotificationItemResponse> getNotifications(Long userId, int page, int size) {
-        Page<Notification> result = notificationRepository.findByUserIdOrderByCreatedAtDesc(
-                userId, PageRequest.of(page, size));
+        Page<Notification> result = notificationRepository.findByUserIdAndTypeNotOrderByCreatedAtDesc(
+                userId, "CHAT", PageRequest.of(page, size));
 
         List<NotificationItemResponse> content = result.getContent().stream()
                 .map(NotificationItemResponse::from)
@@ -133,6 +133,7 @@ public class NotificationService {
                 .isRead(false)
                 .build();
         notificationRepository.save(notification);
+        log.info("📬 알림 저장 완료 - userId: {}, type: {}, title: {}", recipient.getId(), type, title);
 
         // 2. 푸시 알림 전송 (설정 확인 후)
         boolean pushEnabled = userNotificationSettingRepository.findByUserId(recipient.getId())
@@ -141,6 +142,8 @@ public class NotificationService {
 
         if (pushEnabled) {
             fcmService.sendToUser(recipient.getId(), title, body, data);
+        } else {
+            log.info("🔕 FCM 발송 건너뜀 (푸시 비활성화) - userId: {}", recipient.getId());
         }
     }
 

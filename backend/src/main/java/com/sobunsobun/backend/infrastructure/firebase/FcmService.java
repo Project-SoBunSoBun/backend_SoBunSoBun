@@ -62,11 +62,11 @@ public class FcmService {
 
         List<UserDevice> devices = userDeviceRepository.findByUserIdAndIsEnabledTrue(userId);
         if (devices.isEmpty()) {
-            log.debug("📱 활성 디바이스 없음 - userId: {}", userId);
+            log.info("📱 활성 디바이스 없음 - userId: {}", userId);
             return;
         }
 
-        log.debug("📱 FCM 발송 시작 - userId: {}, deviceCount: {}", userId, devices.size());
+        log.info("📱 FCM 발송 시작 - userId: {}, deviceCount: {}", userId, devices.size());
 
         for (UserDevice device : devices) {
             try {
@@ -82,7 +82,7 @@ public class FcmService {
                 }
 
                 String response = FirebaseMessaging.getInstance().send(builder.build());
-                log.debug("✅ FCM 발송 성공: userId={}, deviceId={}, messageId={}",
+                log.info("✅ FCM 발송 성공: userId={}, deviceId={}, messageId={}",
                         userId, device.getDeviceId(), response);
 
             } catch (FirebaseMessagingException e) {
