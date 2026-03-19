@@ -13,6 +13,7 @@ import com.sobunsobun.backend.dto.notification.UnreadCountResponse;
 import com.sobunsobun.backend.infrastructure.firebase.FcmService;
 import com.sobunsobun.backend.repository.NotificationRepository;
 import com.sobunsobun.backend.repository.UserNotificationSettingRepository;
+import com.sobunsobun.backend.support.exception.NotificationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -77,10 +78,10 @@ public class NotificationService {
     @Transactional
     public NotificationReadResponse readNotification(Long userId, Long notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
+                .orElseThrow(NotificationException::notFound);
 
         if (!notification.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("알림에 접근 권한이 없습니다.");
+            throw NotificationException.accessDenied();
         }
 
         if (!notification.getIsRead()) {
