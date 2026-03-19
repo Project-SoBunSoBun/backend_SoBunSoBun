@@ -36,6 +36,6 @@ public class CreateChatRoomResponse {
     @Schema(description = "새로 생성된 방인지 여부", example = "true")
     private Boolean isNewRoom;
 
-    @Schema(description = "응답 메시지", example = "✅ 채팅방 생성/조회 성공")
+    @Schema(description = "응답 메시지", example = " 채팅방 생성/조회 성공")
     private String message;
 }

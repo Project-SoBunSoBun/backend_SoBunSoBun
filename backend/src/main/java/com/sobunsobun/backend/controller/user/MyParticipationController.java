@@ -58,7 +58,7 @@ public class MyParticipationController {
             @Parameter(description = "페이지네이션 정보") Pageable pageable) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("📌 참여 목록 조회 요청 - 사용자 ID: {}, 페이지: {}", principal.id(), pageable.getPageNumber());
+            log.info(" 참여 목록 조회 요청 - 사용자 ID: {}, 페이지: {}", principal.id(), pageable.getPageNumber());
 
             // TODO: Service 호출로 교체
             // PageResponse<ParticipationItemResponse> response = myParticipationService.getParticipations(principal.id(), pageable);
@@ -66,11 +66,11 @@ public class MyParticipationController {
             // 임시 응답
             PageResponse<ParticipationItemResponse> response = new PageResponse<>();
 
-            log.info("✅ 참여 목록 조회 완료 - 사용자 ID: {}", principal.id());
+            log.info(" 참여 목록 조회 완료 - 사용자 ID: {}", principal.id());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 참여 목록 조회 중 오류 발생", e);
+            log.error(" 참여 목록 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -93,7 +93,7 @@ public class MyParticipationController {
             @Parameter(description = "페이지네이션 정보") Pageable pageable) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("📝 작성한 글 목록 조회 요청 - 사용자 ID: {}, 페이지: {}", principal.id(), pageable.getPageNumber());
+            log.info(" 작성한 글 목록 조회 요청 - 사용자 ID: {}, 페이지: {}", principal.id(), pageable.getPageNumber());
 
             // TODO: Service 호출로 교체
             // PageResponse<MyPostItemResponse> response = myParticipationService.getMyPosts(principal.id(), pageable);
@@ -101,11 +101,11 @@ public class MyParticipationController {
             // 임시 응답
             PageResponse<MyPostItemResponse> response = new PageResponse<>();
 
-            log.info("✅ 작성한 글 목록 조회 완료 - 사용자 ID: {}", principal.id());
+            log.info(" 작성한 글 목록 조회 완료 - 사용자 ID: {}", principal.id());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 작성한 글 목록 조회 중 오류 발생", e);
+            log.error(" 작성한 글 목록 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -128,7 +128,7 @@ public class MyParticipationController {
             @Parameter(description = "페이지네이션 정보") Pageable pageable) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("🔖 북마크 목록 조회 요청 - 사용자 ID: {}, 페이지: {}", principal.id(), pageable.getPageNumber());
+            log.info(" 북마크 목록 조회 요청 - 사용자 ID: {}, 페이지: {}", principal.id(), pageable.getPageNumber());
 
             // TODO: Service 호출로 교체
             // PageResponse<BookmarkItemResponse> response = bookmarkService.getBookmarks(principal.id(), pageable);
@@ -136,11 +136,11 @@ public class MyParticipationController {
             // 임시 응답
             PageResponse<BookmarkItemResponse> response = new PageResponse<>();
 
-            log.info("✅ 북마크 목록 조회 완료 - 사용자 ID: {}", principal.id());
+            log.info(" 북마크 목록 조회 완료 - 사용자 ID: {}", principal.id());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 북마크 목록 조회 중 오류 발생", e);
+            log.error(" 북마크 목록 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -162,16 +162,16 @@ public class MyParticipationController {
             @PathVariable @Parameter(description = "게시글 ID") Long postId) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("➕ 북마크 추가 요청 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
+            log.info(" 북마크 추가 요청 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
 
             // TODO: Service 호출로 교체
             // bookmarkService.addBookmark(principal.id(), postId);
 
-            log.info("✅ 북마크 추가 완료 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
+            log.info(" 북마크 추가 완료 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
 
             return ResponseEntity.ok(ApiResponse.success("북마크가 추가되었습니다."));
         } catch (Exception e) {
-            log.error("❌ 북마크 추가 중 오류 발생", e);
+            log.error(" 북마크 추가 중 오류 발생", e);
             throw e;
         }
     }
@@ -193,16 +193,16 @@ public class MyParticipationController {
             @PathVariable @Parameter(description = "게시글 ID") Long postId) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("➖ 북마크 삭제 요청 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
+            log.info(" 북마크 삭제 요청 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
 
             // TODO: Service 호출로 교체
             // bookmarkService.removeBookmark(principal.id(), postId);
 
-            log.info("✅ 북마크 삭제 완료 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
+            log.info(" 북마크 삭제 완료 - 사용자 ID: {}, 게시글 ID: {}", principal.id(), postId);
 
             return ResponseEntity.ok(ApiResponse.success("북마크가 삭제되었습니다."));
         } catch (Exception e) {
-            log.error("❌ 북마크 삭제 중 오류 발생", e);
+            log.error(" 북마크 삭제 중 오류 발생", e);
             throw e;
         }
     }

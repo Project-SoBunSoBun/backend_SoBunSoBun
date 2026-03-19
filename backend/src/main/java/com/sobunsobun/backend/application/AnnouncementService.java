@@ -37,19 +37,19 @@ public class AnnouncementService {
      * @return 공지사항 목록 페이지 응답
      */
     public PageResponse<AnnouncementListItemResponse> getAnnouncements(Pageable pageable) {
-        log.info("📢 공지사항 목록 조회 시작 - 페이지: {}, 사이즈: {}", pageable.getPageNumber(), pageable.getPageSize());
+        log.info(" 공지사항 목록 조회 시작 - 페이지: {}, 사이즈: {}", pageable.getPageNumber(), pageable.getPageSize());
 
         try {
-            log.debug("🔍 Repository findAll 호출 전");
+            log.debug(" Repository findAll 호출 전");
             Page<Announcement> announcementPage = announcementRepository.findAll(pageable);
-            log.debug("✅ Repository findAll 호출 완료 - 총 요소: {}", announcementPage.getTotalElements());
+            log.debug(" Repository findAll 호출 완료 - 총 요소: {}", announcementPage.getTotalElements());
 
             if (announcementPage.getTotalElements() == 0) {
-                log.warn("⚠️ 공지사항이 없습니다");
+                log.warn(" 공지사항이 없습니다");
             }
 
             // Announcement 엔티티를 AnnouncementListItemResponse DTO로 변환
-            log.debug("🔄 DTO 변환 시작 - 컨텐츠 개수: {}", announcementPage.getContent().size());
+            log.debug(" DTO 변환 시작 - 컨텐츠 개수: {}", announcementPage.getContent().size());
             var content = announcementPage.getContent().stream()
                     .map(announcement -> {
                         try {
@@ -65,15 +65,15 @@ public class AnnouncementService {
                                     .createdAt(announcement.getCreatedAt())
                                     .build();
                         } catch (Exception e) {
-                            log.error("❌ DTO 변환 중 오류 - ID: {}", announcement.getId(), e);
+                            log.error(" DTO 변환 중 오류 - ID: {}", announcement.getId(), e);
                             throw new RuntimeException("DTO 변환 실패: " + e.getMessage(), e);
                         }
                     })
                     .toList();
-            log.debug("✅ DTO 변환 완료 - {} 개", content.size());
+            log.debug(" DTO 변환 완료 - {} 개", content.size());
 
             // PageInfo 생성
-            log.debug("🔧 PageInfo 생성 중");
+            log.debug(" PageInfo 생성 중");
             PageResponse.PageInfo pageInfo = PageResponse.PageInfo.builder()
                     .number(announcementPage.getNumber())
                     .size(announcementPage.getSize())
@@ -84,21 +84,21 @@ public class AnnouncementService {
                     .hasNext(announcementPage.hasNext())
                     .hasPrevious(announcementPage.hasPrevious())
                     .build();
-            log.debug("✅ PageInfo 생성 완료");
+            log.debug(" PageInfo 생성 완료");
 
-            log.debug("📦 PageResponse 생성 중");
+            log.debug(" PageResponse 생성 중");
             PageResponse<AnnouncementListItemResponse> response = PageResponse.<AnnouncementListItemResponse>builder()
                     .content(content)
                     .page(pageInfo)
                     .build();
-            log.debug("✅ PageResponse 생성 완료");
+            log.debug(" PageResponse 생성 완료");
 
-            log.info("✅ 공지사항 목록 조회 완료 - 총 개수: {}, 현재 페이지: {}",
+            log.info(" 공지사항 목록 조회 완료 - 총 개수: {}, 현재 페이지: {}",
                     announcementPage.getTotalElements(), announcementPage.getNumber());
 
             return response;
         } catch (Exception e) {
-            log.error("❌ 공지사항 목록 조회 중 오류 발생", e);
+            log.error(" 공지사항 목록 조회 중 오류 발생", e);
             log.error("오류 메시지: {}", e.getMessage());
             log.error("오류 클래스: {}", e.getClass().getName());
             e.printStackTrace();
@@ -115,12 +115,12 @@ public class AnnouncementService {
      */
     @Transactional
     public AnnouncementDetailResponse getAnnouncementDetail(Long id) {
-        log.info("📢 공지사항 상세 조회 시작 - ID: {}", id);
+        log.info(" 공지사항 상세 조회 시작 - ID: {}", id);
 
         try {
             Announcement announcement = announcementRepository.findById(id)
                     .orElseThrow(() -> {
-                        log.warn("⚠️ 공지사항을 찾을 수 없음 - ID: {}", id);
+                        log.warn(" 공지사항을 찾을 수 없음 - ID: {}", id);
                         return new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 공지사항을 찾을 수 없습니다.");
                     });
 
@@ -129,7 +129,7 @@ public class AnnouncementService {
             announcementRepository.save(announcement);
             log.debug("조회수 증가 완료 - ID: {}, 조회수: {}", id, announcement.getViewCount());
 
-            log.info("✅ 공지사항 상세 조회 완료 - ID: {}", id);
+            log.info(" 공지사항 상세 조회 완료 - ID: {}", id);
 
             return AnnouncementDetailResponse.builder()
                     .id(announcement.getId())
@@ -144,7 +144,7 @@ public class AnnouncementService {
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
-            log.error("❌ 공지사항 상세 조회 중 오류 발생 - ID: {}", id, e);
+            log.error(" 공지사항 상세 조회 중 오류 발생 - ID: {}", id, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "공지사항 상세 조회에 실패했습니다.");
         }
     }

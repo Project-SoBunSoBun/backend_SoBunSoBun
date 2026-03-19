@@ -30,7 +30,7 @@ public class AppInfoController {
     @GetMapping("/version")
     public ResponseEntity<ApiResponse<AppInfoResponse>> getAppVersion() {
         try {
-            log.info("📱 앱 버전 정보 조회 요청");
+            log.info(" 앱 버전 정보 조회 요청");
 
             AppInfoResponse appInfo = AppInfoResponse.builder()
                     .latestVersion("1.0.0")
@@ -38,11 +38,11 @@ public class AppInfoController {
                     .releaseNotes("새로운 버전이 출시되었습니다.")
                     .build();
 
-            log.info("✅ 앱 버전 정보 조회 완료 - 버전: {}", appInfo.getLatestVersion());
+            log.info(" 앱 버전 정보 조회 완료 - 버전: {}", appInfo.getLatestVersion());
 
             return ResponseEntity.ok(ApiResponse.success(appInfo));
         } catch (Exception e) {
-            log.error("❌ 앱 버전 정보 조회 중 오류 발생", e);
+            log.error(" 앱 버전 정보 조회 중 오류 발생", e);
             throw e;
         }
     }

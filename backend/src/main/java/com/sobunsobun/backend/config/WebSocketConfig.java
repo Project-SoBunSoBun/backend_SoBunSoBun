@@ -52,11 +52,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // SockJS는 HTTP 핸드셰이크에서 400 BAD_REQUEST 발생
         // 최신 브라우저는 모두 WebSocket 지원하므로 SockJS 불필요
 
-        log.info("✅ WebSocket STOMP endpoint registered: /ws-stomp");
-        log.info("📡 WebSocket only (SockJS fallback disabled)");
-        log.info("🔓 CORS: All origins allowed");
-        log.info("💓 Heartbeat: 25 seconds");
-        log.info("🔐 Authentication: JWT at STOMP CONNECT frame");
+        log.info(" WebSocket STOMP endpoint registered: /ws-stomp");
+        log.info(" WebSocket only (SockJS fallback disabled)");
+        log.info(" CORS: All origins allowed");
+        log.info(" Heartbeat: 25 seconds");
+        log.info(" Authentication: JWT at STOMP CONNECT frame");
     }
 
     @Override
@@ -73,14 +73,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 개인 메시지 destination prefix
         config.setUserDestinationPrefix("/user");
 
-        log.info("✅ Message broker configured");
+        log.info(" Message broker configured");
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         // STOMP CONNECT 프레임에서 JWT 검증
         registration.interceptors(webSocketAuthInterceptor);
-        log.info("✅ WebSocket JWT Auth Interceptor registered");
+        log.info(" WebSocket JWT Auth Interceptor registered");
     }
 }
 

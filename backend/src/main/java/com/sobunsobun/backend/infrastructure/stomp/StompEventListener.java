@@ -67,7 +67,7 @@ public class StompEventListener {
     @EventListener
     public void onSubscribe(SessionSubscribeEvent event) {
         try {
-            log.info("📡 [STOMP Subscribe 이벤트 감지]");
+            log.info(" [STOMP Subscribe 이벤트 감지]");
 
             // 1. destination에서 roomId 추출
             SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.wrap(event.getMessage());
@@ -75,7 +75,7 @@ public class StompEventListener {
             Long roomId = extractRoomId(destination);
 
             if (roomId == null) {
-                log.debug("⏭️ [스킵] 채팅방이 아닌 destination: {}", destination);
+                log.debug("⏭ [스킵] 채팅방이 아닌 destination: {}", destination);
                 return;
             }
 
@@ -84,11 +84,11 @@ public class StompEventListener {
             Long userId = extractUserId(principal);
 
             if (userId == null) {
-                log.error("❌ [오류] userId를 추출할 수 없음");
+                log.error(" [오류] userId를 추출할 수 없음");
                 return;
             }
 
-            log.info("🚪 [채팅방 입장 이벤트] userId: {}, roomId: {}, destination: {}",
+            log.info(" [채팅방 입장 이벤트] userId: {}, roomId: {}, destination: {}",
                     userId, roomId, destination);
 
             // 3. subscriptionId 기반 맵에 저장 (unsubscribe 시 roomId 역조회용)
@@ -104,10 +104,10 @@ public class StompEventListener {
             // 5. 입장한 유저에게 완전한 CHAT_LIST_UPDATE 알림 전송 (unreadCount=0, roomName 등 포함)
             chatMessageService.sendEnterRoomNotification(userId, roomId);
 
-            log.info("✅ [채팅방 입장 처리 완료] userId: {}, roomId: {}", userId, roomId);
+            log.info(" [채팅방 입장 처리 완료] userId: {}, roomId: {}", userId, roomId);
 
         } catch (Exception e) {
-            log.error("❌ [Subscribe 이벤트 처리 오류] error: {}", e.getMessage(), e);
+            log.error(" [Subscribe 이벤트 처리 오류] error: {}", e.getMessage(), e);
         }
     }
 
@@ -137,7 +137,7 @@ public class StompEventListener {
             }
 
             if (roomId == null) {
-                log.debug("⏭️ [Unsubscribe 스킵] 채팅방 구독이 아님 (sessionId: {})", sessionId);
+                log.debug("⏭ [Unsubscribe 스킵] 채팅방 구독이 아님 (sessionId: {})", sessionId);
                 return;
             }
 
@@ -145,23 +145,23 @@ public class StompEventListener {
             Long userId = extractUserId(principal);
 
             if (userId == null) {
-                log.debug("⏭️ [Unsubscribe 스킵] userId 추출 실패");
+                log.debug("⏭ [Unsubscribe 스킵] userId 추출 실패");
                 return;
             }
 
-            log.info("🚪 [채팅방 구독 취소] userId: {}, roomId: {}", userId, roomId);
+            log.info(" [채팅방 구독 취소] userId: {}, roomId: {}", userId, roomId);
 
             // active_room이 이 방일 때만 클리어 (다른 방으로 이동 후 이전 방 구독 취소 시 무시)
             Long currentActiveRoom = chatRedisService.getActiveRoom(userId);
             if (roomId.equals(currentActiveRoom)) {
                 chatRedisService.leaveRoom(userId);
-                log.info("✅ [active_room 초기화] userId: {}, roomId: {}", userId, roomId);
+                log.info(" [active_room 초기화] userId: {}, roomId: {}", userId, roomId);
             } else {
-                log.debug("⏭️ [active_room 유지] active_room({}) != unsubscribed roomId({})", currentActiveRoom, roomId);
+                log.debug("⏭ [active_room 유지] active_room({}) != unsubscribed roomId({})", currentActiveRoom, roomId);
             }
 
         } catch (Exception e) {
-            log.error("❌ [Unsubscribe 이벤트 처리 오류] error: {}", e.getMessage(), e);
+            log.error(" [Unsubscribe 이벤트 처리 오류] error: {}", e.getMessage(), e);
         }
     }
 
@@ -179,7 +179,7 @@ public class StompEventListener {
     @EventListener
     public void onDisconnect(SessionDisconnectEvent event) {
         try {
-            log.info("📡 [STOMP Disconnect 이벤트 감지]");
+            log.info(" [STOMP Disconnect 이벤트 감지]");
 
             // 1. 해당 세션의 구독 맵 항목 일괄 제거
             String sessionId = event.getSessionId();
@@ -190,20 +190,20 @@ public class StompEventListener {
             Long userId = extractUserId(principal);
 
             if (userId == null) {
-                log.debug("⏭️ [스킵] userId를 추출할 수 없음 (비인증 연결일 수 있음)");
+                log.debug("⏭ [스킵] userId를 추출할 수 없음 (비인증 연결일 수 있음)");
                 return;
             }
 
-            log.info("🚪 [WebSocket 연결 끊김] userId: {}, sessionId: {}",
+            log.info(" [WebSocket 연결 끊김] userId: {}, sessionId: {}",
                     userId, sessionId);
 
             // 3. ChatRedisService.leaveRoom() 호출
             chatRedisService.leaveRoom(userId);
 
-            log.info("✅ [채팅방 퇴장 처리 완료] userId: {}", userId);
+            log.info(" [채팅방 퇴장 처리 완료] userId: {}", userId);
 
         } catch (Exception e) {
-            log.error("❌ [Disconnect 이벤트 처리 오류] error: {}", e.getMessage(), e);
+            log.error(" [Disconnect 이벤트 처리 오류] error: {}", e.getMessage(), e);
         }
     }
 
@@ -228,7 +228,7 @@ public class StompEventListener {
             try {
                 return Long.parseLong(matcher.group(1));
             } catch (NumberFormatException e) {
-                log.warn("⚠️ [roomId 추출 실패] 숫자 변환 오류: {}", matcher.group(1));
+                log.warn(" [roomId 추출 실패] 숫자 변환 오류: {}", matcher.group(1));
                 return null;
             }
         }
@@ -267,11 +267,11 @@ public class StompEventListener {
             // Fallback: getName()을 Long으로 변환 시도
             return Long.parseLong(principal.getName());
         } catch (NumberFormatException e) {
-            log.warn("⚠️ [userId 추출 실패] Principal.getName()을 Long으로 변환 불가: {}",
+            log.warn(" [userId 추출 실패] Principal.getName()을 Long으로 변환 불가: {}",
                     principal.getName());
             return null;
         } catch (Exception e) {
-            log.warn("⚠️ [userId 추출 실패] principal type: {}, error: {}",
+            log.warn(" [userId 추출 실패] principal type: {}, error: {}",
                     principal.getClass().getSimpleName(), e.getMessage());
             return null;
         }

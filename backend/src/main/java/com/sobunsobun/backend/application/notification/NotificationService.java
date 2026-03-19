@@ -108,7 +108,7 @@ public class NotificationService {
         unread.forEach(Notification::markAsRead);
         notificationRepository.saveAll(unread);
 
-        log.info("✅ 전체 읽음 처리 완료 - userId: {}, count: {}", userId, unread.size());
+        log.info(" 전체 읽음 처리 완료 - userId: {}, count: {}", userId, unread.size());
 
         return NotificationReadAllResponse.builder()
                 .updatedCount(unread.size())
@@ -133,7 +133,7 @@ public class NotificationService {
                 .isRead(false)
                 .build();
         notificationRepository.save(notification);
-        log.info("📬 알림 저장 완료 - userId: {}, type: {}, title: {}", recipient.getId(), type, title);
+        log.info(" 알림 저장 완료 - userId: {}, type: {}, title: {}", recipient.getId(), type, title);
 
         // 2. 푸시 알림 전송 (설정 확인 후)
         boolean pushEnabled = userNotificationSettingRepository.findByUserId(recipient.getId())
@@ -143,7 +143,7 @@ public class NotificationService {
         if (pushEnabled) {
             fcmService.sendToUser(recipient.getId(), title, body, data);
         } else {
-            log.info("🔕 FCM 발송 건너뜀 (푸시 비활성화) - userId: {}", recipient.getId());
+            log.info(" FCM 발송 건너뜀 (푸시 비활성화) - userId: {}", recipient.getId());
         }
     }
 

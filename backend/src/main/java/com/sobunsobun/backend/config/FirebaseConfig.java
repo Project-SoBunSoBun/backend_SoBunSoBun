@@ -31,7 +31,7 @@ public class FirebaseConfig {
             return FirebaseApp.getInstance();
         }
         if (credentialsJson == null || credentialsJson.isBlank()) {
-            log.warn("⚠️ FIREBASE_CREDENTIALS_JSON 환경변수가 없습니다. FCM이 비활성화됩니다.");
+            log.warn(" FIREBASE_CREDENTIALS_JSON 환경변수가 없습니다. FCM이 비활성화됩니다.");
             return null;
         }
         try {
@@ -41,10 +41,10 @@ public class FirebaseConfig {
                     .setProjectId(projectId)
                     .build();
             FirebaseApp app = FirebaseApp.initializeApp(options);
-            log.info("✅ Firebase 초기화 완료 - projectId: {}", projectId);
+            log.info(" Firebase 초기화 완료 - projectId: {}", projectId);
             return app;
         } catch (Exception e) {
-            log.warn("⚠️ Firebase 초기화 실패 (FCM 비활성화됨): {}", e.getMessage());
+            log.warn(" Firebase 초기화 실패 (FCM 비활성화됨): {}", e.getMessage());
             return null;
         }
     }

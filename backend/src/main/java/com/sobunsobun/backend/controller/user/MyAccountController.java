@@ -54,7 +54,7 @@ public class MyAccountController {
     public ResponseEntity<ApiResponse<AccountInfoResponse>> getAccountInfo(Authentication authentication) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("👤 계정 정보 조회 요청 - 사용자 ID: {}", principal.id());
+            log.info(" 계정 정보 조회 요청 - 사용자 ID: {}", principal.id());
 
             // TODO: Service 호출로 교체
             // AccountInfoResponse accountInfo = accountService.getAccountInfo(principal.id());
@@ -63,11 +63,11 @@ public class MyAccountController {
             AccountInfoResponse accountInfo = AccountInfoResponse.builder()
                     .build();
 
-            log.info("✅ 계정 정보 조회 완료 - 사용자 ID: {}", principal.id());
+            log.info(" 계정 정보 조회 완료 - 사용자 ID: {}", principal.id());
 
             return ResponseEntity.ok(ApiResponse.success(accountInfo));
         } catch (Exception e) {
-            log.error("❌ 계정 정보 조회 중 오류 발생", e);
+            log.error(" 계정 정보 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -93,7 +93,7 @@ public class MyAccountController {
             @Valid @RequestBody(required = false) LogoutRequest request) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("🚪 로그아웃 요청 - 사용자 ID: {}", principal.id());
+            log.info(" 로그아웃 요청 - 사용자 ID: {}", principal.id());
 
             // TODO: Service 호출로 교체
             // LogoutResponse response = accountService.logout(principal.id(), request);
@@ -103,11 +103,11 @@ public class MyAccountController {
                     .message("로그아웃되었습니다.")
                     .build();
 
-            log.info("✅ 로그아웃 완료 - 사용자 ID: {}", principal.id());
+            log.info(" 로그아웃 완료 - 사용자 ID: {}", principal.id());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 로그아웃 처리 중 오류 발생", e);
+            log.error(" 로그아웃 처리 중 오류 발생", e);
             throw e;
         }
     }
@@ -124,7 +124,7 @@ public class MyAccountController {
     @GetMapping("/withdraw/reasons")
     public ResponseEntity<ApiResponse<WithdrawReasonListResponse>> getWithdrawReasons() {
         try {
-            log.info("📋 탈퇴 사유 목록 조회 요청");
+            log.info(" 탈퇴 사유 목록 조회 요청");
 
             List<WithdrawReasonListResponse.WithdrawReasonItem> reasons = Arrays.asList(
                     new WithdrawReasonListResponse.WithdrawReasonItem("RARELY_USED", "잘 사용하지 않아요"),
@@ -139,11 +139,11 @@ public class MyAccountController {
                     .reasons(reasons)
                     .build();
 
-            log.info("✅ 탈퇴 사유 목록 조회 완료 - {} 개", reasons.size());
+            log.info(" 탈퇴 사유 목록 조회 완료 - {} 개", reasons.size());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 탈퇴 사유 목록 조회 중 오류 발생", e);
+            log.error(" 탈퇴 사유 목록 조회 중 오류 발생", e);
             throw e;
         }
     }
@@ -174,16 +174,16 @@ public class MyAccountController {
             @Valid @RequestBody WithdrawRequest request) {
         try {
             JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
-            log.info("⚠️ 회원 탈퇴 요청 - 사용자 ID: {}", principal.id());
+            log.info(" 회원 탈퇴 요청 - 사용자 ID: {}", principal.id());
 
             WithdrawResponse response = userService.withdrawUser(principal.id(), request);
 
-            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
+            log.info(" 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}, 재가입 가능 일시: {}",
                     principal.id(), response.getWithdrawnAt(), response.getReactivatableAt());
 
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("❌ 회원 탈퇴 처리 중 오류 발생 - 사용자 ID: {}",
+            log.error(" 회원 탈퇴 처리 중 오류 발생 - 사용자 ID: {}",
                     ((JwtUserPrincipal) authentication.getPrincipal()).id(), e);
             throw e;
         }

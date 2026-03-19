@@ -83,18 +83,18 @@ public class UserController {
             Long userId) {
 
         try {
-            log.info("🔍 다른 사용자 프로필 조회 요청 - userId: {}", userId);
+            log.info(" 다른 사용자 프로필 조회 요청 - userId: {}", userId);
 
             UserProfileResponse profile = myProfileService.getUserProfile(userId);
 
-            log.info("✅ 다른 사용자 프로필 조회 완료 - userId: {}, nickname: {}", userId, profile.getNickname());
+            log.info(" 다른 사용자 프로필 조회 완료 - userId: {}, nickname: {}", userId, profile.getNickname());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", profile
             ));
         } catch (Exception e) {
-            log.error("❌ 다른 사용자 프로필 조회 중 오류 발생 - userId: {}", userId, e);
+            log.error(" 다른 사용자 프로필 조회 중 오류 발생 - userId: {}", userId, e);
             throw e;
         }
     }
@@ -131,18 +131,18 @@ public class UserController {
             String nickname) {
 
         try {
-            log.info("🔍 닉네임으로 다른 사용자 프로필 조회 요청 - nickname: {}", nickname);
+            log.info(" 닉네임으로 다른 사용자 프로필 조회 요청 - nickname: {}", nickname);
 
             UserProfileResponse profile = myProfileService.getUserProfileByNickname(nickname);
 
-            log.info("✅ 닉네임으로 다른 사용자 프로필 조회 완료 - nickname: {}, userId: {}", nickname, profile.getUserId());
+            log.info(" 닉네임으로 다른 사용자 프로필 조회 완료 - nickname: {}, userId: {}", nickname, profile.getUserId());
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "data", profile
             ));
         } catch (Exception e) {
-            log.error("❌ 닉네임으로 다른 사용자 프로필 조회 중 오류 발생 - nickname: {}", nickname, e);
+            log.error(" 닉네임으로 다른 사용자 프로필 조회 중 오류 발생 - nickname: {}", nickname, e);
             throw e;
         }
     }
@@ -174,13 +174,13 @@ public class UserController {
             String nickname) {
 
         try {
-            log.info("🔍 닉네임 중복 확인 요청: {}", nickname);
+            log.info(" 닉네임 중복 확인 요청: {}", nickname);
 
             // 닉네임 정규화 (공백 제거, 소문자 변환 등)
             String normalizedNickname = userService.normalizeNickname(nickname);
             boolean isAvailable = userService.isNicknameAvailable(normalizedNickname);
 
-            log.info("✅ 닉네임 중복 확인 완료: {} -> 정규화: {}, 사용가능: {}",
+            log.info(" 닉네임 중복 확인 완료: {} -> 정규화: {}, 사용가능: {}",
                     nickname, normalizedNickname, isAvailable);
 
             return ResponseEntity.ok(Map.of(
@@ -189,7 +189,7 @@ public class UserController {
                     "available", isAvailable
             ));
         } catch (Exception e) {
-            log.error("❌ 닉네임 확인 중 오류 발생: {}", nickname, e);
+            log.error(" 닉네임 확인 중 오류 발생: {}", nickname, e);
             throw e;
         }
     }
@@ -222,20 +222,20 @@ public class UserController {
             Long userId = principal.id();
             String newNickname = request.nickname();
 
-            log.info("📝 닉네임 변경 요청 - 사용자 ID: {}, 새 닉네임: {}", userId, newNickname);
+            log.info(" 닉네임 변경 요청 - 사용자 ID: {}, 새 닉네임: {}", userId, newNickname);
 
             // 닉네임 정규화 및 변경
             String normalizedNickname = userService.normalizeNickname(newNickname);
             userService.updateUserNickname(userId, normalizedNickname);
 
-            log.info("✅ 닉네임 변경 완료 - 사용자 ID: {}, 변경된 닉네임: {}", userId, normalizedNickname);
+            log.info(" 닉네임 변경 완료 - 사용자 ID: {}, 변경된 닉네임: {}", userId, normalizedNickname);
 
             return ResponseEntity.ok(Map.of(
                     "nickname", normalizedNickname,
                     "message", "닉네임이 성공적으로 변경되었습니다."
             ));
         } catch (Exception e) {
-            log.error("❌ 닉네임 변경 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            log.error(" 닉네임 변경 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
             throw e;
         }
     }
@@ -283,13 +283,13 @@ public class UserController {
                     ? profileImage.getOriginalFilename()
                     : "이미지 없음";
 
-            log.info("🖼️ 프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
+            log.info(" 프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
                     userId, normalizedNickname, imageInfo);
 
             // 프로필 업데이트 (닉네임 + 이미지)
             userService.updateUserProfile(userId, normalizedNickname, profileImage);
 
-            log.info("✅ 프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
+            log.info(" 프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
 
             return ResponseEntity.ok(Map.of(
                     "message", "프로필이 성공적으로 업데이트되었습니다.",
@@ -297,7 +297,7 @@ public class UserController {
                     "updated", true
             ));
         } catch (Exception e) {
-            log.error("❌ 프로필 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            log.error(" 프로필 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
             throw e;
         }
     }
@@ -333,19 +333,19 @@ public class UserController {
                     ? profileImage.getOriginalFilename()
                     : "없음";
 
-            log.info("🖼️ 프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}", userId, fileName);
+            log.info(" 프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}", userId, fileName);
 
             // 이미지만 업데이트
             userService.updateProfileImage(userId, profileImage);
 
-            log.info("✅ 프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);
+            log.info(" 프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);
 
             return ResponseEntity.ok(Map.of(
                     "message", "프로필 이미지가 성공적으로 업데이트되었습니다.",
                     "updated", true
             ));
         } catch (Exception e) {
-            log.error("❌ 프로필 이미지 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            log.error(" 프로필 이미지 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
             throw e;
         }
     }
@@ -372,7 +372,7 @@ public class UserController {
     @Deprecated
     @Operation(
         summary = "회원 탈퇴 (Deprecated)",
-        description = "⚠️ Deprecated: POST /api/me/withdraw 사용을 권장합니다. " +
+        description = " Deprecated: POST /api/me/withdraw 사용을 권장합니다. " +
                 "사용자 계정을 탈퇴 처리하고 withdrawn_at에 탈퇴 일시를 기록합니다. 탈퇴 사유는 withdrawal_reason 테이블에 저장됩니다.",
         deprecated = true
     )
@@ -384,16 +384,16 @@ public class UserController {
 
         try {
             Long userId = principal.id();
-            log.warn("⚠️ Deprecated API 사용 - /users/me/withdraw → /api/me/withdraw 권장");
-            log.info("🚪 회원 탈퇴 요청 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
+            log.warn(" Deprecated API 사용 - /users/me/withdraw → /api/me/withdraw 권장");
+            log.info(" 회원 탈퇴 요청 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
 
             WithdrawResponse response = userService.withdrawUser(userId, request);
 
-            log.info("✅ 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, response.getWithdrawnAt());
+            log.info(" 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, response.getWithdrawnAt());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("❌ 회원 탈퇴 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            log.error(" 회원 탈퇴 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
             throw e;
         }
     }
@@ -418,15 +418,15 @@ public class UserController {
 
         try {
             Long userId = principal.id();
-            log.info("📋 회원 탈퇴 사유 조회 요청 - 사용자 ID: {}", userId);
+            log.info(" 회원 탈퇴 사유 조회 요청 - 사용자 ID: {}", userId);
 
             WithdrawalReasonResponse response = userService.getWithdrawalReason(userId);
 
-            log.info("✅ 회원 탈퇴 사유 조회 완료 - 사용자 ID: {}, 사유: {}", userId, response.getReasonCode());
+            log.info(" 회원 탈퇴 사유 조회 완료 - 사용자 ID: {}, 사유: {}", userId, response.getReasonCode());
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("❌ 회원 탈퇴 사유 조회 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
+            log.error(" 회원 탈퇴 사유 조회 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
             throw e;
         }
     }

@@ -68,11 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         try {
-            // 🔴 WebSocket 요청은 HTTP 레벨 인증을 건너뜀
+            //  WebSocket 요청은 HTTP 레벨 인증을 건너뜀
             // WebSocket은 STOMP 레벨에서 Authorization을 처리
             String requestURI = request.getRequestURI();
             if (requestURI.startsWith("/ws/")) {
-                log.debug("📡 WebSocket 요청 - HTTP 레벨 인증 건너뜀: {}", requestURI);
+                log.debug(" WebSocket 요청 - HTTP 레벨 인증 건너뜀: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -81,7 +81,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwtToken = extractTokenFromRequest(request);
 
             if (jwtToken != null) {
-                log.info("🔑 JWT 토큰 발견 - URI: {}, 토큰 길이: {}", request.getRequestURI(), jwtToken.length());
+                log.info(" JWT 토큰 발견 - URI: {}, 토큰 길이: {}", request.getRequestURI(), jwtToken.length());
 
                 // 2. JWT 토큰 파싱 및 검증
                 Claims claims = jwtTokenProvider.parse(jwtToken).getBody();
@@ -89,7 +89,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 3. 토큰 타입 확인 (액세스 토큰만 허용)
                 String tokenType = claims.get("type", String.class);
                 if (!"access".equals(tokenType)) {
-                    log.warn("❌ 잘못된 토큰 타입: {} - URI: {}", tokenType, request.getRequestURI());
+                    log.warn(" 잘못된 토큰 타입: {} - URI: {}", tokenType, request.getRequestURI());
                     return; // 인증 실패로 처리
                 }
 
@@ -97,19 +97,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long userId = Long.valueOf(claims.getSubject());
                 String role = claims.get("role", String.class);
 
-                log.info("✅ JWT 토큰 검증 성공 - 사용자 ID: {}, 역할: {}", userId, role);
+                log.info(" JWT 토큰 검증 성공 - 사용자 ID: {}, 역할: {}", userId, role);
 
                 // 5. 사용자 존재 및 활성 상태 확인 (보안 강화)
                 var userOptional = userRepository.findById(userId);
                 if (userOptional.isEmpty()) {
-                    log.warn("❌ 토큰의 사용자 ID가 DB에 존재하지 않음: {}", userId);
+                    log.warn(" 토큰의 사용자 ID가 DB에 존재하지 않음: {}", userId);
                     return; // 인증 실패로 처리
                 }
 
                 // 탈퇴한 사용자의 토큰은 즉시 무효화 및 재가입 안내
                 var user = userOptional.get();
                 if (user.getStatus() == com.sobunsobun.backend.domain.UserStatus.DELETED) {
-                    log.warn("❌ 탈퇴한 사용자의 토큰 접근 차단 - 사용자 ID: {}", userId);
+                    log.warn(" 탈퇴한 사용자의 토큰 접근 차단 - 사용자 ID: {}", userId);
 
                     java.time.LocalDateTime reactivatableAt = user.getReactivatableAt();
                     String message;
@@ -132,14 +132,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 6. SecurityContext에 Authentication 설정
                 setAuthenticationInSecurityContext(userId, role);
 
-                log.info("✅ 인증 성공 - 사용자 ID: {}, URI: {}", userId, request.getRequestURI());
+                log.info(" 인증 성공 - 사용자 ID: {}, URI: {}", userId, request.getRequestURI());
             } else {
-                log.info("⚠️ JWT 토큰 없음 - URI: {}", request.getRequestURI());
+                log.info(" JWT 토큰 없음 - URI: {}", request.getRequestURI());
             }
 
         } catch (Exception e) {
             // JWT 관련 모든 예외를 캐치하여 인증 실패로 처리
-            log.warn("❌ JWT 인증 실패 - {}: {} - URI: {}",
+            log.warn(" JWT 인증 실패 - {}: {} - URI: {}",
                     e.getClass().getSimpleName(), e.getMessage(), request.getRequestURI());
         }
 
@@ -158,7 +158,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private String extractTokenFromRequest(HttpServletRequest request) {
         // 디버그: 모든 헤더 출력
         java.util.Enumeration<String> headerNames = request.getHeaderNames();
-        log.debug("📋 요청 헤더 목록:");
+        log.debug(" 요청 헤더 목록:");
         while (headerNames.hasMoreElements()) {
             String headerName = headerNames.nextElement();
             String headerValue = request.getHeader(headerName);
@@ -173,18 +173,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // 토큰 내에 "Bearer "가 또 있으면 제거 (Bearer 중복 방지)
                 if (token.startsWith(BEARER_PREFIX)) {
-                    log.warn("⚠️ Bearer 중복 발견 - 정리 중...");
+                    log.warn(" Bearer 중복 발견 - 정리 중...");
                     token = token.substring(BEARER_PREFIX_LENGTH);
                 }
 
-                log.info("📥 Authorization 헤더에서 토큰 추출 성공 (길이: {})", token.length());
+                log.info(" Authorization 헤더에서 토큰 추출 성공 (길이: {})", token.length());
                 return token;
             } else {
-                log.warn("⚠️ Authorization 헤더가 Bearer로 시작하지 않음: {}",
+                log.warn(" Authorization 헤더가 Bearer로 시작하지 않음: {}",
                         authorizationHeader.substring(0, Math.min(20, authorizationHeader.length())));
             }
         } else {
-            log.info("ℹ️ Authorization 헤더 없음");
+            log.info("ℹ Authorization 헤더 없음");
         }
 
         return null;

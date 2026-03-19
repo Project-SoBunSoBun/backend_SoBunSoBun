@@ -61,17 +61,17 @@ public class ChatMessageController {
     ) {
         try {
             log.info("═════════════════════════════════════════════════════════════");
-            log.info("📤 [메시지 전송 시작] 요청 수신");
+            log.info(" [메시지 전송 시작] 요청 수신");
 
             Long userId = extractUserId(principal, headerAccessor);
             if (userId == null) {
-                log.error("❌ [메시지 전송 실패] User ID를 찾을 수 없음");
+                log.error(" [메시지 전송 실패] User ID를 찾을 수 없음");
                 sendErrorToUser(null, "User authentication failed");
                 return;
             }
-            log.info("✅ [인증] userId 추출 성공: {}", userId);
+            log.info(" [인증] userId 추출 성공: {}", userId);
 
-            log.info("📝 [요청 정보] roomId: {}, contentLength: {}, type: {}",
+            log.info(" [요청 정보] roomId: {}, contentLength: {}, type: {}",
                     request.getRoomId(),
                     request.getContent() != null ? request.getContent().length() : 0,
                     request.getType());
@@ -89,7 +89,7 @@ public class ChatMessageController {
             }
 
             // 메시지 저장
-            log.debug("💾 [단계1] ChatMessageService.saveMessage() 호출 중...");
+            log.debug(" [단계1] ChatMessageService.saveMessage() 호출 중...");
             MessageResponse response = chatMessageService.saveMessage(
                     request.getRoomId(),
                     userId,
@@ -98,16 +98,16 @@ public class ChatMessageController {
                     request.getImageUrl(),
                     request.getCardPayload()
             );
-            log.info("✅ [단계1 완료] 메시지 저장됨: messageId={}", response.getId());
-            log.info("📢 [Redis Pub/Sub를 통해 메시지가 브로드캐스트됩니다]");
+            log.info(" [단계1 완료] 메시지 저장됨: messageId={}", response.getId());
+            log.info(" [Redis Pub/Sub를 통해 메시지가 브로드캐스트됩니다]");
             log.info("   - Redis가 모든 구독자에게 메시지를 전송합니다");
-            log.info("✅ [메시지 전송 완료] roomId: {}, messageId: {}, sender: {}",
+            log.info(" [메시지 전송 완료] roomId: {}, messageId: {}, sender: {}",
                     request.getRoomId(), response.getId(), response.getSenderName());
             log.info("═════════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
-            log.error("❌ [메시지 전송 오류] 예외 발생", e);
+            log.error(" [메시지 전송 오류] 예외 발생", e);
             log.error("   - roomId: {}", request != null ? request.getRoomId() : "unknown");
             log.error("   - content: {}", request != null && request.getContent() != null ? request.getContent().substring(0, Math.min(50, request.getContent().length())) : "null");
             log.error("   - errorMsg: {}", e.getMessage());
@@ -131,54 +131,54 @@ public class ChatMessageController {
     ) {
         try {
             log.info("═════════════════════════════════════════════════════════════");
-            log.info("📖 [읽음 처리 시작] 요청 수신");
+            log.info(" [읽음 처리 시작] 요청 수신");
 
             Long userId = extractUserId(principal, headerAccessor);
             if (userId == null) {
-                log.error("❌ [읽음 처리 실패] User ID를 찾을 수 없음");
+                log.error(" [읽음 처리 실패] User ID를 찾을 수 없음");
                 return;
             }
-            log.info("✅ [인증] userId 추출 성공: {}", userId);
+            log.info(" [인증] userId 추출 성공: {}", userId);
 
-            log.info("📝 [요청 정보] roomId: {}, lastReadMessageId: {}",
+            log.info(" [요청 정보] roomId: {}, lastReadMessageId: {}",
                     request.getRoomId(), request.getLastReadMessageId());
 
-            log.debug("💾 [단계1] ChatMessageService.markAsRead() 호출 중...");
+            log.debug(" [단계1] ChatMessageService.markAsRead() 호출 중...");
             chatMessageService.markAsRead(
                     request.getRoomId(),
                     userId,
                     request.getLastReadMessageId()
             );
-            log.info("✅ [단계1 완료] 읽음 처리 완료");
+            log.info(" [단계1 완료] 읽음 처리 완료");
 
             // Redis unReadCount 초기화
             chatRedisService.resetUnreadCount(request.getRoomId(), userId);
-            log.debug("✅ [Redis] unReadCount 초기화 완료 - roomId: {}, userId: {}", request.getRoomId(), userId);
+            log.debug(" [Redis] unReadCount 초기화 완료 - roomId: {}, userId: {}", request.getRoomId(), userId);
 
             // 채팅 목록 CHAT_LIST_UPDATE 알림 전송 (unReadCount: 0)
             chatMessageService.sendEnterRoomNotification(userId, request.getRoomId());
-            log.debug("✅ [WebSocket] 채팅 목록 unReadCount:0 알림 전송 완료");
+            log.debug(" [WebSocket] 채팅 목록 unReadCount:0 알림 전송 완료");
 
-            // ✅ 읽음 처리 완료 - 개인 큐로 알림
-            log.debug("📢 [단계2] 읽음 완료 알림 전송 중... userId: {}", userId);
+            //  읽음 처리 완료 - 개인 큐로 알림
+            log.debug(" [단계2] 읽음 완료 알림 전송 중... userId: {}", userId);
             messagingTemplate.convertAndSendToUser(
                     userId.toString(),
                     "/queue/private",
                     java.util.Map.of(
                             "type", "READ_COMPLETE",
                             "roomId", request.getRoomId(),
-                            "message", "✅ 읽음 처리 완료"
+                            "message", " 읽음 처리 완료"
                     )
             );
-            log.info("✅ [단계2 완료] 읽음 완료 알림 전송됨");
+            log.info(" [단계2 완료] 읽음 완료 알림 전송됨");
 
-            log.info("✅ [읽음 처리 완료] roomId: {}, userId: {}",
+            log.info(" [읽음 처리 완료] roomId: {}, userId: {}",
                     request.getRoomId(), userId);
             log.info("═════════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
-            log.error("❌ [읽음 처리 오류] 예외 발생", e);
+            log.error(" [읽음 처리 오류] 예외 발생", e);
             log.error("   - roomId: {}", request != null ? request.getRoomId() : "unknown");
             log.error("   - errorMsg: {}", e.getMessage());
             log.error("═════════════════════════════════════════════════════════════");
@@ -198,7 +198,7 @@ public class ChatMessageController {
                 return jwtPrincipal.id();
             }
         } catch (Exception e) {
-            log.debug("⚠️ JwtUserPrincipal 캐스팅 실패");
+            log.debug(" JwtUserPrincipal 캐스팅 실패");
         }
 
         // 2. Principal에서 직접 파싱
@@ -230,7 +230,7 @@ public class ChatMessageController {
             messagingTemplate.convertAndSendToUser(
                     userId.toString(),
                     "/queue/errors",
-                    "❌ Error: " + message
+                    " Error: " + message
             );
         }
     }
