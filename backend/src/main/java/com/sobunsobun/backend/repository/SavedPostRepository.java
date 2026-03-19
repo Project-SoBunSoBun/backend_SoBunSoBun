@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -58,6 +59,12 @@ public interface SavedPostRepository extends JpaRepository<SavedPost, Long> {
      */
     @Query("SELECT sp FROM SavedPost sp INNER JOIN sp.post WHERE sp.user.id = :userId ORDER BY sp.createdAt DESC")
     Page<SavedPost> findByUserIdOrderByCreatedAtDescSafe(@Param("userId") Long userId, Pageable pageable);
+
+    /**
+     * 특정 게시글을 저장한 사용자 목록 (User Eager fetch)
+     */
+    @Query("SELECT sp FROM SavedPost sp JOIN FETCH sp.user WHERE sp.post.id = :postId")
+    List<SavedPost> findByPostId(@Param("postId") Long postId);
 
     /**
      * 특정 게시글의 모든 저장 삭제 (게시글 삭제 시)

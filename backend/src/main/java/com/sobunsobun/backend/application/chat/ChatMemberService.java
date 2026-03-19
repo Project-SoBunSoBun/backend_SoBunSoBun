@@ -1,6 +1,8 @@
 package com.sobunsobun.backend.application.chat;
 
+import com.sobunsobun.backend.application.notification.NotificationService;
 import com.sobunsobun.backend.domain.GroupPost;
+import com.sobunsobun.backend.domain.SavedPost;
 import com.sobunsobun.backend.domain.SettlementStatus;
 import com.sobunsobun.backend.domain.chat.ChatMember;
 import com.sobunsobun.backend.domain.chat.ChatMemberStatus;
@@ -9,6 +11,7 @@ import com.sobunsobun.backend.domain.chat.ChatMessageType;
 import com.sobunsobun.backend.domain.chat.ChatRoom;
 import com.sobunsobun.backend.dto.chat.KickMemberResponse;
 import com.sobunsobun.backend.repository.GroupPostRepository;
+import com.sobunsobun.backend.repository.SavedPostRepository;
 import com.sobunsobun.backend.repository.SettlementRepository;
 import com.sobunsobun.backend.repository.chat.ChatMemberRepository;
 import com.sobunsobun.backend.repository.chat.ChatMessageRepository;
@@ -20,6 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -30,6 +36,8 @@ public class ChatMemberService {
     private final ChatMemberRepository chatMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final GroupPostRepository groupPostRepository;
+    private final SavedPostRepository savedPostRepository;
+    private final NotificationService notificationService;
     private final SettlementRepository settlementRepository;
 
     /**
@@ -84,6 +92,12 @@ public class ChatMemberService {
         // 7. group_post.joined_members 감소
         Integer remainingMembers = decrementJoinedMembers(chatRoom);
 
+        // 저장한 글 자리가 빌 때 알림
+        GroupPost groupPost = chatRoom.getGroupPost();
+        if (groupPost != null) {
+            notifySavedPostUsers(groupPost.getId(), targetUserId);
+        }
+
         // 8. SYSTEM 메시지 삽입
         String systemContent = targetNickname + "님이 방장에 의해 퇴장되었습니다.";
         ChatMessage systemMessage = ChatMessage.builder()
@@ -122,5 +136,31 @@ public class ChatMemberService {
         loadedPost.setJoinedMembers(updated);
         log.info("[ChatMember] joined_members 감소 - groupPostId: {}, remaining: {}", loadedPost.getId(), updated);
         return updated;
+    }
+
+    /**
+     * 자리가 빌 때: 해당 게시글을 저장한 유저들에게 POST_UPDATE 알림 발송 (이탈자 제외)
+     */
+    private void notifySavedPostUsers(Long postId, Long excludeUserId) {
+        try {
+            List<SavedPost> savedPosts = savedPostRepository.findByPostId(postId);
+            for (SavedPost sp : savedPosts) {
+                if (sp.getUser().getId().equals(excludeUserId)) continue;
+                try {
+                    notificationService.createAndSend(
+                            sp.getUser(),
+                            "POST_UPDATE",
+                            "자리가 생겼어요!",
+                            "저장한 공동구매에 자리가 생겼습니다.",
+                            Map.of("type", "POST_UPDATE", "postId", String.valueOf(postId))
+                    );
+                } catch (Exception e) {
+                    log.warn("저장 게시글 자리 알림 실패 - postId: {}, userId: {}, error: {}",
+                            postId, sp.getUser().getId(), e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("저장 게시글 자리 알림 전체 실패 - postId: {}, error: {}", postId, e.getMessage());
+        }
     }
 }

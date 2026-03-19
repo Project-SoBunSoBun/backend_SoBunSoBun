@@ -863,7 +863,7 @@ public class ChatMessageService {
         String notifBody = sender.getNickname() + ": " + (content != null ? truncateContent(content) : "");
         Map<String, String> data = Map.of(
                 "type", "CHAT",
-                "roomId", String.valueOf(roomId)
+                "chatRoomId", String.valueOf(roomId)
         );
 
         for (Long memberId : memberIds) {
