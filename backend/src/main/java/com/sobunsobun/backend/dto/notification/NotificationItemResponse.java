@@ -8,8 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.LocalDateTime;
 
 /**
  * 알림 아이템 응답 DTO
@@ -46,6 +45,11 @@ public class NotificationItemResponse {
     private Long settlementId;
 
     /**
+     * 채팅 초대 ID (PARTICIPATION 타입인 경우)
+     */
+    private Long inviteId;
+
+    /**
      * 읽음 여부
      */
     private Boolean isRead;
@@ -53,7 +57,7 @@ public class NotificationItemResponse {
     /**
      * 생성 일시
      */
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     public static NotificationItemResponse from(Notification notification) {
         String payload = notification.getDataPayload();
@@ -63,10 +67,9 @@ public class NotificationItemResponse {
                 .nickname(extractField(payload, "nickname"))
                 .postId(extractPostId(payload))
                 .settlementId(extractLongField(payload, "settlementId"))
+                .inviteId(extractLongField(payload, "inviteId"))
                 .isRead(notification.getIsRead())
-                .createdAt(notification.getCreatedAt() != null
-                        ? notification.getCreatedAt().atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime()
-                        : null)
+                .createdAt(notification.getCreatedAt())
                 .build();
     }
 
