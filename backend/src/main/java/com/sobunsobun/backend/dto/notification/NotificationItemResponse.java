@@ -50,6 +50,11 @@ public class NotificationItemResponse {
     private Long inviteId;
 
     /**
+     * 채팅방 ID (PARTICIPATION 타입인 경우)
+     */
+    private Long chatRoomId;
+
+    /**
      * 읽음 여부
      */
     private Boolean isRead;
@@ -68,6 +73,7 @@ public class NotificationItemResponse {
                 .postId(extractPostId(payload))
                 .settlementId(extractLongField(payload, "settlementId"))
                 .inviteId(extractLongField(payload, "inviteId"))
+                .chatRoomId(extractLongField(payload, "chatRoomId"))
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();
