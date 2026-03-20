@@ -3,6 +3,7 @@ package com.sobunsobun.backend.controller.comment;
 import com.sobunsobun.backend.application.comment.CommentReportService;
 import com.sobunsobun.backend.domain.ReportStatus;
 import com.sobunsobun.backend.dto.comment.CommentReportDto;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import com.sobunsobun.backend.security.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,12 +31,11 @@ public class CommentReportController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "댓글 신고", description = "댓글을 신고합니다")
-    public ResponseEntity<CommentReportDto.Response> createReport(
+    public ResponseEntity<ApiResponse<Void>> createReport(
             @Valid @RequestBody CommentReportDto.CreateRequest2 request) {
         Long userId = SecurityUtil.getCurrentUserId();
-        CommentReportDto.Response response = commentReportService.createReport(userId, request);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        commentReportService.createReport(userId, request);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     @GetMapping("/{reportId}")

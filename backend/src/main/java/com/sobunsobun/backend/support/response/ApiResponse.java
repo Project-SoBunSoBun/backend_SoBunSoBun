@@ -21,13 +21,19 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
     private boolean success;
-    private int statusCode;
+    private Integer statusCode;
     private String message;
     private T data;
     private String errorCode;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Map<String, Object> errorDetails;
     private LocalDateTime timestamp;
+
+    public static <T> ApiResponse<T> ok() {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .build();
+    }
 
     public static <T> ApiResponse<T> success(T data) {
         return ApiResponse.<T>builder()

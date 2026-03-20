@@ -27,12 +27,12 @@ public class ChatMemberController {
      */
     @DeleteMapping("/{roomId}/members/{targetUserId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<KickMemberResponse>> kickMember(
+    public ResponseEntity<ApiResponse<Void>> kickMember(
             @PathVariable Long roomId,
             @PathVariable Long targetUserId,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        KickMemberResponse response = chatMemberService.kickMember(roomId, principal.id(), targetUserId);
-        return ResponseEntity.ok(ApiResponse.success(response, "멤버가 강퇴되었습니다."));
+        chatMemberService.kickMember(roomId, principal.id(), targetUserId);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

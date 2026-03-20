@@ -2,6 +2,7 @@ package com.sobunsobun.backend.controller.user;
 
 import com.sobunsobun.backend.application.user.UserService;
 import com.sobunsobun.backend.application.user.MyProfileService;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import com.sobunsobun.backend.dto.user.NicknameRequest;
 import com.sobunsobun.backend.dto.user.ProfileUpdateRequest;
 import com.sobunsobun.backend.dto.user.UserProfileResponse;
@@ -212,32 +213,23 @@ public class UserController {
         description = "인증된 사용자의 닉네임을 변경합니다. JWT 토큰 필수입니다."
     )
     @PatchMapping("/me/nickname")
-    public ResponseEntity<Map<String, Object>> updateMyNickname(
+    public ResponseEntity<ApiResponse<Void>> updateMyNickname(
             @Parameter(hidden = true) // Swagger에서 숨김 (JWT에서 자동 추출)
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @Parameter(description = "새로운 닉네임 정보")
             @RequestBody @Valid NicknameRequest request) {
 
-        try {
-            Long userId = principal.id();
-            String newNickname = request.nickname();
+        Long userId = principal.id();
+        String newNickname = request.nickname();
 
-            log.info(" 닉네임 변경 요청 - 사용자 ID: {}, 새 닉네임: {}", userId, newNickname);
+        log.info(" 닉네임 변경 요청 - 사용자 ID: {}, 새 닉네임: {}", userId, newNickname);
 
-            // 닉네임 정규화 및 변경
-            String normalizedNickname = userService.normalizeNickname(newNickname);
-            userService.updateUserNickname(userId, normalizedNickname);
+        String normalizedNickname = userService.normalizeNickname(newNickname);
+        userService.updateUserNickname(userId, normalizedNickname);
 
-            log.info(" 닉네임 변경 완료 - 사용자 ID: {}, 변경된 닉네임: {}", userId, normalizedNickname);
+        log.info(" 닉네임 변경 완료 - 사용자 ID: {}, 변경된 닉네임: {}", userId, normalizedNickname);
 
-            return ResponseEntity.ok(Map.of(
-                    "nickname", normalizedNickname,
-                    "message", "닉네임이 성공적으로 변경되었습니다."
-            ));
-        } catch (Exception e) {
-            log.error(" 닉네임 변경 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
-            throw e;
-        }
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**
@@ -260,7 +252,7 @@ public class UserController {
         description = "닉네임과 프로필 이미지를 업데이트합니다. 이미지를 보내지 않으면 기존 이미지가 유지됩니다."
     )
     @PatchMapping(value = "/me/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, Object>> updateMyProfile(
+    public ResponseEntity<ApiResponse<Void>> updateMyProfile(
             @Parameter(hidden = true)
             @AuthenticationPrincipal JwtUserPrincipal principal,
 
@@ -275,31 +267,16 @@ public class UserController {
             @RequestParam(required = false)
             MultipartFile profileImage) {
 
-        try {
-            Long userId = principal.id();
-            String normalizedNickname = userService.normalizeNickname(nickname);
+        Long userId = principal.id();
+        String normalizedNickname = userService.normalizeNickname(nickname);
 
-            String imageInfo = (profileImage != null && !profileImage.isEmpty())
-                    ? profileImage.getOriginalFilename()
-                    : "이미지 없음";
+        log.info(" 프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
 
-            log.info(" 프로필 업데이트 요청 - 사용자 ID: {}, 닉네임: {}, 이미지: {}",
-                    userId, normalizedNickname, imageInfo);
+        userService.updateUserProfile(userId, normalizedNickname, profileImage);
 
-            // 프로필 업데이트 (닉네임 + 이미지)
-            userService.updateUserProfile(userId, normalizedNickname, profileImage);
+        log.info(" 프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
 
-            log.info(" 프로필 업데이트 완료 - 사용자 ID: {}, 닉네임: {}", userId, normalizedNickname);
-
-            return ResponseEntity.ok(Map.of(
-                    "message", "프로필이 성공적으로 업데이트되었습니다.",
-                    "nickname", normalizedNickname,
-                    "updated", true
-            ));
-        } catch (Exception e) {
-            log.error(" 프로필 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
-            throw e;
-        }
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**
@@ -319,7 +296,7 @@ public class UserController {
         description = "프로필 이미지만 변경합니다."
     )
     @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, Object>> updateMyProfileImage(
+    public ResponseEntity<ApiResponse<Void>> updateMyProfileImage(
             @Parameter(hidden = true)
             @AuthenticationPrincipal JwtUserPrincipal principal,
 
@@ -327,27 +304,15 @@ public class UserController {
             @RequestParam(required = false)
             MultipartFile profileImage) {
 
-        try {
-            Long userId = principal.id();
-            String fileName = (profileImage != null && !profileImage.isEmpty())
-                    ? profileImage.getOriginalFilename()
-                    : "없음";
+        Long userId = principal.id();
 
-            log.info(" 프로필 이미지 업데이트 요청 - 사용자 ID: {}, 이미지: {}", userId, fileName);
+        log.info(" 프로필 이미지 업데이트 요청 - 사용자 ID: {}", userId);
 
-            // 이미지만 업데이트
-            userService.updateProfileImage(userId, profileImage);
+        userService.updateProfileImage(userId, profileImage);
 
-            log.info(" 프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);
+        log.info(" 프로필 이미지 업데이트 완료 - 사용자 ID: {}", userId);
 
-            return ResponseEntity.ok(Map.of(
-                    "message", "프로필 이미지가 성공적으로 업데이트되었습니다.",
-                    "updated", true
-            ));
-        } catch (Exception e) {
-            log.error(" 프로필 이미지 업데이트 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
-            throw e;
-        }
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**
@@ -377,25 +342,20 @@ public class UserController {
         deprecated = true
     )
     @PostMapping("/me/withdraw")
-    public ResponseEntity<WithdrawResponse> withdrawUser(
+    public ResponseEntity<ApiResponse<Void>> withdrawUser(
             @Parameter(hidden = true)
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @RequestBody @Valid WithdrawRequest request) {
 
-        try {
-            Long userId = principal.id();
-            log.warn(" Deprecated API 사용 - /users/me/withdraw → /api/me/withdraw 권장");
-            log.info(" 회원 탈퇴 요청 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
+        Long userId = principal.id();
+        log.warn(" Deprecated API 사용 - /users/me/withdraw → /api/me/withdraw 권장");
+        log.info(" 회원 탈퇴 요청 - 사용자 ID: {}, 사유: {}", userId, request.getReasonCode());
 
-            WithdrawResponse response = userService.withdrawUser(userId, request);
+        userService.withdrawUser(userId, request);
 
-            log.info(" 회원 탈퇴 완료 - 사용자 ID: {}, 탈퇴 일시: {}", userId, response.getWithdrawnAt());
+        log.info(" 회원 탈퇴 완료 - 사용자 ID: {}", userId);
 
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error(" 회원 탈퇴 중 오류 발생 - 사용자 ID: {}", principal.id(), e);
-            throw e;
-        }
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**

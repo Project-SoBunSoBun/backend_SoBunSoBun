@@ -113,7 +113,7 @@ public class UserProfileController {
             description = "다른 유저를 신고합니다. 자기 자신은 신고할 수 없습니다.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
-    public ResponseEntity<ApiResponse<Void>> reportUser(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> reportUser(
             @Parameter(description = "신고 대상 사용자 ID", required = true)
             @PathVariable Long userId,
             @AuthenticationPrincipal JwtUserPrincipal principal,
@@ -123,6 +123,6 @@ public class UserProfileController {
                 principal.id(), userId, request.getReason());
 
         reportService.reportUser(principal.id(), userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(null));
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 }

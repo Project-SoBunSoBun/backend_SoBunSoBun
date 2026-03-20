@@ -70,14 +70,13 @@ public class CommentController {
         @ApiResponse(responseCode = "401", description = "인증되지 않음"),
         @ApiResponse(responseCode = "404", description = "게시글 또는 부모 댓글을 찾을 수 없음")
     })
-    public ResponseEntity<CommentResponse> createComment(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> createComment(
         @PathVariable @Parameter(description = "게시글 ID") Long postId,
         @Valid @RequestBody CreateCommentRequest request,
         Authentication authentication) {
 
         log.info("댓글 생성 요청 - postId: {}", postId);
 
-        // parentCommentId가 0이면 null로 변환
         request.normalizeParentCommentId();
 
         JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
@@ -85,9 +84,9 @@ public class CommentController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "사용자를 찾을 수 없습니다"));
-        CommentResponse response = commentService.createComment(postId, request, user);
+        commentService.createComment(postId, request, user);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 
     /**
@@ -220,7 +219,7 @@ public class CommentController {
         @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음"),
         @ApiResponse(responseCode = "410", description = "이미 삭제된 댓글")
     })
-    public ResponseEntity<Void> deleteComment(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> deleteComment(
         @PathVariable @Parameter(description = "댓글 ID") Long commentId,
         Authentication authentication) {
 
@@ -233,7 +232,7 @@ public class CommentController {
                         "사용자를 찾을 수 없습니다"));
         commentService.deleteComment(commentId, user);
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 }
 

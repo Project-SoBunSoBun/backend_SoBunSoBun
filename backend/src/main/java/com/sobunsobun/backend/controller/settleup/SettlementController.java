@@ -87,10 +87,11 @@ public class SettlementController extends BaseController {
                security = @SecurityRequirement(name = "bearerAuth"))
     @PutMapping("/{settlementId}/complete")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<SettlementDetailResponse>> completeSettlement(
+    public ResponseEntity<ApiResponse<Void>> completeSettlement(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable Long settlementId,
             @Valid @RequestBody SettlementCompleteRequest request) {
-        return ok(settlementService.completeSettlement(principal.id(), settlementId, request));
+        settlementService.completeSettlement(principal.id(), settlementId, request);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

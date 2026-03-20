@@ -35,15 +35,13 @@ public class ChatInviteController {
      */
     @PostMapping("/rooms/{roomId}/invites")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<ChatInviteResponse>> inviteUser(
+    public ResponseEntity<ApiResponse<Void>> inviteUser(
             @PathVariable Long roomId,
             @RequestBody @Valid ChatInviteRequest request,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
-        ChatInviteResponse response = chatInviteService.invite(roomId, principal.id(), request);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED, response, "초대가 발송되었습니다."));
+        chatInviteService.invite(roomId, principal.id(), request);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**

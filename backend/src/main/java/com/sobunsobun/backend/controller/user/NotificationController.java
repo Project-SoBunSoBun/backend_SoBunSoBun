@@ -46,11 +46,11 @@ public class NotificationController {
 
     @Operation(summary = "단건 읽음 처리", description = "특정 알림을 읽음 처리합니다.")
     @PatchMapping("/{id}/read")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> readNotification(
+    public ResponseEntity<ApiResponse<Void>> readNotification(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable Long id) {
         notificationService.readNotification(principal.id(), id);
-        return ResponseEntity.ok(ApiResponse.success(Map.of()));
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     @Operation(summary = "전체 읽음 처리", description = "모든 알림을 읽음 처리합니다.")
