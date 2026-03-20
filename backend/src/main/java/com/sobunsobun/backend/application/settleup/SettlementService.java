@@ -140,7 +140,7 @@ public class SettlementService {
         }
 
         // 4. [방식 B] 요청 참여자 == 채팅방 ACTIVE 멤버 검증
-        validateParticipantsMatchChatRoom(settlement.getGroupPost().getId(), request);
+        Long chatRoomId = validateParticipantsMatchChatRoom(settlement.getGroupPost().getId(), request);
 
         // 5. 기존 참여자/품목을 JPQL로 직접 삭제 후 재삽입
         //    orphanRemoval 대신 직접 삭제: settlement_item FK 제약 순서 문제(items 미로딩 → participant DELETE 실패) 방지
@@ -171,7 +171,7 @@ public class SettlementService {
                                     "SETTLEMENT",
                                     "정산 요청",
                                     "정산 요청이 도착했습니다.",
-                                    Map.of("type", "SETTLEMENT", "postId", String.valueOf(postId), "settlementId", String.valueOf(settlementId))
+                                    Map.of("type", "SETTLEMENT", "postId", String.valueOf(postId), "settlementId", String.valueOf(settlementId), "chatRoomId", String.valueOf(chatRoomId))
                             );
                         } catch (Exception e) {
                             log.warn("[정산 FCM 실패] userId={}, error={}", recipient.getId(), e.getMessage());
@@ -187,7 +187,7 @@ public class SettlementService {
     /**
      * [방식 B] iOS가 보낸 참여자 목록이 채팅방 ACTIVE 멤버와 정확히 일치하는지 검증
      */
-    private void validateParticipantsMatchChatRoom(Long groupPostId,
+    private Long validateParticipantsMatchChatRoom(Long groupPostId,
                                                     SettlementCompleteRequest request) {
         ChatRoom chatRoom = chatRoomRepository.findByGroupPostIdWithMembers(groupPostId)
                 .orElseThrow(() -> new SettlementException(
@@ -210,6 +210,8 @@ public class SettlementService {
                     String.format("정산 참여자(%s)가 채팅방 활성 멤버(%s)와 일치하지 않습니다.",
                             requestParticipantIds, activeMemberIds));
         }
+
+        return chatRoom.getId();
     }
 
     // =================================================
