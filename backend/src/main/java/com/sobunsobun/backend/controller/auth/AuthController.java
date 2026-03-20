@@ -5,6 +5,7 @@ import com.sobunsobun.backend.dto.auth.*;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -170,13 +171,13 @@ public class AuthController {
                        "Authorization: Bearer {accessToken} 헤더가 필요합니다.")
     @DeleteMapping("/revoke/apple")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> revokeApple(
+    public ResponseEntity<ApiResponse<Void>> revokeApple(
             @AuthenticationPrincipal JwtUserPrincipal principal) {
 
         log.info("Apple 계정 연결 해제 요청 - 사용자 ID: {}", principal.id());
         authService.revokeAppleAccount(principal.id());
         log.info("Apple 계정 연결 해제 완료 - 사용자 ID: {}", principal.id());
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

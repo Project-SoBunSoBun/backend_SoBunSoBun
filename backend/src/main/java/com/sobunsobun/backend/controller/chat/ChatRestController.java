@@ -281,7 +281,7 @@ public class ChatRestController {
         description = "단체 채팅방에서 나갑니다. 나간 사용자는 더 이상 메시지를 받지 않습니다."
     )
     @DeleteMapping("/rooms/{roomId}/members/me")
-    public ResponseEntity<ApiResponse<Void>> leaveGroupChatRoom(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> leaveGroupChatRoom(
             @PathVariable("roomId") Long roomId,
             Principal principal
     ) {
@@ -292,17 +292,17 @@ public class ChatRestController {
             chatRoomService.leaveGroupChatRoom(roomId, userId);
 
             log.info(" [REST] 채팅방 퇴장 완료");
-            return ResponseEntity.ok(ApiResponse.success(null, "채팅방 퇴장 성공"));
+            return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
 
         } catch (IllegalArgumentException e) {
             log.warn(" [REST] 채팅방 퇴장 실패 - {}", e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("LEAVE_FAILED", e.getMessage()));
+                    .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "LEAVE_FAILED", e.getMessage()));
 
         } catch (Exception e) {
             log.error(" [REST] 채팅방 퇴장 실패", e);
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("LEAVE_FAILED", e.getMessage()));
+                    .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "LEAVE_FAILED", e.getMessage()));
         }
     }
 
@@ -459,7 +459,7 @@ public class ChatRestController {
             """
     )
     @PostMapping("/rooms/{roomId}/settlement-card")
-    public ResponseEntity<?> sendSettlementCard(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> sendSettlementCard(
             @PathVariable Long roomId,
             @jakarta.validation.Valid @RequestBody SendSettlementCardRequest request,
             Authentication authentication
@@ -482,8 +482,7 @@ public class ChatRestController {
                 roomId, userId, ChatMessageType.SETTLEMENT_CARD, null, null, cardPayload);
 
         log.info(" [정산서 카드 전송 완료] messageId: {}", response.getId());
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
-                .body(com.sobunsobun.backend.dto.common.ApiResponse.success(response));
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 
     // ====== 메시지 관련 API ======
@@ -689,7 +688,7 @@ public class ChatRestController {
         )
     })
     @PostMapping(value = "/rooms/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ChatImageMessageResponse>> uploadChatImage(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> uploadChatImage(
             @PathVariable("chatId") Long chatId,
             @Parameter(description = "이미지 파일 (jpg/png/webp, 최대 5MB)", required = true)
             @RequestParam("image") MultipartFile image,
@@ -710,7 +709,7 @@ public class ChatRestController {
             if (image == null || image.isEmpty()) {
                 log.warn(" 이미지 파일이 없음");
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.badRequest("IMAGE_REQUIRED", "이미지 파일이 필요합니다"));
+                        .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "IMAGE_REQUIRED", "이미지 파일이 필요합니다"));
             }
 
             // 2. 권한 체크 (채팅방 멤버 확인)
@@ -719,7 +718,7 @@ public class ChatRestController {
             if (!isMember) {
                 log.warn(" 권한 없음 - userId: {}는 chatId: {} 멤버가 아님", userId, chatId);
                 return ResponseEntity.status(403)
-                        .body(ApiResponse.forbidden("NOT_MEMBER", "채팅방 멤버가 아닙니다"));
+                        .body(com.sobunsobun.backend.support.response.ApiResponse.error(403, "NOT_MEMBER", "채팅방 멤버가 아닙니다"));
             }
             log.info(" 권한 확인 완료 - 멤버임");
 
@@ -740,29 +739,10 @@ public class ChatRestController {
             );
             log.info(" 채팅 메시지 저장 완료 - messageId: {}", savedMessage.getId());
 
-            // 5. 사용자 정보 조회
-            User sender = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-
-            // 6. 응답 생성 (개선된 필드명 적용)
-            ChatImageMessageResponse response = ChatImageMessageResponse.builder()
-                    .id(savedMessage.getId())
-                    .roomId(chatId)
-                    .userId(userId)  // 신규 필드
-                    .nickname(sender.getNickname())  // senderName -> nickname
-                    .profileImage(sender.getProfileImageUrl())  // senderProfileImageUrl -> profileImage
-                    .type("IMAGE")
-                    .content(message)
-                    .imageUrl(imageUrl)
-                    .readCount(0)
-                    .createdAt(savedMessage.getCreatedAt())  // timestamp -> createdAt (ISO 8601)
-                    .readByMe(true)
-                    .build();
-
             log.info(" [REST] 채팅 이미지 업로드 완료 - messageId: {}", savedMessage.getId());
             log.info("═════════════════════════════════════════════════════════════");
 
-            return ResponseEntity.ok(ApiResponse.success(response, "이미지 업로드 성공"));
+            return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
@@ -771,7 +751,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("IMAGE_UPLOAD_FAILED", e.getMessage()));
+                    .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "IMAGE_UPLOAD_FAILED", e.getMessage()));
         }
     }
 

@@ -1,7 +1,7 @@
 package com.sobunsobun.backend.controller.user;
 
 import com.sobunsobun.backend.application.user.MannerReviewService;
-import com.sobunsobun.backend.dto.common.ApiResponse;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import com.sobunsobun.backend.dto.manner.MannerReviewRequest;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,13 +51,13 @@ public class MannerReviewController {
                       "응답은 receiverId를 키로, 실제 저장된 태그 목록을 값으로 반환합니다."
     )
     @PostMapping("/review")
-    public ResponseEntity<ApiResponse<Map<Long, List<String>>>> submitReview(
+    public ResponseEntity<ApiResponse<Void>> submitReview(
             @Valid @RequestBody MannerReviewRequest request,
             Authentication authentication) {
         JwtUserPrincipal principal = (JwtUserPrincipal) authentication.getPrincipal();
         log.info("매너 평가 요청 - senderId: {}", principal.id());
 
-        Map<Long, List<String>> result = mannerReviewService.submitMannerReviews(request, principal.id());
-        return ResponseEntity.ok(ApiResponse.success(result));
+        mannerReviewService.submitMannerReviews(request, principal.id());
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

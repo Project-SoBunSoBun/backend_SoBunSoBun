@@ -124,7 +124,7 @@ public class SupportController {
             summary = "1:1 문의 제출",
             description = "스크린샷 첨부가 가능한 1:1 문의를 제출합니다. 최대 5개의 스크린샷(jpg/png/webp, 각 5MB)을 첨부할 수 있습니다."
     )
-    public ResponseEntity<InquiryResponse> submitInquiry(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> submitInquiry(
             @RequestParam("typeCode") String typeCode,
             @RequestParam("content") String content,
             @RequestParam("replyEmail") String replyEmail,
@@ -132,25 +132,7 @@ public class SupportController {
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
         log.info(" [submitInquiry API] 1:1 문의 제출 - userId: {}", principal.id());
-        log.info(" [submitInquiry API] 요청 파라미터 검증");
-        log.info("  - typeCode: '{}' (null: {})", typeCode, typeCode == null);
-        log.info("  - content: '{}' (null: {}, length: {})",
-                content, content == null, content != null ? content.length() : 0);
-        log.info("  - replyEmail: '{}' (null: {})", replyEmail, replyEmail == null);
-        log.info("  - screenshots: {} (null: {})",
-                screenshots != null ? screenshots.size() : 0, screenshots == null);
 
-        // 스크린샷 상세 로그
-        if (screenshots != null && !screenshots.isEmpty()) {
-            for (int i = 0; i < screenshots.size(); i++) {
-                MultipartFile file = screenshots.get(i);
-                log.info("  - screenshot[{}]: name='{}', originalFilename='{}', size={}, contentType='{}', empty={}",
-                        i, file.getName(), file.getOriginalFilename(), file.getSize(),
-                        file.getContentType(), file.isEmpty());
-            }
-        }
-
-        // InquiryRequest 객체 생성
         InquiryRequest request = InquiryRequest.builder()
                 .typeCode(typeCode)
                 .content(content)
@@ -161,8 +143,8 @@ public class SupportController {
         User user = new User();
         user.setId(principal.id());
 
-        InquiryResponse response = inquiryService.submitInquiry(request, user);
-        return ResponseEntity.ok(response);
+        inquiryService.submitInquiry(request, user);
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 
     /**
@@ -272,7 +254,7 @@ public class SupportController {
             summary = "버그 신고 제출",
             description = "스크린샷을 첨부할 수 있는 버그 신고를 제출합니다. 최대 5개의 스크린샷(jpg/png/webp, 각 5MB)을 첨부할 수 있습니다."
     )
-    public ResponseEntity<BugReportResponse> submitBugReport(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> submitBugReport(
             @RequestParam String typeCode,
             @RequestParam String content,
             @RequestParam(required = false) List<MultipartFile> screenshots,
@@ -280,10 +262,7 @@ public class SupportController {
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
         log.info(" [submitBugReport API] 버그 신고 제출 - userId: {}", principal.id());
-        log.info(" [submitBugReport API] 요청 데이터 - typeCode: {}, content: {}, deviceInfo: {}",
-                typeCode, content, deviceInfo);
 
-        // BugReportRequest 객체 생성
         BugReportRequest request = BugReportRequest.builder()
                 .typeCode(typeCode)
                 .content(content)
@@ -294,8 +273,8 @@ public class SupportController {
         User user = new User();
         user.setId(principal.id());
 
-        BugReportResponse response = bugReportService.submitBugReport(request, user);
-        return ResponseEntity.ok(response);
+        bugReportService.submitBugReport(request, user);
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 
 

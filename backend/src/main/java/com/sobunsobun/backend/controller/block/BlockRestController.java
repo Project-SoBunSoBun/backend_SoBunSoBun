@@ -28,10 +28,10 @@ public class BlockRestController {
      */
     @PostMapping("/{userId}")
     @Operation(summary = "사용자 차단", description = "특정 사용자를 차단합니다. 자기 자신이나 이미 차단된 사용자는 불가.")
-    public ResponseEntity<ApiResponse<Void>> blockUser(@PathVariable Long userId) {
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> blockUser(@PathVariable Long userId) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
         blockService.blockUser(currentUserId, userId);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 
     /**
@@ -40,10 +40,10 @@ public class BlockRestController {
      */
     @DeleteMapping("/{userId}")
     @Operation(summary = "차단 취소", description = "차단된 사용자를 차단 해제합니다.")
-    public ResponseEntity<ApiResponse<Void>> unblockUser(@PathVariable Long userId) {
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> unblockUser(@PathVariable Long userId) {
         Long currentUserId = SecurityUtil.getCurrentUserId();
         blockService.unblockUser(currentUserId, userId);
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
     }
 
     /**

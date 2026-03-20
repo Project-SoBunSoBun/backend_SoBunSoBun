@@ -2,6 +2,7 @@ package com.sobunsobun.backend.controller.post;
 
 import com.sobunsobun.backend.application.post.PostService;
 import com.sobunsobun.backend.dto.post.*;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -304,14 +305,14 @@ public class PostController {
             description = "게시글을 삭제합니다 (작성자만 가능)",
             security = @SecurityRequirement(name = "bearerAuth")
     )
-    public ResponseEntity<Void> deletePost(
+    public ResponseEntity<ApiResponse<Void>> deletePost(
             @Parameter(description = "게시글 ID", required = true)
             @PathVariable Long postId,
             @AuthenticationPrincipal JwtUserPrincipal principal
     ) {
         log.info("게시글 삭제 요청 - 게시글 ID: {}, 사용자 ID: {}", postId, principal.id());
         postService.deletePost(postId, principal.id());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }
 

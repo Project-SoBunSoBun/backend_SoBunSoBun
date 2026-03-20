@@ -33,11 +33,11 @@ public class DeviceController {
         description = "디바이스의 FCM 토큰을 등록하거나 갱신합니다."
     )
     @PostMapping
-    public ResponseEntity<ApiResponse<DeviceRegistrationResponse>> registerDevice(
+    public ResponseEntity<ApiResponse<Void>> registerDevice(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @Valid @RequestBody DeviceRegistrationRequest request) {
-        DeviceRegistrationResponse response = deviceService.registerDevice(principal.id(), request);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        deviceService.registerDevice(principal.id(), request);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     @Operation(
@@ -45,11 +45,11 @@ public class DeviceController {
         description = "로그아웃 시 디바이스의 FCM 토큰을 삭제합니다."
     )
     @DeleteMapping("/{deviceId}")
-    public ResponseEntity<ApiResponse<DeviceDeleteResponse>> deleteDevice(
+    public ResponseEntity<ApiResponse<Void>> deleteDevice(
             @AuthenticationPrincipal JwtUserPrincipal principal,
             @PathVariable String deviceId) {
-        DeviceDeleteResponse response = deviceService.deleteDevice(principal.id(), deviceId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        deviceService.deleteDevice(principal.id(), deviceId);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     @Operation(

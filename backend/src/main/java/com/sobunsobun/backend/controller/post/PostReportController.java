@@ -3,6 +3,7 @@ package com.sobunsobun.backend.controller.post;
 import com.sobunsobun.backend.application.post.PostReportService;
 import com.sobunsobun.backend.domain.ReportStatus;
 import com.sobunsobun.backend.dto.post.PostReportDto;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import com.sobunsobun.backend.security.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -38,11 +39,11 @@ public class PostReportController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "게시글 신고", description = "게시글을 신고합니다")
-    public ResponseEntity<PostReportDto.Response> createReport(
+    public ResponseEntity<ApiResponse<Void>> createReport(
             @Valid @RequestBody PostReportDto.CreateRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
-        PostReportDto.Response response = postReportService.createReport(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        postReportService.createReport(userId, request);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**

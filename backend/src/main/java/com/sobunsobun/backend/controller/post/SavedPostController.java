@@ -3,6 +3,7 @@ package com.sobunsobun.backend.controller.post;
 import com.sobunsobun.backend.application.post.SavedPostService;
 import com.sobunsobun.backend.dto.post.PostListResponse;
 import com.sobunsobun.backend.dto.post.SavedPostDto;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import com.sobunsobun.backend.security.util.SecurityUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,11 +36,11 @@ public class SavedPostController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "게시글 저장", description = "게시글을 저장합니다")
-    public ResponseEntity<SavedPostDto.Response> savePost(
+    public ResponseEntity<ApiResponse<Void>> savePost(
             @RequestParam Long postId) {
         Long userId = SecurityUtil.getCurrentUserId();
-        SavedPostDto.Response response = savedPostService.savePost(userId, postId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        savedPostService.savePost(userId, postId);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**
@@ -77,11 +78,11 @@ public class SavedPostController {
     @DeleteMapping
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "게시글 저장 해제", description = "저장된 게시글을 취소합니다")
-    public ResponseEntity<Void> unsavePost(
+    public ResponseEntity<ApiResponse<Void>> unsavePost(
             @RequestParam Long postId) {
         Long userId = SecurityUtil.getCurrentUserId();
         savedPostService.unsavePost(userId, postId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     /**
