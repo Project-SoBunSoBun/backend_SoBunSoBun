@@ -203,7 +203,7 @@ public class ChatMessageService {
             // 8. FCM 푸시 알림 - 현재 방에 없는 멤버에게 발송
             if (type == ChatMessageType.TEXT || type == ChatMessageType.IMAGE) {
                 try {
-                    sendChatPushNotification(chatRoom, sender, content, roomId);
+                    sendChatPushNotification(chatRoom, sender, content, roomId, type);
                 } catch (Exception e) {
                     log.warn(" [FCM 발송 실패] 메시지 저장은 완료됨: {}", e.getMessage());
                 }
@@ -859,14 +859,17 @@ public class ChatMessageService {
      * - 발신자 제외
      * - 현재 해당 방에 접속 중인 멤버 제외 (active_room 기반)
      */
-    private void sendChatPushNotification(ChatRoom chatRoom, User sender, String content, Long roomId) {
+    private void sendChatPushNotification(ChatRoom chatRoom, User sender, String content, Long roomId, ChatMessageType type) {
         List<Long> memberIds = chatMemberRepository.findActiveMemberIdsByRoomId(roomId);
         String notifTitle = "새 메시지";
         String notifBody = sender.getNickname() + ": " + (content != null ? truncateContent(content) : "");
         Map<String, String> data = Map.of(
                 "type", "CHAT",
                 "chatRoomId", String.valueOf(roomId),
-                "nickname", sender.getNickname()
+                "chatRoomName", chatRoom.getName() != null ? chatRoom.getName() : "",
+                "nickname", sender.getNickname(),
+                "content", content != null ? truncateContent(content) : "",
+                "chatType", type.name()
         );
 
         for (Long memberId : memberIds) {
