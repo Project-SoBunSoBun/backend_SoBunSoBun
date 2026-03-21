@@ -114,10 +114,10 @@ public class CommentService {
                 try {
                     notificationService.createAndSend(
                             parentAuthor,
-                            "COMMENT",
+                            "COMMENT_MENTIONED",
                             "새 답글",
                             user.getNickname() + "님이 답글을 남겼습니다.",
-                            Map.of("type", "COMMENT", "postId", String.valueOf(postId), "nickname", user.getNickname())
+                            Map.of("type", "COMMENT_MENTIONED", "postId", String.valueOf(postId), "nickname", user.getNickname())
                     );
                 } catch (Exception e) {
                     log.warn("답글 FCM 알림 발송 실패 - postId: {}, error: {}", postId, e.getMessage());
