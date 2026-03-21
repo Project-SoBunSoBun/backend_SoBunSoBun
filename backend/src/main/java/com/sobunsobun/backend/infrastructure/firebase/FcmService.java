@@ -1,6 +1,8 @@
 package com.sobunsobun.backend.infrastructure.firebase;
 
 import com.google.firebase.FirebaseApp;
+import com.google.firebase.messaging.ApnsConfig;
+import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
@@ -37,6 +39,9 @@ public class FcmService {
                     .setNotification(Notification.builder()
                             .setTitle(title)
                             .setBody(body)
+                            .build())
+                    .setApnsConfig(ApnsConfig.builder()
+                            .setAps(Aps.builder().setBadge(1).build())
                             .build());
 
             if (data != null && !data.isEmpty()) {
@@ -75,6 +80,9 @@ public class FcmService {
                         .setNotification(Notification.builder()
                                 .setTitle(title)
                                 .setBody(body)
+                                .build())
+                        .setApnsConfig(ApnsConfig.builder()
+                                .setAps(Aps.builder().setBadge(1).build())
                                 .build());
 
                 if (data != null && !data.isEmpty()) {
