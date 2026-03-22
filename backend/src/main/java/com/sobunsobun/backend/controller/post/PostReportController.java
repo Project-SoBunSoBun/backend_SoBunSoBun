@@ -43,7 +43,7 @@ public class PostReportController {
             @Valid @RequestBody PostReportDto.CreateRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
         postReportService.createReport(userId, request);
-        return ResponseEntity.ok(ApiResponse.ok());
+        return ResponseEntity.ok(ApiResponse.ok("게시글 신고가 접수되었습니다."));
     }
 
     /**
