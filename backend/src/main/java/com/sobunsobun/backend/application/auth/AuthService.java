@@ -21,6 +21,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -79,7 +80,14 @@ public class AuthService {
         log.info("[사용자 작동] 카카오 로그인 시도");
 
         // 1. 카카오 API 호출하여 사용자 정보 조회
-        var kakaoUser = kakaoOAuthClient.getUserInfo(kakaoAccessToken).block();
+        KakaoOAuthClient.KakaoUserResponse kakaoUser;
+        try {
+            kakaoUser = kakaoOAuthClient.getUserInfo(kakaoAccessToken).block();
+        } catch (WebClientResponseException e) {
+            log.warn("카카오 API 호출 실패 - status: {}, message: {}", e.getStatusCode(), e.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 카카오 토큰입니다.");
+        }
+
         if (kakaoUser == null) {
             log.error("카카오 사용자 정보 조회 실패");
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 사용자 조회 실패");
@@ -135,6 +143,36 @@ public class AuthService {
                 .loginToken(loginToken)
                 .isNewUser(isNewUser)
                 .build();
+    }
+
+    /**
+     * 1단계 (웹 Kakao): Authorization Code로 로그인 검증
+     *
+     * 플로우:
+     * 1. Kakao authorization code → access token 교환
+     * 2. access token으로 verifyKakaoToken() 위임
+     *
+     * @param code Kakao OAuth authorization code
+     * @return 사용자 정보와 임시 로그인 토큰
+     */
+    public KakaoVerifyResponse verifyKakaoCode(String code) {
+        log.info("[사용자 작동] 카카오 웹 로그인 시도 (authorization code)");
+
+        KakaoOAuthClient.KakaoTokenResponse tokenResponse;
+        try {
+            tokenResponse = kakaoOAuthClient.exchangeCodeForAccessToken(code);
+        } catch (Exception e) {
+            log.warn("카카오 토큰 교환 실패: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 인가 코드 교환에 실패했습니다.");
+        }
+
+        if (tokenResponse == null || tokenResponse.getAccess_token() == null) {
+            log.error("카카오 토큰 응답 없음");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "카카오 토큰 응답이 없습니다.");
+        }
+
+        log.info("카카오 access token 교환 완료");
+        return verifyKakaoToken(tokenResponse.getAccess_token());
     }
 
     /**

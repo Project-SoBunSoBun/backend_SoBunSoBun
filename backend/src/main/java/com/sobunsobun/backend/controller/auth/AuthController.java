@@ -81,6 +81,29 @@ public class AuthController {
     }
 
     /**
+     * Kakao OAuth 웹 콜백 엔드포인트
+     *
+     * - 카카오 로그인 후 브라우저가 GET으로 리다이렉트
+     * - authorization code를 access token으로 교환 후 임시 로그인 토큰 발급
+     *
+     * @param code Kakao authorization code (query parameter)
+     * @return 사용자 정보 및 임시 로그인 토큰
+     */
+    @Operation(summary = "Kakao OAuth 웹 콜백",
+               description = "Kakao 로그인 후 리다이렉트되는 콜백. authorization code를 받아 임시 로그인 토큰을 발급합니다.")
+    @GetMapping("/callback/kakao")
+    public ResponseEntity<KakaoVerifyResponse> kakaoCallback(
+            @RequestParam("code") String code) {
+
+        log.info("Kakao OAuth 웹 콜백 수신");
+        KakaoVerifyResponse response = authService.verifyKakaoCode(code);
+        log.info("Kakao OAuth 웹 콜백 처리 완료 - 이메일: {}, 신규사용자: {}",
+                response.getEmail(), response.isNewUser());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Apple OAuth 콜백 엔드포인트
      *
      * - Apple에서 POST로 authorization_code를 전달
