@@ -41,7 +41,7 @@ public class GroupPost {
     /**
      * 카테고리
      */
-    @Column(name = "categories", nullable = false, length = 40)
+    @Column(name = "categories", nullable = false, length = 1000)
     private String categories;
 
     /**
