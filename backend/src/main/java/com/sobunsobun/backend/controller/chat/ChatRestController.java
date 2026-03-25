@@ -274,22 +274,22 @@ public class ChatRestController {
     }
 
     /**
-     * 단체 채팅방 나가기
+     * 채팅방 나가기 (1:1 및 단체 채팅 모두 지원)
      */
     @Operation(
-        summary = "단체 채팅방 나가기",
-        description = "단체 채팅방에서 나갑니다. 나간 사용자는 더 이상 메시지를 받지 않습니다."
+        summary = "채팅방 나가기",
+        description = "채팅방에서 나갑니다. 1:1 채팅과 단체 채팅 모두 지원합니다. 단, 단체 채팅은 정산 진행 중일 때 나갈 수 없습니다."
     )
     @DeleteMapping("/rooms/{roomId}/members/me")
-    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> leaveGroupChatRoom(
+    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> leaveChatRoom(
             @PathVariable("roomId") Long roomId,
             Principal principal
     ) {
         try {
-            log.info(" [REST] 단체 채팅 퇴장 - roomId: {}", roomId);
+            log.info(" [REST] 채팅 퇴장 - roomId: {}", roomId);
 
             Long userId = extractUserIdFromPrincipal(principal);
-            chatRoomService.leaveGroupChatRoom(roomId, userId);
+            chatRoomService.leaveChatRoom(roomId, userId);
 
             log.info(" [REST] 채팅방 퇴장 완료");
             return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
