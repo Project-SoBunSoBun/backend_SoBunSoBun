@@ -724,29 +724,27 @@ public class ChatRoomService {
     }
 
     /**
-     * 단체 채팅방 나가기
+     * 채팅방 나가기 (1:1 및 단체 채팅 모두 지원)
+     * - 단체 채팅: 정산 진행 중(PENDING)이면 퇴장 불가
+     * - 1:1 채팅: 제한 없이 퇴장 가능
      *
      * @param roomId 채팅방 ID
      * @param userId 나가는 사용자 ID
      */
     @Transactional
-    public void leaveGroupChatRoom(Long roomId, Long userId) {
+    public void leaveChatRoom(Long roomId, Long userId) {
         try {
-            log.info(" [단체 채팅 퇴장] roomId: {}, userId: {}", roomId, userId);
+            log.info(" [채팅 퇴장] roomId: {}, userId: {}", roomId, userId);
 
             ChatRoom chatRoom = chatRoomRepository.findByIdWithMembers(roomId)
                     .orElseThrow(() -> new ChatException(ErrorCode.CHAT_ROOM_NOT_FOUND));
-
-            if (chatRoom.getRoomType() != ChatRoomType.GROUP) {
-                throw new ChatException(ErrorCode.CHAT_INVALID_ROOM_TYPE, "단체 채팅방에서만 나갈 수 있습니다.");
-            }
 
             if (!chatRoom.isMember(userId)) {
                 throw new ChatException(ErrorCode.CHAT_MEMBER_NOT_FOUND);
             }
 
-            // 정산 진행 중(PENDING) 퇴장 차단
-            if (chatRoom.getGroupPost() != null) {
+            // 단체 채팅: 정산 진행 중(PENDING) 퇴장 차단
+            if (chatRoom.getRoomType() == ChatRoomType.GROUP && chatRoom.getGroupPost() != null) {
                 boolean settlementPending = settlementRepository.existsByGroupPostIdAndStatus(
                         chatRoom.getGroupPost().getId(), SettlementStatus.PENDING);
                 if (settlementPending) {
@@ -762,26 +760,28 @@ public class ChatRoomService {
             chatRoom.removeMember(userId);
             chatRoomRepository.save(chatRoom);
 
-            // LEAVE 시스템 메시지 발행 (제거 이후이므로 publishSystemMessage의 멤버 검증 건너뜀)
-            chatMessageService.publishSystemMessage(
-                    roomId,
-                    leavingUser,
-                    ChatMessageType.LEAVE,
-                    leavingUser.getNickname() + "님이 퇴장했습니다."
-            );
+            // 단체 채팅만 LEAVE 시스템 메시지 발행
+            if (chatRoom.getRoomType() == ChatRoomType.GROUP) {
+                chatMessageService.publishSystemMessage(
+                        roomId,
+                        leavingUser,
+                        ChatMessageType.LEAVE,
+                        leavingUser.getNickname() + "님이 퇴장했습니다."
+                );
 
-            // 저장한 글 자리가 빌 때 알림
-            GroupPost groupPost = chatRoom.getGroupPost();
-            if (groupPost != null) {
-                notifySavedPostUsers(groupPost.getId(), userId);
+                // 저장한 글 자리가 빌 때 알림
+                GroupPost groupPost = chatRoom.getGroupPost();
+                if (groupPost != null) {
+                    notifySavedPostUsers(groupPost.getId(), userId);
+                }
             }
 
-            log.info(" [단체 채팅 퇴장 완료] roomId: {}, userId: {}", roomId, userId);
+            log.info(" [채팅 퇴장 완료] roomId: {}, userId: {}", roomId, userId);
 
         } catch (ChatException | UserException e) {
             throw e;
         } catch (Exception e) {
-            log.error(" 단체 채팅 퇴장 실패 - roomId: {}, userId: {}", roomId, userId, e);
+            log.error(" 채팅 퇴장 실패 - roomId: {}, userId: {}", roomId, userId, e);
             throw new RuntimeException("채팅방 퇴장 실패: " + e.getMessage(), e);
         }
     }
