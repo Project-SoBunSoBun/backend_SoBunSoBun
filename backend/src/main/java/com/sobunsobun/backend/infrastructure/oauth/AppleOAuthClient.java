@@ -26,6 +26,7 @@ import java.net.URL;
 import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Apple OAuth 클라이언트
@@ -41,6 +42,11 @@ public class AppleOAuthClient {
 
     @Value("${APPLE_CLIENT_ID}")
     private String clientId;
+
+    // iOS 네이티브 앱의 Bundle ID (id_token aud 검증용)
+    // 웹 OAuth는 clientId(Service ID), iOS 앱은 bundleId(Bundle ID)를 aud로 사용
+    @Value("${APPLE_BUNDLE_ID:}")
+    private String bundleId;
 
     @Value("${APPLE_TEAM_ID}")
     private String teamId;
@@ -175,7 +181,13 @@ public class AppleOAuthClient {
             }
 
             // audience 검증
-            if (!claims.getAudience().contains(clientId)) {
+            // iOS 네이티브 앱: aud = Bundle ID, 웹 OAuth: aud = Service ID(clientId)
+            List<String> audience = claims.getAudience();
+            boolean audienceValid = audience.contains(clientId)
+                    || (!bundleId.isBlank() && audience.contains(bundleId));
+            if (!audienceValid) {
+                log.error("Apple id_token audience 불일치 - aud: {}, clientId: {}, bundleId: {}",
+                        audience, clientId, bundleId);
                 throw new RuntimeException("Apple id_token audience 불일치");
             }
 
