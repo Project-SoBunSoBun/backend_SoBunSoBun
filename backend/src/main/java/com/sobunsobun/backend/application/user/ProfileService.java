@@ -87,10 +87,11 @@ public class ProfileService {
         };
 
         int hostCount = (int) groupPostRepository.countByOwnerId(userId);
+        int completedHostCount = (int) groupPostRepository.countByOwnerIdAndStatus(userId, PostStatus.COMPLETED);
         int participationCount = (int) chatMemberRepository.countParticipationByUserId(userId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
         int reportedCount = (int) userReportRepository.countByTargetUserId(userId);
-        int activityScore = hostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
+        int activityScore = completedHostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
 
         List<MyProfileDetailResponse.MannerTagDto> mannerTags = userTagStatsRepository
                 .findTop5ByReceiverIdOrderByCountDesc(userId)
@@ -145,10 +146,11 @@ public class ProfileService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         int hostCount = (int) groupPostRepository.countByOwnerId(targetUserId);
+        int completedHostCount = (int) groupPostRepository.countByOwnerIdAndStatus(targetUserId, PostStatus.COMPLETED);
         int participationCount = (int) chatMemberRepository.countParticipationByUserId(targetUserId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(targetUserId);
         int reportedCount = (int) userReportRepository.countByTargetUserId(targetUserId);
-        int activityScore = hostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
+        int activityScore = completedHostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
 
         List<PublicUserProfileResponse.MannerTagDto> mannerTags = userTagStatsRepository
                 .findTop5ByReceiverIdOrderByCountDesc(targetUserId)

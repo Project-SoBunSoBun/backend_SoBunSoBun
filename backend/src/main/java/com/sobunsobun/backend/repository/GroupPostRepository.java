@@ -215,6 +215,12 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     long countByOwnerId(Long userId);
 
     /**
+     * 사용자가 작성한 특정 상태의 게시글 수 조회
+     * 활동 점수 계산 시 COMPLETED 상태(매너 평가 완료) 게시글만 카운트하는 데 사용
+     */
+    long countByOwnerIdAndStatus(Long ownerId, PostStatus status);
+
+    /**
      * 사용자가 참여한 게시글 수 조회
      * TODO: 참여 정보를 저장하는 엔티티/테이블 필요
      */
