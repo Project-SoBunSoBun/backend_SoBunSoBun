@@ -65,10 +65,11 @@ public class MyProfileService {
                 .toList();
 
         int hostCount = (int) groupPostRepository.countByOwnerId(user.getId());
+        int completedHostCount = (int) groupPostRepository.countByOwnerIdAndStatus(user.getId(), PostStatus.COMPLETED);
         int participationCount = (int) chatMemberRepository.countParticipationByUserId(userId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
         int reportedCount = (int) userReportRepository.countByTargetUserId(userId);
-        int activityScore = hostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
+        int activityScore = completedHostCount * 8 + participationCount * 3 + tagCount - reportedCount * 7;
 
         MyProfileResponse profile = MyProfileResponse.builder()
                 .userId(user.getId())
