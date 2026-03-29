@@ -42,6 +42,9 @@ public class SettlementSummaryResponse {
     @Schema(description = "참여자 목록 (userId, nickname) — COMPLETED 시에만 채워짐")
     private List<ParticipantInfo> participants;
 
+    @Schema(description = "채팅방 ID", example = "3")
+    private Long chatRoomId;
+
     @Schema(description = "채팅방 ACTIVE 멤버 목록 — 정산 대상 인원 (PENDING 포함 항상 제공)")
     private List<ChatMemberInfo> chatRoomMembers;
 
@@ -60,7 +63,7 @@ public class SettlementSummaryResponse {
     @Schema(description = "수정 일시")
     private LocalDateTime updatedAt;
 
-    public static SettlementSummaryResponse from(Settlement settlement, List<ChatMember> activeMembers) {
+    public static SettlementSummaryResponse from(Settlement settlement, Long chatRoomId, List<ChatMember> activeMembers) {
         List<ParticipantInfo> participantInfos = settlement.getParticipants().stream()
                 .map(p -> new ParticipantInfo(p.getUser().getId(), p.getUser().getNickname()))
                 .toList();
@@ -78,6 +81,7 @@ public class SettlementSummaryResponse {
                 .totalAmount(settlement.getTotalAmount())
                 .participantCount(participantInfos.size())
                 .participants(participantInfos)
+                .chatRoomId(chatRoomId)
                 .chatRoomMembers(chatMemberInfos)
                 .locationName(settlement.getGroupPost().getLocationName())
                 .meetAt(settlement.getGroupPost().getMeetAt())
