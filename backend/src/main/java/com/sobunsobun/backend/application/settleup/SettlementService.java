@@ -92,13 +92,14 @@ public class SettlementService {
         }
 
         return settlements.map(settlement -> {
-            List<ChatMember> activeMembers = chatRoomRepository
-                    .findByGroupPostIdWithMembers(settlement.getGroupPost().getId())
+            var chatRoom = chatRoomRepository.findByGroupPostIdWithMembers(settlement.getGroupPost().getId());
+            Long chatRoomId = chatRoom.map(room -> room.getId()).orElse(null);
+            List<ChatMember> activeMembers = chatRoom
                     .map(room -> room.getMembers().stream()
                             .filter(m -> m.getStatus() == ChatMemberStatus.ACTIVE)
                             .toList())
                     .orElse(List.of());
-            return SettlementSummaryResponse.from(settlement, activeMembers);
+            return SettlementSummaryResponse.from(settlement, chatRoomId, activeMembers);
         });
     }
 
