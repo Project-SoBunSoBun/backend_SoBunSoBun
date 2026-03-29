@@ -794,18 +794,34 @@ public class ChatRestController {
      * ChatMessage를 MessageResponse로 변환
      */
     private MessageResponse toMessageResponse(ChatMessage msg, Long userId) {
-        // 간단한 읽음 처리: 자신의 메시지이거나 readCount > 0이면 읽음
-        boolean readByMe = msg.getSender().getId().equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
+        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+        Long senderId = null;
+        String senderName = "알 수 없음";
+        String profileImage = null;
+        boolean readByMe = false;
+        
+        try {
+            if (msg.getSender() != null) {
+                senderId = msg.getSender().getId();
+                senderName = msg.getSender().getNickname();
+                profileImage = msg.getSender().getProfileImageUrl();
+                readByMe = senderId.equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            log.warn(" [메시지 변환] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", msg.getId());
+            // 삭제된 사용자: 기본값 사용
+            readByMe = msg.getReadCount() != null && msg.getReadCount() > 0;
+        }
 
         return MessageResponse.builder()
                 .id(msg.getId())
                 .roomId(msg.getChatRoom().getId())
-                .senderId(msg.getSender().getId())
-                .userId(msg.getSender().getId())  // 신규 필드: userId
-                .senderName(msg.getSender().getNickname())
-                .nickname(msg.getSender().getNickname())  // 신규 필드: nickname
-                .senderProfileImageUrl(msg.getSender().getProfileImageUrl())
-                .profileImage(msg.getSender().getProfileImageUrl())  // 신규 필드: profileImage
+                .senderId(senderId)
+                .userId(senderId)  // 신규 필드: userId
+                .senderName(senderName)
+                .nickname(senderName)  // 신규 필드: nickname
+                .senderProfileImageUrl(profileImage)
+                .profileImage(profileImage)  // 신규 필드: profileImage
                 .type(msg.getType().toString())
                 .content(msg.getContent())
                 .imageUrl(msg.getImageUrl())

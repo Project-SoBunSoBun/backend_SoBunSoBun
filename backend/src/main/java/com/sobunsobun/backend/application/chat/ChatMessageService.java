@@ -301,12 +301,28 @@ public class ChatMessageService {
                 member.getLastReadAt() != null &&
                 !member.getLastReadAt().isBefore(message.getCreatedAt());
 
+        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+        Long senderId = null;
+        String senderName = "알 수 없음";
+        String profileImage = null;
+        
+        try {
+            if (message.getSender() != null) {
+                senderId = message.getSender().getId();
+                senderName = message.getSender().getNickname();
+                profileImage = message.getSender().getProfileImageUrl();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            log.warn(" [메시지 변환] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", message.getId());
+            // 삭제된 사용자: 기본값 사용
+        }
+
         return MessageResponse.builder()
                 .id(message.getId())
                 .roomId(message.getChatRoom().getId())
-                .senderId(message.getSender().getId())
-                .senderName(message.getSender().getNickname())
-                .senderProfileImageUrl(message.getSender().getProfileImageUrl())
+                .senderId(senderId)
+                .senderName(senderName)
+                .senderProfileImageUrl(profileImage)
                 .type(message.getType().toString())
                 .content(message.getContent())
                 .imageUrl(message.getImageUrl())
@@ -415,18 +431,34 @@ public class ChatMessageService {
             log.debug(" [단계3] MessageResponse로 변환 중...");
             List<MessageResponse> messageResponses = messages.stream()
                     .map(msg -> {
-                        boolean readByMe = msg.getSender().getId().equals(userId)
-                                || (msg.getReadCount() != null && msg.getReadCount() > 0);
+                        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+                        Long senderId = null;
+                        String senderName = "알 수 없음";
+                        String senderProfileImageUrl = null;
+                        boolean readByMe = false;
+                        
+                        try {
+                            if (msg.getSender() != null) {
+                                senderId = msg.getSender().getId();
+                                senderName = msg.getSender().getNickname();
+                                senderProfileImageUrl = msg.getSender().getProfileImageUrl();
+                                readByMe = senderId.equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
+                            }
+                        } catch (jakarta.persistence.EntityNotFoundException e) {
+                            log.warn(" [메시지 변환] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", msg.getId());
+                            // 삭제된 사용자: 기본값 사용
+                            readByMe = msg.getReadCount() != null && msg.getReadCount() > 0;
+                        }
 
                         return MessageResponse.builder()
                                 .id(msg.getId())
                                 .roomId(msg.getChatRoom().getId())
-                                .senderId(msg.getSender() != null ? msg.getSender().getId() : null)
-                                .userId(msg.getSender() != null ? msg.getSender().getId() : null)
-                                .senderName(msg.getSender() != null ? msg.getSender().getNickname() : "알 수 없음")
-                                .nickname(msg.getSender() != null ? msg.getSender().getNickname() : "알 수 없음")
-                                .senderProfileImageUrl(msg.getSender() != null ? msg.getSender().getProfileImageUrl() : null)
-                                .profileImage(msg.getSender() != null ? msg.getSender().getProfileImageUrl() : null)
+                                .senderId(senderId)
+                                .userId(senderId)
+                                .senderName(senderName)
+                                .nickname(senderName)
+                                .senderProfileImageUrl(senderProfileImageUrl)
+                                .profileImage(senderProfileImageUrl)
                                 .type(msg.getType().toString())
                                 .content(msg.getContent())
                                 .imageUrl(msg.getImageUrl())
@@ -530,9 +562,21 @@ public class ChatMessageService {
                     && !member.getLastReadAt().isBefore(message.getCreatedAt());
         }
 
-        String senderName = message.getSender() != null ? message.getSender().getNickname() : null;
-        String profileImage = message.getSender() != null ? message.getSender().getProfileImageUrl() : null;
-        Long senderId = message.getSender() != null ? message.getSender().getId() : null;
+        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+        String senderName = "알 수 없음";
+        String profileImage = null;
+        Long senderId = null;
+        
+        try {
+            if (message.getSender() != null) {
+                senderId = message.getSender().getId();
+                senderName = message.getSender().getNickname();
+                profileImage = message.getSender().getProfileImageUrl();
+            }
+        } catch (jakarta.persistence.EntityNotFoundException e) {
+            log.warn(" [메시지 응답 빌더] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", message.getId());
+            // 삭제된 사용자: 기본값 사용
+        }
 
         return MessageResponse.builder()
                 .id(message.getId())
