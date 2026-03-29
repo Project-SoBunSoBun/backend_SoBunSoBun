@@ -4,6 +4,7 @@ import com.sobunsobun.backend.support.exception.BusinessException;
 import com.sobunsobun.backend.support.exception.ChatException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
 import com.sobunsobun.backend.support.response.ApiResponse;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -45,6 +46,23 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
+    }
+
+    /**
+     * Hibernate EntityNotFoundException 처리
+     * 삭제된 사용자 등 엔티티 참조 실패 시
+     */
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiResponse<?>> handleEntityNotFoundException(EntityNotFoundException e) {
+        log.warn("[EntityNotFoundException] 엔티티를 찾을 수 없습니다: {}", e.getMessage());
+
+        ApiResponse<?> response = ApiResponse.error(
+                ErrorCode.USER_NOT_FOUND.getStatusCode(),
+                ErrorCode.USER_NOT_FOUND.getCode(),
+                ErrorCode.USER_NOT_FOUND.getMessage()
+        );
+
+        return ResponseEntity.status(ErrorCode.USER_NOT_FOUND.getHttpStatus()).body(response);
     }
 
     /**

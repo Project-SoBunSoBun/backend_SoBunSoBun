@@ -198,18 +198,8 @@ public class ChatRoomService {
             return chatRoom.getMembers().stream()
                     .filter(member -> !member.getUser().getId().equals(userId))
                     .findFirst()
-                    .map(member -> {
-                        try {
-                            return member.getUser().getNickname();
-                        } catch (jakarta.persistence.EntityNotFoundException e) {
-                            log.warn(" [채팅방 이름 조회] 상대방 정보 조회 실패 (삭제된 사용자) - roomId: {}", chatRoom.getId());
-                            return "알 수 없는 사용자";
-                        }
-                    })
+                    .map(member -> member.getUser().getNickname())
                     .orElse(chatRoom.getName()); // 상대방을 찾지 못하면 채팅방 이름 반환
-        } catch (jakarta.persistence.EntityNotFoundException e) {
-            log.warn(" [채팅방 이름 조회] 발신자 정보 조회 실패 (삭제된 사용자) - roomId: {}", chatRoom.getId());
-            return chatRoom.getName();
         } catch (Exception e) {
             log.warn(" 상대방 이름 조회 실패, 기본값 사용: {}", chatRoom.getName());
             return chatRoom.getName();
@@ -228,18 +218,8 @@ public class ChatRoomService {
             return chatRoom.getMembers().stream()
                     .filter(member -> !member.getUser().getId().equals(userId))
                     .findFirst()
-                    .map(member -> {
-                        try {
-                            return member.getUser().getProfileImageUrl();
-                        } catch (jakarta.persistence.EntityNotFoundException e) {
-                            log.warn(" [프로필 이미지 조회] 상대방 정보 조회 실패 (삭제된 사용자) - roomId: {}", chatRoom.getId());
-                            return null;
-                        }
-                    })
+                    .map(member -> member.getUser().getProfileImageUrl())
                     .orElse(null);
-        } catch (jakarta.persistence.EntityNotFoundException e) {
-            log.warn(" [프로필 이미지 조회] 발신자 정보 조회 실패 (삭제된 사용자) - roomId: {}", chatRoom.getId());
-            return null;
         } catch (Exception e) {
             log.warn(" 상대방 프로필 이미지 조회 실패: roomId={}", chatRoom.getId());
             return null;
