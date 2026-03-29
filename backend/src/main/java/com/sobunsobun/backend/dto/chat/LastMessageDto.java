@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -83,12 +84,29 @@ public class LastMessageDto {
                     .format(FORMATTER);
         }
 
+        // User lazy loading 실패 처리 (삭제된 사용자 등)
+        Long userId = null;
+        String nickname = null;
+        String profileImage = null;
+        try {
+            if (message.getSender() != null) {
+                userId = message.getSender().getId();
+                nickname = message.getSender().getNickname();
+                profileImage = message.getSender().getProfileImageUrl();
+            }
+        } catch (EntityNotFoundException e) {
+            // 발신자 User가 삭제된 경우 - null 값으로 처리하여 계속 진행
+            userId = null;
+            nickname = null;
+            profileImage = null;
+        }
+
         return LastMessageDto.builder()
                 .id(message.getId() != null ? message.getId().toString() : null)
                 .roomId(message.getChatRoom() != null ? message.getChatRoom().getId() : null)
-                .userId(message.getSender() != null ? message.getSender().getId() : null)
-                .nickname(message.getSender() != null ? message.getSender().getNickname() : null)
-                .profileImage(message.getSender() != null ? message.getSender().getProfileImageUrl() : null)
+                .userId(userId)
+                .nickname(nickname)
+                .profileImage(profileImage)
                 .type(message.getType() != null ? message.getType().name() : null)
                 .content(message.getContent())
                 .imageUrl(message.getImageUrl())

@@ -131,9 +131,32 @@ public class ChatRoomService {
                                     .build();
 
                         } catch (Exception e) {
-                            log.error(" [방{}] DTO 변환 중 오류 발생: {}", roomId, e.getMessage());
-                            // 하나의 방 변환 실패가 전체를 실패시키지 않도록 에러만 로깅
-                            throw new RuntimeException("방 " + roomId + " 정보 조회 실패: " + e.getMessage(), e);
+                            log.warn(" [방{}] DTO 변환 중 오류 발생 (계속 진행): {}", roomId, e.getMessage());
+                            // 하나의 방 변환 실패가 전체 목록 조회를 실패시키지 않도록
+                            // 기본 정보만으로 DTO 생성하여 반환 (lastMessage 없이)
+                            try {
+                                String roomName = chatRoom.getName();
+                                String profileImageUrl = null;
+                                if (chatRoom.getRoomType() == ChatRoomType.ONE_TO_ONE) {
+                                    roomName = getPrivateChatRoomName(chatRoom, userId);
+                                    profileImageUrl = getPrivateChatProfileImage(chatRoom, userId);
+                                }
+                                Long unreadCount = chatRedisService.getUnreadCount(roomId, userId);
+                                
+                                return ChatRoomListResponseDto.builder()
+                                        .roomId(roomId)
+                                        .roomName(roomName)
+                                        .profileImageUrl(profileImageUrl)
+                                        .roomType(chatRoom.getRoomType().toString())
+                                        .memberCount(chatRoom.getMembers().size())
+                                        .lastMessage(null)  // lastMessage 제외
+                                        .unreadCount(unreadCount)
+                                        .groupPostId(chatRoom.getGroupPost() != null ? chatRoom.getGroupPost().getId() : null)
+                                        .build();
+                            } catch (Exception fallbackError) {
+                                log.error(" [방{}] 폴백 DTO 생성 중 오류 발생: {}", roomId, fallbackError.getMessage());
+                                throw new RuntimeException("방 " + roomId + " 정보 조회 실패: " + fallbackError.getMessage(), fallbackError);
+                            }
                         }
                     })
                     .collect(Collectors.toList());
