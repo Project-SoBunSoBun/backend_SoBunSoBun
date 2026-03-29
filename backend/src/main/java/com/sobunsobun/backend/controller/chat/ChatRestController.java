@@ -794,23 +794,18 @@ public class ChatRestController {
      * ChatMessage를 MessageResponse로 변환
      */
     private MessageResponse toMessageResponse(ChatMessage msg, Long userId) {
-        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+        // 발신자 정보 조회
+        // EntityNotFoundException은 전역 핸들러가 처리
         Long senderId = null;
         String senderName = "알 수 없음";
         String profileImage = null;
         boolean readByMe = false;
         
-        try {
-            if (msg.getSender() != null) {
-                senderId = msg.getSender().getId();
-                senderName = msg.getSender().getNickname();
-                profileImage = msg.getSender().getProfileImageUrl();
-                readByMe = senderId.equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
-            }
-        } catch (jakarta.persistence.EntityNotFoundException e) {
-            log.warn(" [메시지 변환] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", msg.getId());
-            // 삭제된 사용자: 기본값 사용
-            readByMe = msg.getReadCount() != null && msg.getReadCount() > 0;
+        if (msg.getSender() != null) {
+            senderId = msg.getSender().getId();
+            senderName = msg.getSender().getNickname();
+            profileImage = msg.getSender().getProfileImageUrl();
+            readByMe = senderId.equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
         }
 
         return MessageResponse.builder()

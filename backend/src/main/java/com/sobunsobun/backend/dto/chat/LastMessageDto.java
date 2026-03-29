@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sobunsobun.backend.domain.chat.ChatMessage;
 import com.sobunsobun.backend.domain.chat.ChatMessageType;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -85,20 +84,14 @@ public class LastMessageDto {
         }
 
         // User lazy loading 실패 처리 (삭제된 사용자 등)
+        // EntityNotFoundException은 전역 핸들러가 처리
         Long userId = null;
         String nickname = null;
         String profileImage = null;
-        try {
-            if (message.getSender() != null) {
-                userId = message.getSender().getId();
-                nickname = message.getSender().getNickname();
-                profileImage = message.getSender().getProfileImageUrl();
-            }
-        } catch (EntityNotFoundException e) {
-            // 발신자 User가 삭제된 경우 - null 값으로 처리하여 계속 진행
-            userId = null;
-            nickname = null;
-            profileImage = null;
+        if (message.getSender() != null) {
+            userId = message.getSender().getId();
+            nickname = message.getSender().getNickname();
+            profileImage = message.getSender().getProfileImageUrl();
         }
 
         return LastMessageDto.builder()

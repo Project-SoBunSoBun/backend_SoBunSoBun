@@ -301,20 +301,16 @@ public class ChatMessageService {
                 member.getLastReadAt() != null &&
                 !member.getLastReadAt().isBefore(message.getCreatedAt());
 
-        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+        // 발신자 정보 조회
+        // EntityNotFoundException은 전역 핸들러가 처리
         Long senderId = null;
         String senderName = "알 수 없음";
         String profileImage = null;
         
-        try {
-            if (message.getSender() != null) {
-                senderId = message.getSender().getId();
-                senderName = message.getSender().getNickname();
-                profileImage = message.getSender().getProfileImageUrl();
-            }
-        } catch (jakarta.persistence.EntityNotFoundException e) {
-            log.warn(" [메시지 변환] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", message.getId());
-            // 삭제된 사용자: 기본값 사용
+        if (message.getSender() != null) {
+            senderId = message.getSender().getId();
+            senderName = message.getSender().getNickname();
+            profileImage = message.getSender().getProfileImageUrl();
         }
 
         return MessageResponse.builder()
@@ -431,23 +427,18 @@ public class ChatMessageService {
             log.debug(" [단계3] MessageResponse로 변환 중...");
             List<MessageResponse> messageResponses = messages.stream()
                     .map(msg -> {
-                        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+                        // 발신자 정보 안전하게 조회
+                        // EntityNotFoundException은 전역 핸들러가 처리
                         Long senderId = null;
                         String senderName = "알 수 없음";
                         String senderProfileImageUrl = null;
                         boolean readByMe = false;
                         
-                        try {
-                            if (msg.getSender() != null) {
-                                senderId = msg.getSender().getId();
-                                senderName = msg.getSender().getNickname();
-                                senderProfileImageUrl = msg.getSender().getProfileImageUrl();
-                                readByMe = senderId.equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
-                            }
-                        } catch (jakarta.persistence.EntityNotFoundException e) {
-                            log.warn(" [메시지 변환] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", msg.getId());
-                            // 삭제된 사용자: 기본값 사용
-                            readByMe = msg.getReadCount() != null && msg.getReadCount() > 0;
+                        if (msg.getSender() != null) {
+                            senderId = msg.getSender().getId();
+                            senderName = msg.getSender().getNickname();
+                            senderProfileImageUrl = msg.getSender().getProfileImageUrl();
+                            readByMe = senderId.equals(userId) || (msg.getReadCount() != null && msg.getReadCount() > 0);
                         }
 
                         return MessageResponse.builder()
@@ -562,20 +553,16 @@ public class ChatMessageService {
                     && !member.getLastReadAt().isBefore(message.getCreatedAt());
         }
 
-        // 발신자 정보 안전하게 조회 (삭제된 사용자 처리)
+        // 발신자 정보 조회
+        // EntityNotFoundException은 전역 핸들러가 처리
         String senderName = "알 수 없음";
         String profileImage = null;
         Long senderId = null;
         
-        try {
-            if (message.getSender() != null) {
-                senderId = message.getSender().getId();
-                senderName = message.getSender().getNickname();
-                profileImage = message.getSender().getProfileImageUrl();
-            }
-        } catch (jakarta.persistence.EntityNotFoundException e) {
-            log.warn(" [메시지 응답 빌더] 발신자 정보 조회 실패 (삭제된 사용자) - messageId: {}", message.getId());
-            // 삭제된 사용자: 기본값 사용
+        if (message.getSender() != null) {
+            senderId = message.getSender().getId();
+            senderName = message.getSender().getNickname();
+            profileImage = message.getSender().getProfileImageUrl();
         }
 
         return MessageResponse.builder()
