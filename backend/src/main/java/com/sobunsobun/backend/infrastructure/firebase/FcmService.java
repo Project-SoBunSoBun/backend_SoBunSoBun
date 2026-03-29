@@ -41,7 +41,7 @@ public class FcmService {
                             .setBody(body)
                             .build())
                     .setApnsConfig(ApnsConfig.builder()
-                            .setAps(Aps.builder().setBadge(1).build())
+                            .setAps(Aps.builder().setBadge(1).setMutableContent(true).build())
                             .build());
 
             if (data != null && !data.isEmpty()) {
@@ -82,7 +82,7 @@ public class FcmService {
                                 .setBody(body)
                                 .build())
                         .setApnsConfig(ApnsConfig.builder()
-                                .setAps(Aps.builder().setBadge(1).build())
+                                .setAps(Aps.builder().setBadge(1).setMutableContent(true).build())
                                 .build());
 
                 if (data != null && !data.isEmpty()) {
