@@ -18,6 +18,7 @@ import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtUserPrincipal;
 import com.sobunsobun.backend.support.exception.ChatException;
 import com.sobunsobun.backend.support.exception.ErrorCode;
+import com.sobunsobun.backend.support.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -139,7 +140,7 @@ public class ChatRestController {
             log.warn("   - errorMsg: {}", e.getMessage());
 
             return ResponseEntity.status(404)
-                    .body(ApiResponse.notFound("USER_NOT_FOUND", e.getMessage()));
+                    .body(ApiResponse.error(404, "USER_NOT_FOUND", e.getMessage()));
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
@@ -149,7 +150,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("CREATE_PRIVATE_ROOM_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "CREATE_PRIVATE_ROOM_FAILED", e.getMessage()));
         }
     }
 
@@ -225,7 +226,7 @@ public class ChatRestController {
             log.warn("   - errorMsg: {}", e.getMessage());
 
             return ResponseEntity.status(404)
-                    .body(ApiResponse.notFound("POST_NOT_FOUND", e.getMessage()));
+                    .body(ApiResponse.error(404, "POST_NOT_FOUND", e.getMessage()));
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
@@ -235,7 +236,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("CREATE_GROUP_ROOM_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "CREATE_GROUP_ROOM_FAILED", e.getMessage()));
         }
     }
 
@@ -264,12 +265,12 @@ public class ChatRestController {
         } catch (IllegalArgumentException e) {
             log.warn(" [REST] 멤버 초대 실패 - {}", e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("INVITE_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "INVITE_FAILED", e.getMessage()));
 
         } catch (Exception e) {
             log.error(" [REST] 멤버 초대 실패", e);
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("INVITE_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "INVITE_FAILED", e.getMessage()));
         }
     }
 
@@ -281,7 +282,7 @@ public class ChatRestController {
         description = "채팅방에서 나갑니다. 1:1 채팅과 단체 채팅 모두 지원합니다. 단, 단체 채팅은 정산 진행 중일 때 나갈 수 없습니다."
     )
     @DeleteMapping("/rooms/{roomId}/members/me")
-    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> leaveChatRoom(
+    public ResponseEntity<ApiResponse<Void>> leaveChatRoom(
             @PathVariable("roomId") Long roomId,
             Principal principal
     ) {
@@ -292,17 +293,17 @@ public class ChatRestController {
             chatRoomService.leaveChatRoom(roomId, userId);
 
             log.info(" [REST] 채팅방 퇴장 완료");
-            return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
+            return ResponseEntity.ok(ApiResponse.ok());
 
         } catch (IllegalArgumentException e) {
             log.warn(" [REST] 채팅방 퇴장 실패 - {}", e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "LEAVE_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "LEAVE_FAILED", e.getMessage()));
 
         } catch (Exception e) {
             log.error(" [REST] 채팅방 퇴장 실패", e);
             return ResponseEntity.badRequest()
-                    .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "LEAVE_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "LEAVE_FAILED", e.getMessage()));
         }
     }
 
@@ -375,7 +376,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("GET_ROOMS_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "GET_ROOMS_FAILED", e.getMessage()));
         }
     }
 
@@ -431,15 +432,15 @@ public class ChatRestController {
 
             if (e.getMessage().contains("멤버가 아닙니다")) {
                 return ResponseEntity.status(403)
-                        .body(ApiResponse.forbidden("NOT_MEMBER", e.getMessage()));
+                        .body(ApiResponse.error(403, "NOT_MEMBER", e.getMessage()));
             }
             return ResponseEntity.status(404)
-                    .body(ApiResponse.notFound("ROOM_NOT_FOUND", e.getMessage()));
+                    .body(ApiResponse.error(404, "ROOM_NOT_FOUND", e.getMessage()));
 
         } catch (Exception e) {
             log.error(" [REST] 채팅방 상세 조회 실패", e);
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("GET_ROOM_DETAIL_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "GET_ROOM_DETAIL_FAILED", e.getMessage()));
         }
     }
 
@@ -459,7 +460,7 @@ public class ChatRestController {
             """
     )
     @PostMapping("/rooms/{roomId}/settlement-card")
-    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> sendSettlementCard(
+    public ResponseEntity<ApiResponse<Void>> sendSettlementCard(
             @PathVariable Long roomId,
             @jakarta.validation.Valid @RequestBody SendSettlementCardRequest request,
             Authentication authentication
@@ -482,7 +483,7 @@ public class ChatRestController {
                 roomId, userId, ChatMessageType.SETTLEMENT_CARD, null, null, cardPayload);
 
         log.info(" [정산서 카드 전송 완료] messageId: {}", response.getId());
-        return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
     // ====== 메시지 관련 API ======
@@ -597,7 +598,7 @@ public class ChatRestController {
             if (!isMember) {
                 log.warn(" 권한 없음 - userId: {}는 roomId: {} 멤버가 아님", userId, roomId);
                 return ResponseEntity.status(403)
-                        .body(ApiResponse.forbidden("NOT_MEMBER", "채팅방 멤버가 아닙니다"));
+                        .body(ApiResponse.error(403, "NOT_MEMBER", "채팅방 멤버가 아닙니다"));
             }
             log.info(" 권한 확인 완료 - 멤버임");
 
@@ -647,7 +648,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.badRequest("GET_MESSAGES_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "GET_MESSAGES_FAILED", e.getMessage()));
         }
     }
 
@@ -688,7 +689,7 @@ public class ChatRestController {
         )
     })
     @PostMapping(value = "/rooms/{chatId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<com.sobunsobun.backend.support.response.ApiResponse<Void>> uploadChatImage(
+    public ResponseEntity<ApiResponse<Void>> uploadChatImage(
             @PathVariable("chatId") Long chatId,
             @Parameter(description = "이미지 파일 (jpg/png/webp, 최대 5MB)", required = true)
             @RequestParam("image") MultipartFile image,
@@ -709,7 +710,7 @@ public class ChatRestController {
             if (image == null || image.isEmpty()) {
                 log.warn(" 이미지 파일이 없음");
                 return ResponseEntity.badRequest()
-                        .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "IMAGE_REQUIRED", "이미지 파일이 필요합니다"));
+                        .body(ApiResponse.error(400, "IMAGE_REQUIRED", "이미지 파일이 필요합니다"));
             }
 
             // 2. 권한 체크 (채팅방 멤버 확인)
@@ -718,7 +719,7 @@ public class ChatRestController {
             if (!isMember) {
                 log.warn(" 권한 없음 - userId: {}는 chatId: {} 멤버가 아님", userId, chatId);
                 return ResponseEntity.status(403)
-                        .body(com.sobunsobun.backend.support.response.ApiResponse.error(403, "NOT_MEMBER", "채팅방 멤버가 아닙니다"));
+                        .body(ApiResponse.error(403, "NOT_MEMBER", "채팅방 멤버가 아닙니다"));
             }
             log.info(" 권한 확인 완료 - 멤버임");
 
@@ -742,7 +743,7 @@ public class ChatRestController {
             log.info(" [REST] 채팅 이미지 업로드 완료 - messageId: {}", savedMessage.getId());
             log.info("═════════════════════════════════════════════════════════════");
 
-            return ResponseEntity.ok(com.sobunsobun.backend.support.response.ApiResponse.ok());
+            return ResponseEntity.ok(ApiResponse.ok());
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
@@ -751,7 +752,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.badRequest()
-                    .body(com.sobunsobun.backend.support.response.ApiResponse.error(400, "IMAGE_UPLOAD_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(400, "IMAGE_UPLOAD_FAILED", e.getMessage()));
         }
     }
 
@@ -892,7 +893,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.status(500)
-                    .body(ApiResponse.serverError("CHAT_ROOM_LIST_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(500, "CHAT_ROOM_LIST_FAILED", e.getMessage()));
         }
     }
 
@@ -1021,7 +1022,7 @@ public class ChatRestController {
             log.warn("   - errorMsg: {}", e.getMessage());
 
             return ResponseEntity.status(403)
-                    .body(ApiResponse.forbidden("ACCESS_DENIED", e.getMessage()));
+                    .body(ApiResponse.error(403, "ACCESS_DENIED", e.getMessage()));
 
         } catch (Exception e) {
             log.error("═════════════════════════════════════════════════════════════");
@@ -1031,7 +1032,7 @@ public class ChatRestController {
             log.error("═════════════════════════════════════════════════════════════");
 
             return ResponseEntity.status(500)
-                    .body(ApiResponse.serverError("GET_CHAT_MESSAGES_FAILED", e.getMessage()));
+                    .body(ApiResponse.error(500, "GET_CHAT_MESSAGES_FAILED", e.getMessage()));
         }
     }
 }
