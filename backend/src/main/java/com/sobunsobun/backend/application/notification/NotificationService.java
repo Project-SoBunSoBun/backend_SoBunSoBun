@@ -11,6 +11,7 @@ import com.sobunsobun.backend.dto.notification.NotificationReadAllResponse;
 import com.sobunsobun.backend.dto.notification.NotificationReadResponse;
 import com.sobunsobun.backend.dto.notification.UnreadCountResponse;
 import com.sobunsobun.backend.infrastructure.firebase.FcmService;
+import com.sobunsobun.backend.infrastructure.redis.ChatRedisService;
 import com.sobunsobun.backend.repository.NotificationRepository;
 import com.sobunsobun.backend.repository.UserNotificationSettingRepository;
 import com.sobunsobun.backend.support.exception.NotificationException;
@@ -34,6 +35,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserNotificationSettingRepository userNotificationSettingRepository;
     private final FcmService fcmService;
+    private final ChatRedisService chatRedisService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -141,7 +143,10 @@ public class NotificationService {
                 .orElse(true); // 설정 없으면 기본값 true
 
         if (pushEnabled) {
-            fcmService.sendToUser(recipient.getId(), title, body, data);
+            long unreadNotifications = notificationRepository.countByUserIdAndIsReadFalseAndTypeNot(recipient.getId(), "CHAT");
+            long unreadChat = chatRedisService.getTotalUnreadCount(recipient.getId());
+            int badgeCount = (int) Math.max(1, unreadNotifications + unreadChat);
+            fcmService.sendToUser(recipient.getId(), title, body, data, badgeCount);
         } else {
             log.info(" FCM 발송 건너뜀 (푸시 비활성화) - userId: {}", recipient.getId());
         }

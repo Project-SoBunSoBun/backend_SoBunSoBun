@@ -29,7 +29,7 @@ public class FcmService {
      * 단일 FCM 토큰으로 푸시 알림 발송
      */
     @Async("fcmTaskExecutor")
-    public void sendToToken(String fcmToken, String title, String body, Map<String, String> data) {
+    public void sendToToken(String fcmToken, String title, String body, Map<String, String> data, int badgeCount) {
         if (!isFirebaseAvailable()) return;
         if (fcmToken == null || fcmToken.isBlank()) return;
 
@@ -41,7 +41,7 @@ public class FcmService {
                             .setBody(body)
                             .build())
                     .setApnsConfig(ApnsConfig.builder()
-                            .setAps(Aps.builder().setBadge(1).setMutableContent(true).build())
+                            .setAps(Aps.builder().setBadge(badgeCount).setMutableContent(true).build())
                             .build());
 
             if (data != null && !data.isEmpty()) {
@@ -62,7 +62,7 @@ public class FcmService {
      * 특정 사용자의 모든 활성 디바이스에 푸시 알림 발송
      */
     @Async("fcmTaskExecutor")
-    public void sendToUser(Long userId, String title, String body, Map<String, String> data) {
+    public void sendToUser(Long userId, String title, String body, Map<String, String> data, int badgeCount) {
         if (!isFirebaseAvailable()) return;
 
         List<UserDevice> devices = userDeviceRepository.findByUserIdAndIsEnabledTrue(userId);
@@ -71,7 +71,7 @@ public class FcmService {
             return;
         }
 
-        log.info(" FCM 발송 시작 - userId: {}, deviceCount: {}", userId, devices.size());
+        log.info(" FCM 발송 시작 - userId: {}, deviceCount: {}, badgeCount: {}", userId, devices.size(), badgeCount);
 
         for (UserDevice device : devices) {
             try {
@@ -82,7 +82,7 @@ public class FcmService {
                                 .setBody(body)
                                 .build())
                         .setApnsConfig(ApnsConfig.builder()
-                                .setAps(Aps.builder().setBadge(1).setMutableContent(true).build())
+                                .setAps(Aps.builder().setBadge(badgeCount).setMutableContent(true).build())
                                 .build());
 
                 if (data != null && !data.isEmpty()) {
