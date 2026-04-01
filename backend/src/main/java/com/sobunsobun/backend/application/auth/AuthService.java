@@ -546,6 +546,7 @@ public class AuthService {
         log.debug("JWT 토큰 생성 완료 - 액세스 만료: {}, 리프레시 만료: {}", accessExpireKst, refreshExpireKst);
 
         return AuthResponse.builder()
+                .success(true)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .user(AuthResponse.UserSummary.builder()
