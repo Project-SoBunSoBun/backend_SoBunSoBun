@@ -10,6 +10,7 @@ import com.sobunsobun.backend.infrastructure.oauth.KakaoOAuthClient;
 import com.sobunsobun.backend.repository.AuthProviderRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtTokenProvider;
+import com.sobunsobun.backend.support.exception.UserException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
@@ -620,7 +621,7 @@ public class AuthService {
         // 이메일 중복 사전 검증
         if (userRepository.existsByEmail(email)) {
             log.warn("이메일 중복 감지 - 이메일: {}", email);
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 등록된 이메일입니다.");
+            throw UserException.emailDuplicate();
         }
 
         // 1. User 엔티티 생성

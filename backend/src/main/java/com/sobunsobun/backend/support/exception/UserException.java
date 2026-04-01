@@ -66,5 +66,12 @@ public class UserException extends BusinessException {
     public static UserException suspended() {
         return new UserException(ErrorCode.USER_SUSPENDED);
     }
+
+    /**
+     * 이메일 중복
+     */
+    public static UserException emailDuplicate() {
+        return new UserException(ErrorCode.USER_EMAIL_DUPLICATE);
+    }
 }
 
