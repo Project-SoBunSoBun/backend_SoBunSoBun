@@ -10,6 +10,7 @@ import com.sobunsobun.backend.infrastructure.oauth.KakaoOAuthClient;
 import com.sobunsobun.backend.repository.AuthProviderRepository;
 import com.sobunsobun.backend.repository.user.UserRepository;
 import com.sobunsobun.backend.security.JwtTokenProvider;
+import com.sobunsobun.backend.support.exception.BusinessException;
 import com.sobunsobun.backend.support.exception.UserException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -413,6 +414,9 @@ public class AuthService {
             } catch (Exception e) {
                 if (e instanceof ResponseStatusException) {
                     throw e;
+                }
+                if (e instanceof BusinessException) {
+                    throw (BusinessException) e;
                 }
                 if (e instanceof DataIntegrityViolationException) {
                     throw (DataIntegrityViolationException) e;
