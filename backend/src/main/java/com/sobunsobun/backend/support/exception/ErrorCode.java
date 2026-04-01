@@ -31,7 +31,7 @@ public enum ErrorCode {
     NICKNAME_ALREADY_EXISTS("USER_004", "이미 사용 중인 닉네임입니다.", HttpStatus.CONFLICT),
     USER_WITHDRAWN("USER_005", "탈퇴한 사용자입니다.", HttpStatus.FORBIDDEN),
     USER_SUSPENDED("USER_006", "정지된 사용자입니다.", HttpStatus.FORBIDDEN),
-    USER_EMAIL_DUPLICATE("USER_007", "이미 등록된 이메일입니다.", HttpStatus.CONFLICT),
+    USER_EMAIL_DUPLICATE("USER_007", "이미 가입된 이메일입니다.", HttpStatus.CONFLICT),
 
     // 게시글 관련 (3000~3099)
     POST_NOT_FOUND("POST_001", "게시글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
