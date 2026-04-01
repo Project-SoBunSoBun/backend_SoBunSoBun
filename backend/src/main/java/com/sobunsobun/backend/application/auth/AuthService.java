@@ -411,16 +411,13 @@ public class AuthService {
                 // JWT 관련 예외는 간단한 로그만 기록
                 log.error("회원가입 완료 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 로그인 토큰입니다.");
+            } catch (ResponseStatusException e) {
+                throw e;
+            } catch (BusinessException e) {
+                throw e;
+            } catch (DataIntegrityViolationException e) {
+                throw e;
             } catch (Exception e) {
-                if (e instanceof ResponseStatusException) {
-                    throw e;
-                }
-                if (e instanceof BusinessException) {
-                    throw (BusinessException) e;
-                }
-                if (e instanceof DataIntegrityViolationException) {
-                    throw (DataIntegrityViolationException) e;
-                }
                 log.error("회원가입 완료 처리 중 오류 발생 {}: {}", e.getClass().getSimpleName(), e.getMessage());
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 토큰이 유효하지 않습니다.");
             }
