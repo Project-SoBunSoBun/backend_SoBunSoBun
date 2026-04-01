@@ -39,7 +39,7 @@ import java.time.format.DateTimeFormatter;
  * - 카카오 OAuth 로그인/회원가입 처리
  * - JWT 액세스/리프레시 토큰 발급 및 갱신
  * - 이용약관 동의 기반 회원가입 플로우
- * - 토큰 생명주기 관리
+ * - 토큰 생명주기 관리 (임시 로그인 토큰, 액세스/리프레시 토큰)
  */
 @Slf4j
 @Service
