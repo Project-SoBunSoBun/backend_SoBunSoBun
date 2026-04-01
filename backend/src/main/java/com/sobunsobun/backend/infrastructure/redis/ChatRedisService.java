@@ -240,6 +240,28 @@ public class ChatRedisService {
     }
 
     /**
+     * 사용자의 전체 채팅 미읽음 수 합산
+     *
+     * Redis Hash "unread:counts:{userId}"의 모든 field 값을 합산하여 반환합니다.
+     * Redis 미사용 환경에서는 0을 반환합니다 (graceful degradation).
+     */
+    public long getTotalUnreadCount(Long userId) {
+        if (!isRedisAvailable()) return 0L;
+
+        try {
+            String hashKey = buildUnreadHashKey(userId);
+            List<Object> values = redisTemplate.get().opsForHash().values(hashKey);
+            if (values == null || values.isEmpty()) return 0L;
+            return values.stream()
+                    .mapToLong(v -> Long.parseLong(v.toString()))
+                    .sum();
+        } catch (Exception e) {
+            log.warn(" [total unread count 조회 실패] userId: {}", userId);
+            return 0L;
+        }
+    }
+
+    /**
      * 안 읽은 메시지 수를 0으로 초기화 (방 입장 / 읽음 처리 시)
      *
      * Hash field를 삭제하지 않고 "0"으로 명시 설정:

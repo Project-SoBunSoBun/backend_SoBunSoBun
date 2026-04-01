@@ -139,6 +139,7 @@ public class AuthService {
         log.info("임시 로그인 토큰 발급 완료");
 
         return KakaoVerifyResponse.builder()
+                .success(true)
                 .email(email)
                 .loginToken(loginToken)
                 .isNewUser(isNewUser)
@@ -284,6 +285,7 @@ public class AuthService {
             log.info("임시 로그인 토큰 발급 완료 (Apple)");
 
             return KakaoVerifyResponse.builder()
+                    .success(true)
                     .email(email)
                     .loginToken(loginToken)
                     .isNewUser(isNewUser)
