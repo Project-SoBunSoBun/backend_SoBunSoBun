@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+
 /**
  * 애플리케이션 전역 에러 코드 정의
  *
@@ -118,6 +119,15 @@ public enum ErrorCode {
     private final String code;
     private final String message;
     private final HttpStatus httpStatus;
+
+    static {
+        Set<String> seen = new java.util.HashSet<>();
+        for (ErrorCode ec : values()) {
+            if (!seen.add(ec.code)) {
+                throw new IllegalStateException("ErrorCode 중복 감지: " + ec.code);
+            }
+        }
+    }
 
     /**
      * HTTP 상태 코드를 정수로 반환
