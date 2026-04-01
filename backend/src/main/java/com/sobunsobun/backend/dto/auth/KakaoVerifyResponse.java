@@ -5,6 +5,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @AllArgsConstructor @NoArgsConstructor
 public class KakaoVerifyResponse {
+    private boolean success;
     private String email;
     private String nickname;
     private String profileImageUrl;
