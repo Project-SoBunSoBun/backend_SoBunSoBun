@@ -6,6 +6,7 @@ import lombok.*;
 @Getter @Setter @Builder
 @AllArgsConstructor @NoArgsConstructor
 public class AuthResponse {
+    private boolean success; // 인증 성공 여부
     private String accessToken;   // 우리 서버 JWT (짧은 만료)
     private String refreshToken;  // 우리 서버 Refresh JWT (긴 만료)
     private UserSummary user;
