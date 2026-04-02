@@ -84,14 +84,14 @@ cd backend_SoBunHaeYo
 ```dotenv
 # Database
 DB_HOST=localhost
-DB_PORT=3307
-DB_NAME=sobunsobun
+DB_PORT=3*0*
+DB_NAME=SoBunHaeYo
 DB_USERNAME=root
 DB_PASSWORD=your_password
 
 # Redis
 REDIS_HOST=localhost
-REDIS_PORT=6379
+REDIS_PORT=6*7*
 
 # JWT
 JWT_SECRET=your_jwt_secret_key
@@ -119,7 +119,7 @@ FIREBASE_PROJECT_ID=your-firebase-project-id
 docker-compose -f docker-compose.local.yml up -d
 ```
 
-MySQL 컨테이너가 `localhost:3307`에 실행됩니다.
+MySQL 컨테이너가 `localhost:3*0*`에 실행됩니다.
 
 ### 4. 애플리케이션 실행
 
@@ -128,7 +128,7 @@ cd backend
 ./gradlew bootRun
 ```
 
-서버가 `http://localhost:8081` 에서 실행됩니다.
+서버가 `http://localhost:8*8*` 에서 실행됩니다.
 
 ---
 
@@ -194,7 +194,7 @@ Authorization: Bearer {access_token}
 
 | 항목 | 설정값 |
 |------|--------|
-| 서버 포트 | `8081` |
+| 서버 포트 | `8*8*` |
 | DB DDL | `update` |
 | 파일 업로드 최대 크기 | 단일 파일 10MB / 요청 15MB |
 | 타임존 | `Asia/Seoul` (KST) |
