@@ -132,25 +132,6 @@ cd backend
 
 ---
 
-## 📖 API 문서
-
-서버 실행 후 아래 주소에서 Swagger UI를 확인할 수 있습니다.
-
-```
-http://localhost:8081/swagger-ui.html
-```
-
-추가 API 문서는 `/docs` 디렉토리를 참고하세요.
-
-| 파일 | 내용 |
-|------|------|
-| `docs/GROUP_CHAT_API.md` | 단체 채팅 API 명세 |
-| `docs/GROUP_CHAT_ROOM_GUIDE.md` | 채팅방 운영 가이드 |
-| `docs/CHAT_API_RESPONSES.md` | 채팅 API 응답 형식 |
-| `docs/RUNNING_WITHOUT_REDIS.md` | Redis 없이 실행하는 방법 |
-
----
-
 ## 🔑 인증 방식
 
 모든 API 요청에는 JWT Bearer Token이 필요합니다.
