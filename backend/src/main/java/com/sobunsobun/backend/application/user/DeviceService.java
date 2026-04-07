@@ -33,12 +33,17 @@ public class DeviceService {
      * - 동일 fcmToken이 다른 user에게 있으면 이전 레코드 삭제 후 저장 (기기 이전)
      */
     public DeviceRegistrationResponse registerDevice(Long userId, DeviceRegistrationRequest request) {
-        // 다른 사용자에게 같은 FCM 토큰이 등록된 경우 삭제 (기기 이전)
+        // 동일 FCM 토큰이 다른 사용자 또는 다른 deviceId에 등록된 경우 삭제
         userDeviceRepository.findByFcmToken(request.getFcmToken()).ifPresent(existing -> {
-            if (!existing.getUser().getId().equals(userId)) {
-                log.info(" 기기 이전: 기존 토큰 삭제 - userId: {}, deviceId: {}",
-                        existing.getUser().getId(), existing.getDeviceId());
+            boolean differentUser = !existing.getUser().getId().equals(userId);
+            boolean sameUserDifferentDevice = existing.getUser().getId().equals(userId)
+                    && !existing.getDeviceId().equals(request.getDeviceId());
+            if (differentUser || sameUserDifferentDevice) {
+                log.info(" 기존 토큰 삭제 - userId: {}, deviceId: {} (사유: {})",
+                        existing.getUser().getId(), existing.getDeviceId(),
+                        differentUser ? "기기 이전" : "동일 사용자 deviceId 변경");
                 userDeviceRepository.delete(existing);
+                userDeviceRepository.flush();
             }
         });
 

@@ -61,11 +61,6 @@ public class SecurityConfig {
         "/",
         "/index.html",
 
-        // 테스트용 HTML 파일
-        "/chat.html",
-        "/chatTest.html",
-        "/apple-login-test.html",
-
         // 약관 및 정책 (인증 불필요)
         "/api/terms/**",
 
