@@ -146,7 +146,7 @@ public class NotificationService {
             long unreadNotifications = notificationRepository.countByUserIdAndIsReadFalseAndTypeNot(recipient.getId(), "CHAT");
             long unreadChat = chatRedisService.getTotalUnreadCount(recipient.getId());
             int badgeCount = (int) Math.max(1, unreadNotifications + unreadChat);
-            fcmService.sendToUser(recipient.getId(), title, body, data, badgeCount);
+            fcmService.sendToUser(recipient.getId(), title, body, data, badgeCount, type);
         } else {
             log.info(" FCM 발송 건너뜀 (푸시 비활성화) - userId: {}", recipient.getId());
         }

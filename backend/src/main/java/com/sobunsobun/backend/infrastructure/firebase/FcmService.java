@@ -29,11 +29,16 @@ public class FcmService {
      * 단일 FCM 토큰으로 푸시 알림 발송
      */
     @Async("fcmTaskExecutor")
-    public void sendToToken(String fcmToken, String title, String body, Map<String, String> data, int badgeCount) {
+    public void sendToToken(String fcmToken, String title, String body, Map<String, String> data, int badgeCount, String apnsCategory) {
         if (!isFirebaseAvailable()) return;
         if (fcmToken == null || fcmToken.isBlank()) return;
 
         try {
+            Aps.Builder apsBuilder = Aps.builder().setBadge(badgeCount).setMutableContent(true);
+            if (apnsCategory != null && !apnsCategory.isBlank()) {
+                apsBuilder.setCategory(apnsCategory);
+            }
+
             Message.Builder builder = Message.builder()
                     .setToken(fcmToken)
                     .setNotification(Notification.builder()
@@ -41,7 +46,7 @@ public class FcmService {
                             .setBody(body)
                             .build())
                     .setApnsConfig(ApnsConfig.builder()
-                            .setAps(Aps.builder().setBadge(badgeCount).setMutableContent(true).build())
+                            .setAps(apsBuilder.build())
                             .build());
 
             if (data != null && !data.isEmpty()) {
@@ -62,7 +67,7 @@ public class FcmService {
      * 특정 사용자의 모든 활성 디바이스에 푸시 알림 발송
      */
     @Async("fcmTaskExecutor")
-    public void sendToUser(Long userId, String title, String body, Map<String, String> data, int badgeCount) {
+    public void sendToUser(Long userId, String title, String body, Map<String, String> data, int badgeCount, String apnsCategory) {
         if (!isFirebaseAvailable()) return;
 
         List<UserDevice> devices = userDeviceRepository.findByUserIdAndIsEnabledTrue(userId);
@@ -73,6 +78,12 @@ public class FcmService {
 
         log.info(" FCM 발송 시작 - userId: {}, deviceCount: {}, badgeCount: {}", userId, devices.size(), badgeCount);
 
+        Aps.Builder apsBuilder = Aps.builder().setBadge(badgeCount).setMutableContent(true);
+        if (apnsCategory != null && !apnsCategory.isBlank()) {
+            apsBuilder.setCategory(apnsCategory);
+        }
+        Aps aps = apsBuilder.build();
+
         for (UserDevice device : devices) {
             try {
                 Message.Builder builder = Message.builder()
@@ -82,7 +93,7 @@ public class FcmService {
                                 .setBody(body)
                                 .build())
                         .setApnsConfig(ApnsConfig.builder()
-                                .setAps(Aps.builder().setBadge(badgeCount).setMutableContent(true).build())
+                                .setAps(aps)
                                 .build());
 
                 if (data != null && !data.isEmpty()) {
