@@ -220,6 +220,19 @@ public class SettlementService {
     // =================================================
 
     /**
+     * 게시글 삭제 시 PENDING 상태인 정산 자동 삭제 (내부 호출 전용)
+     */
+    @Transactional
+    public void deleteIfPending(Long groupPostId) {
+        settlementRepository.findByGroupPostId(groupPostId)
+                .filter(s -> s.getStatus() == SettlementStatus.PENDING)
+                .ifPresent(s -> {
+                    settlementRepository.delete(s);
+                    log.info("[정산 자동 삭제] 게시글 삭제로 인한 PENDING 정산 삭제 - groupPostId={}", groupPostId);
+                });
+    }
+
+    /**
      * 정산 삭제 — 게시글 작성자(방장)만 가능
      */
     @Transactional

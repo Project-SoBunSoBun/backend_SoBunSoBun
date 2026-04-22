@@ -368,6 +368,9 @@ public class PostService {
         // 5. 해당 게시글을 저장한 모든 SavedPost 레코드 삭제
         savedPostRepository.deleteByPostId(postId);
 
+        // 6. PENDING 상태인 정산이 있으면 함께 삭제
+        settlementService.deleteIfPending(postId);
+
         log.info("[사용자 작동] 게시글 삭제(취소) 완료 - 게시글 ID: {}, 사용자 ID: {}", postId, userId);
     }
 
