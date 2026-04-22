@@ -64,7 +64,7 @@ public class MyProfileService {
                         .build())
                 .toList();
 
-        int hostCount = (int) groupPostRepository.countByOwnerId(user.getId());
+        int hostCount = (int) groupPostRepository.countByOwnerIdAndStatusNot(user.getId(), PostStatus.CANCELLED);
         int completedHostCount = (int) groupPostRepository.countByOwnerIdAndStatus(user.getId(), PostStatus.COMPLETED);
         int participationCount = (int) chatMemberRepository.countParticipationByUserId(userId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
@@ -132,7 +132,7 @@ public class MyProfileService {
                         .build())
                 .toList();
 
-        long postCountValue = groupPostRepository.countByOwnerId(user.getId());
+        long postCountValue = groupPostRepository.countByOwnerIdAndStatusNot(user.getId(), PostStatus.CANCELLED);
 
         UserProfileResponse profile = UserProfileResponse.builder()
                 .userId(user.getId())
@@ -198,7 +198,7 @@ public class MyProfileService {
                         .build())
                 .toList();
 
-        long postCountValue = groupPostRepository.countByOwnerId(user.getId());
+        long postCountValue = groupPostRepository.countByOwnerIdAndStatusNot(user.getId(), PostStatus.CANCELLED);
 
         UserProfileResponse profile = UserProfileResponse.builder()
                 .userId(user.getId())
