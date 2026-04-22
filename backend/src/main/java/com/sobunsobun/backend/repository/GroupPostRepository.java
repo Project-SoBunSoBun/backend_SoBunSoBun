@@ -215,6 +215,12 @@ public interface GroupPostRepository extends JpaRepository<GroupPost, Long> {
     long countByOwnerId(Long userId);
 
     /**
+     * 사용자가 작성한 게시글 수 조회 (특정 상태 제외)
+     * CANCELLED 상태 제외하여 실제 호스트 횟수 계산에 사용
+     */
+    long countByOwnerIdAndStatusNot(Long ownerId, PostStatus status);
+
+    /**
      * 사용자가 작성한 특정 상태의 게시글 수 조회
      * 활동 점수 계산 시 COMPLETED 상태(매너 평가 완료) 게시글만 카운트하는 데 사용
      */

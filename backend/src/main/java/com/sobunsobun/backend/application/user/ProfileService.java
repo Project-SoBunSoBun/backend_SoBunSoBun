@@ -86,7 +86,7 @@ public class ProfileService {
             }
         };
 
-        int hostCount = (int) groupPostRepository.countByOwnerId(userId);
+        int hostCount = (int) groupPostRepository.countByOwnerIdAndStatusNot(userId, PostStatus.CANCELLED);
         int completedHostCount = (int) groupPostRepository.countByOwnerIdAndStatus(userId, PostStatus.COMPLETED);
         int participationCount = (int) chatMemberRepository.countParticipationByUserId(userId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(userId);
@@ -145,7 +145,7 @@ public class ProfileService {
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        int hostCount = (int) groupPostRepository.countByOwnerId(targetUserId);
+        int hostCount = (int) groupPostRepository.countByOwnerIdAndStatusNot(targetUserId, PostStatus.CANCELLED);
         int completedHostCount = (int) groupPostRepository.countByOwnerIdAndStatus(targetUserId, PostStatus.COMPLETED);
         int participationCount = (int) chatMemberRepository.countParticipationByUserId(targetUserId);
         int tagCount = userTagStatsRepository.sumCountByReceiverId(targetUserId);
